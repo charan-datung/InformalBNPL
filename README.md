@@ -135,6 +135,85 @@ If the env vars are missing the page reports `degraded` rather than crashing.
 | `npm run start` | Run the production build              |
 | `npm run lint`  | ESLint                                |
 
+## Database
+
+The Postgres schema lives in `supabase/`:
+
+```
+supabase/
+  migrations/20260618120000_init_schema.sql   # tables, enums, triggers, RLS
+  seed.sql                                     # 1 admin, 1 operator, 3 users
+```
+
+### Tables
+
+| Table              | Purpose                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `users`            | One row per identity, mirrored from `auth.users`. `staff_role` null = normal user. |
+| `buyer_profiles`   | Buyer capability (KYC, credit limit). At most one per user.             |
+| `seller_profiles`  | Seller capability (KYC, trust tier, rolling reserve). At most one per user. |
+| `loans`            | A BNPL transaction; `status` is the live state-machine position.        |
+| `escrow_events`    | Append-only audit log of everything that happens to a loan (never edited/deleted). |
+| `repayments`       | The buyer's installment schedule for a loan.                            |
+| `disputes`         | Disputes raised against a loan, plus their resolution.                  |
+| `system_config`    | Admin-editable parameters (`value` is jsonb). Overrides code defaults.  |
+
+A user may have a buyer profile, a seller profile, **both, or neither** —
+capabilities unlock independently under one identity.
+
+### Loan state machine
+
+Transitions are enforced in code by `src/lib/loans/state-machine.ts` (the
+`loan_status` enum only constrains values, not transitions):
+
+```
+booked → escrow_held → shipped → (delivered_confirmed | auto_released
+                                  | dispute_raised) → escrow_released
+       → repaying → settled
+
+side states:  refunded (terminal) · frozen_fraud_review (hold)
+```
+
+Call `assertTransition(from, to)` before persisting any status change.
+
+### System config
+
+`src/lib/config/system-config.ts` reads `system_config` with code-defined
+fallback defaults (`CONFIG_DEFAULTS`), so reads never fail on a missing key.
+Keys there must stay in sync with the rows in `seed.sql`.
+
+### Applying the schema locally
+
+With the [Supabase CLI](https://supabase.com/docs/guides/local-development):
+
+```bash
+supabase start          # local stack
+supabase db reset       # runs migrations/ then seed.sql
+```
+
+Or paste `migrations/…sql` then `seed.sql` into the SQL editor of a hosted
+project. The seed inserts into `auth.users` (works locally / self-hosted); on
+hosted Supabase, create the users via the dashboard instead and run only the
+profile + config sections with the real UUIDs.
+
+**Seed accounts** (all share password `password123`):
+
+| Email                | Role     | Capabilities    |
+| -------------------- | -------- | --------------- |
+| `admin@bnpl.test`    | admin    | neither         |
+| `operator@bnpl.test` | operator | neither         |
+| `buyer@bnpl.test`    | normal   | buyer           |
+| `seller@bnpl.test`   | normal   | seller          |
+| `both@bnpl.test`     | normal   | buyer + seller  |
+
+### Reads vs. writes (RLS)
+
+Row Level Security is enabled on every table. Logged-in clients get **read**
+access scoped to their own data; staff (operator/admin) read everything. No
+client write policies exist — all **mutations** run server-side via the
+service role (which bypasses RLS), where the state-machine validator enforces
+correctness.
+
 ## Deploying to Vercel
 
 1. Import the repo into Vercel.
