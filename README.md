@@ -214,6 +214,41 @@ client write policies exist — all **mutations** run server-side via the
 service role (which bypasses RLS), where the state-machine validator enforces
 correctness.
 
+## Public user journey
+
+One identity, one login. Buyer and seller are **capabilities** unlocked
+independently, each with its own approval status — never separate accounts.
+
+```
+/signup ─▶ /onboarding ─┬─ /onboarding/buyer  ─▶ buyer_profile  (pending)
+ (Stage 1)  (Stage 2)    ├─ /onboarding/seller ─▶ seller_profile (pending)
+                         └─ Both: buyer ▶ seller
+                                              │
+                              operator approves (manual)
+                                              ▼
+                          /dashboard (Stage 4): approved panel(s)
+                          + Buy/Sell toggle when both are approved
+                          + "add the other capability" anytime
+```
+
+| Stage | Route | What happens |
+| --- | --- | --- |
+| 1 — Signup | `/signup` | Email/phone + password via Supabase Auth. The `handle_new_user` trigger creates the `users` row with `staff_role` null. **No role, no underwriting yet.** |
+| 2 — Role selection | `/onboarding` | Neutral "What would you like to do?" — Buy / Sell / Both. Not exclusive. |
+| 3 — Onboarding | `/onboarding/buyer`, `/onboarding/seller` | **Underwriting starts here.** Buyer application or seller verification (with a required live item photo → private Storage). Creates the profile with `kyc_status 'pending'`. |
+| 4 — Dashboard | `/dashboard` | Approved capability panels. A both-approved user gets a Buy/Sell mode toggle. Pending shows "under review"; missing capabilities show an "add it" path. |
+
+Routing is centralized in `src/lib/profiles/capabilities.ts` (`getCapabilities`):
+the home page, onboarding, and dashboard all branch off the buyer/seller
+`kyc_status`. Approval itself is **manual** — an operator flips `kyc_status` to
+`verified` (and sets `activated_at`); there is no automated decision.
+
+The seller live photo is uploaded through a server action to a **private**
+`seller-verification` Storage bucket (created by migration 0003); only
+server-side code (service role) reads it. This needs `SUPABASE_SERVICE_ROLE_KEY`
+set, and the server-action body limit is raised to 10 MB in `next.config.ts` for
+camera images.
+
 ## Server-side mutations
 
 All loan state changes flow through one trusted path. Nothing on the client
