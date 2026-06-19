@@ -338,6 +338,49 @@ Properties:
   window, and default credit limit are read from `system_config` (see the
   overview page and the prefilled review forms).
 
+## Admin portal
+
+Admin-only surface (`/admin/*`), higher privilege than the operator console:
+
+| Route | What it does |
+| --- | --- |
+| `/admin/config` | Edit every `system_config` value; each change is audit-logged with who/when (and `updated_by`). |
+| `/admin/staff` | View all users; promote/demote `staff_role` (user / operator / admin). You can't change your own role. |
+| `/admin/audit` | Searchable, merged immutable trail — every `escrow_event` + every `audit_log` entry — filterable by user, loan, type, and date. |
+| `/admin/loans`, `/admin/loans/[id]` | Read everything operators see, plus **override**. |
+
+**Override**: an admin can force a loan into any status, bypassing the state
+machine, but only with a **mandatory reason**. The force is recorded as a
+flagged, immutable `admin_override` escrow_event (and mirrored to `audit_log`).
+Overrides are visually flagged everywhere they appear — a red `OVERRIDE` badge
+in the loans lists, a banner + highlighted rows on the loan detail, and a red
+row in the audit search.
+
+Admins are also staff, so they retain full read/write access to the operator
+console.
+
+### How access control is enforced
+
+Defence in depth across three layers — not just hidden buttons:
+
+1. **Route layer.** `(admin)/layout.tsx` calls `requireAdminOrRedirect()` as its
+   first `await`; non-admins are redirected (operators → `/operator`, others →
+   `/login`). Each admin page repeats the guard as its own first `await`, so a
+   non-admin's request never reaches the data fetches below it.
+2. **Data/action layer.** Every admin server action (`updateConfigAction`,
+   `updateStaffRoleAction`, `adminOverrideAction`) begins with `requireAdmin()`,
+   which **throws** for non-admins. So a direct POST that skips the UI is
+   rejected before any write — the gate is server-side, keyed off the session
+   user's `staff_role`, not the client.
+3. **Database layer.** RLS restricts what a logged-in client can read to their
+   own rows (staff via `is_staff()`); the privileged reads/writes run through
+   the service-role client only inside these already-gated server contexts. The
+   `audit_log` and `escrow_events` tables are append-only at the DB (trigger),
+   so the trail can't be edited or deleted by anyone — including admins.
+
+`staff_role` is read server-side from `public.users` for the session user
+(`getCurrentStaff`); the client never asserts its own role.
+
 ## Server-side mutations
 
 All loan state changes flow through one trusted path. Nothing on the client

@@ -1,106 +1,56 @@
-import { getConfig, type ConfigKey } from "@/lib/config/system-config";
-import { getCurrentStaff } from "@/lib/auth/staff";
-import { updateConfigAction } from "@/app/(operator)/operator/actions";
+import Link from "next/link";
+import { getConfig } from "@/lib/config/system-config";
+import { formatPeso } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const FIELDS: { key: ConfigKey; label: string; hint: string }[] = [
-  {
-    key: "default_interest_rate_monthly",
-    label: "Default interest rate (monthly)",
-    hint: "decimal, e.g. 0.035 = 3.5%/mo",
-  },
-  {
-    key: "default_merchant_fee_pct",
-    label: "Default merchant fee %",
-    hint: "whole percent, e.g. 5 = 5%",
-  },
-  {
-    key: "default_reserve_pct",
-    label: "Default rolling reserve %",
-    hint: "whole percent, e.g. 10 = 10%",
-  },
-  { key: "dispute_window_days", label: "Dispute window (days)", hint: "integer" },
-  {
-    key: "auto_release_days",
-    label: "Auto-release window (days)",
-    hint: "integer",
-  },
-  {
-    key: "default_credit_limit_centavos",
-    label: "Default credit limit (centavos)",
-    hint: "centavos, e.g. 5000000 = ₱50,000",
-  },
-  { key: "default_tenor_months", label: "Default tenor (months)", hint: "integer" },
-  {
-    key: "seller_payout_days",
-    label: "Seller payout window (days)",
-    hint: "days after escrow release",
-  },
-];
+/**
+ * Read-only system config for operators. Editing lives in the admin portal
+ * (/admin/config) — operators see the values that drive the app but can't
+ * change them.
+ */
+export default async function ConfigPage() {
+  const config = await getConfig();
 
-export default async function ConfigPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
-  const [config, staff] = await Promise.all([getConfig(), getCurrentStaff()]);
-  const isAdmin = staff?.staff_role === "admin";
+  const rows: [string, string][] = [
+    [
+      "Default interest rate (monthly)",
+      `${(config.default_interest_rate_monthly * 100).toFixed(2)}%`,
+    ],
+    ["Default merchant fee", `${config.default_merchant_fee_pct}%`],
+    ["Default rolling reserve", `${config.default_reserve_pct}%`],
+    ["Dispute window", `${config.dispute_window_days} days`],
+    ["Auto-release window", `${config.auto_release_days} days`],
+    ["Default tenor", `${config.default_tenor_months} months`],
+    ["Seller payout window", `${config.seller_payout_days} days`],
+    ["Default credit limit", formatPeso(config.default_credit_limit_centavos)],
+  ];
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">System config</h1>
       <p className="text-sm text-black/60 dark:text-white/60">
-        These values are the defaults used across the app. Editing is{" "}
-        <strong>admin-only</strong>; every change is recorded in the audit log.
+        These values drive the app. Editing is in the{" "}
+        <Link href="/admin/config" className="underline underline-offset-4">
+          admin portal
+        </Link>{" "}
+        (admin only).
       </p>
-
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
-
-      {!isAdmin ? (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-          You are signed in as an operator — values are read-only. Saving
-          requires an admin.
-        </p>
-      ) : null}
-
-      <div className="space-y-2">
-        {FIELDS.map((f) => (
-          <form
-            key={f.key}
-            action={updateConfigAction}
-            className="flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-3 dark:border-white/10"
-          >
-            <input type="hidden" name="key" value={f.key} />
-            <label className="flex-1 space-y-1">
-              <span className="text-sm font-medium">{f.label}</span>
-              <span className="block text-xs text-black/40 dark:text-white/40">
-                {f.hint}
-              </span>
-              <input
-                type="number"
-                name="value"
-                step="any"
-                defaultValue={config[f.key]}
-                disabled={!isAdmin}
-                className="mt-1 w-48 rounded-md border border-black/15 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-white/15 dark:bg-transparent"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={!isAdmin}
-              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-white dark:text-slate-900"
+      <table className="w-full max-w-md text-sm">
+        <tbody>
+          {rows.map(([k, v]) => (
+            <tr
+              key={k}
+              className="border-b border-black/5 dark:border-white/5"
             >
-              Save
-            </button>
-          </form>
-        ))}
-      </div>
+              <td className="py-1.5 pr-4 text-black/60 dark:text-white/60">
+                {k}
+              </td>
+              <td className="py-1.5 text-right font-medium tabular-nums">{v}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

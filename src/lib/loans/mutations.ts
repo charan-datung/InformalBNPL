@@ -400,3 +400,48 @@ export async function recordRepayment(input: {
   const r = data as { loan_id: string; remaining: number };
   return { loanId: r.loan_id, remaining: r.remaining };
 }
+
+/**
+ * ADMIN OVERRIDE — force a loan into any status, bypassing the state machine.
+ * Requires a mandatory reason, recorded as an immutable `admin_override`
+ * escrow_event (and mirrored to the audit log). Caller MUST already be
+ * confirmed as an admin in the action layer.
+ */
+export async function adminOverride(input: {
+  loanId: string;
+  to: LoanStatus;
+  reason: string;
+  actorUserId: string;
+}): Promise<Loan> {
+  if (!input.reason.trim()) {
+    throw new LoanMutationError(
+      "validation",
+      "A reason is required for an override.",
+    );
+  }
+  if (!isLoanStatus(input.to)) {
+    throw new LoanMutationError("validation", "Unknown target status.");
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .rpc("admin_override_transition", {
+      p_loan_id: input.loanId,
+      p_to: input.to,
+      p_reason: input.reason.trim(),
+      p_actor: input.actorUserId,
+    })
+    .single<Loan>();
+  if (error) throw new LoanMutationError("db", error.message);
+
+  const { recordAudit } = await import("@/lib/audit/log");
+  await recordAudit(supabase, {
+    actorUserId: input.actorUserId,
+    action: "admin_override",
+    entityType: "loan",
+    entityId: input.loanId,
+    detail: { to: input.to, reason: input.reason.trim() },
+  });
+
+  return data;
+}

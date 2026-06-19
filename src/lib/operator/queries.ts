@@ -33,18 +33,31 @@ export type LoanRow = {
   shipment_proof_path: string | null;
   buyerName: string;
   sellerName: string;
+  hasOverride: boolean;
 };
+
+/** Loan ids that have at least one admin_override event. */
+async function overriddenLoanIds(): Promise<Set<string>> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("escrow_events")
+    .select("loan_id")
+    .eq("event_type", "admin_override");
+  return new Set((data ?? []).map((r) => r.loan_id));
+}
 
 export async function listLoans(): Promise<LoanRow[]> {
   const admin = createAdminClient();
-  const [{ data }, users] = await Promise.all([
+  const [{ data }, users, overridden] = await Promise.all([
     admin.from("loans").select("*").order("created_at", { ascending: false }),
     usersMap(),
+    overriddenLoanIds(),
   ]);
   return (data ?? []).map((l) => ({
-    ...(l as Omit<LoanRow, "buyerName" | "sellerName">),
+    ...(l as Omit<LoanRow, "buyerName" | "sellerName" | "hasOverride">),
     buyerName: users.get(l.buyer_user_id)?.name ?? l.buyer_user_id,
     sellerName: users.get(l.seller_user_id)?.name ?? l.seller_user_id,
+    hasOverride: overridden.has(l.id),
   }));
 }
 
@@ -100,12 +113,17 @@ export async function getLoanWithEvents(loanId: string): Promise<{
     shipmentProofUrl = signed?.signedUrl ?? null;
   }
 
+  const hasOverride = (events ?? []).some(
+    (e) => e.event_type === "admin_override",
+  );
+
   return {
     shipmentProofUrl,
     loan: {
-      ...(loan as Omit<LoanRow, "buyerName" | "sellerName">),
+      ...(loan as Omit<LoanRow, "buyerName" | "sellerName" | "hasOverride">),
       buyerName: users.get(loan.buyer_user_id)?.name ?? loan.buyer_user_id,
       sellerName: users.get(loan.seller_user_id)?.name ?? loan.seller_user_id,
+      hasOverride,
     },
     events: (events ?? []).map((e) => ({
       ...(e as Omit<EscrowEventRow, "actorName">),

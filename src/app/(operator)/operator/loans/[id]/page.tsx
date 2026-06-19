@@ -56,7 +56,19 @@ export default async function LoanDetailPage({
           ← Loans
         </Link>
         <StatusBadge status={loan.status} />
+        {loan.hasOverride ? (
+          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            OVERRIDE
+          </span>
+        ) : null}
       </div>
+
+      {loan.hasOverride ? (
+        <p className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          ⚠ This loan has been force-changed by an admin override. See the
+          flagged rows in the audit trail below.
+        </p>
+      ) : null}
 
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -228,15 +240,27 @@ export default async function LoanDetailPage({
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => (
+              {events.map((e) => {
+                const override = e.event_type === "admin_override";
+                return (
                 <tr
                   key={e.id}
-                  className="border-b border-black/5 align-top dark:border-white/5"
+                  className={`border-b border-black/5 align-top dark:border-white/5 ${
+                    override ? "bg-red-50 dark:bg-red-950/40" : ""
+                  }`}
                 >
                   <td className="whitespace-nowrap py-2 pr-3 text-black/60 dark:text-white/60">
                     {formatDateTime(e.created_at)}
                   </td>
-                  <td className="py-2 pr-3 font-mono text-xs">{e.event_type}</td>
+                  <td className="py-2 pr-3 font-mono text-xs">
+                    {override ? (
+                      <span className="rounded bg-red-600 px-1 py-0.5 font-bold text-white">
+                        {e.event_type}
+                      </span>
+                    ) : (
+                      e.event_type
+                    )}
+                  </td>
                   <td className="py-2 pr-3 text-right tabular-nums">
                     {formatPeso(e.amount_centavos)}
                   </td>
@@ -245,7 +269,8 @@ export default async function LoanDetailPage({
                     {e.note ?? ""}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

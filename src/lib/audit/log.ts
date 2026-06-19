@@ -10,7 +10,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type AuditInput = {
   actorUserId?: string | null;
   action: string;
-  entityType: "buyer_profile" | "seller_profile" | "system_config" | "dispute";
+  entityType:
+    | "buyer_profile"
+    | "seller_profile"
+    | "system_config"
+    | "dispute"
+    | "user"
+    | "loan";
   entityId?: string | null;
   detail?: unknown;
 };

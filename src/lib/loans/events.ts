@@ -19,6 +19,7 @@ export const ESCROW_EVENT_TYPES = [
   "refunded",
   "frozen_fraud_review",
   "unfrozen",
+  "admin_override",
   "note",
 ] as const;
 

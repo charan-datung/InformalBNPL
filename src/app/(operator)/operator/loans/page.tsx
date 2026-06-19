@@ -37,6 +37,11 @@ export default async function LoansListPage() {
                 >
                   <td className="py-2 pr-3">
                     <StatusBadge status={l.status} />
+                    {l.hasOverride ? (
+                      <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        OVERRIDE
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-2 pr-3">{l.buyerName}</td>
                   <td className="py-2 pr-3">{l.sellerName}</td>

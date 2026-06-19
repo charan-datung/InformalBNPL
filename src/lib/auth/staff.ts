@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -48,11 +49,24 @@ export async function requireStaff(): Promise<Staff> {
   return staff;
 }
 
-/** Require an admin specifically; throws otherwise. */
+/** Require an admin specifically; throws otherwise. (Use in server actions.) */
 export async function requireAdmin(): Promise<Staff> {
   const staff = await requireStaff();
   if (staff.staff_role !== "admin") {
     throw new Error("Forbidden: admin access required.");
   }
+  return staff;
+}
+
+/**
+ * Page-level admin gate: redirects non-admins away (operators -> their console,
+ * everyone else -> login) instead of throwing. Call this as the FIRST await in
+ * every admin page/layout so a non-admin's request never reaches the data
+ * fetches below it.
+ */
+export async function requireAdminOrRedirect(): Promise<Staff> {
+  const staff = await getCurrentStaff();
+  if (!staff) redirect("/login");
+  if (staff.staff_role !== "admin") redirect("/operator");
   return staff;
 }

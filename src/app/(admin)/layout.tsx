@@ -1,22 +1,64 @@
+import Link from "next/link";
+import { requireAdminOrRedirect } from "@/lib/auth/staff";
+import { signOutAction } from "@/app/(public)/auth/actions";
+
 /**
- * Layout for the Admin portal — highest privilege, internal only.
- *
- * Admins configure system parameters, manage staff, see all audit logs and
- * metrics, and can override. Access control is not wired up yet; this surface
- * will be gated to admins once staff roles exist.
+ * Admin portal layout. ROUTE-LAYER access control: requireAdminOrRedirect runs
+ * before anything else and sends non-admins away (operators -> /operator,
+ * everyone else -> /login). Because it's the first await, no admin page below
+ * this layout renders or fetches data for a non-admin.
  */
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const admin = await requireAdminOrRedirect();
+
+  const nav = [
+    { href: "/admin", label: "Overview" },
+    { href: "/admin/config", label: "Config" },
+    { href: "/admin/staff", label: "Staff" },
+    { href: "/admin/audit", label: "Audit" },
+    { href: "/admin/loans", label: "Loans" },
+  ];
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-black/10 bg-slate-900 text-white dark:border-white/10">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <span className="font-semibold">Admin Portal</span>
-          <span className="text-xs text-white/60">Internal · Highest privilege</span>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold">Admin Portal</span>
+            <nav className="flex flex-wrap gap-3 text-sm">
+              {nav.map((n) => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  className="text-white/80 underline-offset-4 hover:underline"
+                >
+                  {n.label}
+                </Link>
+              ))}
+              <Link
+                href="/operator"
+                className="text-white/50 underline-offset-4 hover:underline"
+              >
+                Operator console ↗
+              </Link>
+            </nav>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-white/60">{admin.name} · admin</span>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="rounded border border-white/20 px-2 py-1 font-medium hover:bg-white/10"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         {children}
       </main>
     </div>
