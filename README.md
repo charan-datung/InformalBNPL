@@ -214,6 +214,51 @@ client write policies exist — all **mutations** run server-side via the
 service role (which bypasses RLS), where the state-machine validator enforces
 correctness.
 
+## Server-side mutations
+
+All loan state changes flow through one trusted path. Nothing on the client
+writes loan state directly.
+
+```
+operator UI ─▶ server action ─▶ mutations core ─▶ Postgres RPC
+ (pending)     (auth-gated)      (validates)       (atomic write)
+```
+
+| Layer | File | Responsibility |
+| --- | --- | --- |
+| Server actions | `src/app/(operator)/operator/actions.ts` | `requireStaff()`, stamp the actor, delegate. |
+| Mutations core | `src/lib/loans/mutations.ts` | `bookLoan` / `transitionLoan`. Runs business rules + the state-machine validator using the **service-role** client. |
+| RPCs | `supabase/migrations/…loan_mutations.sql` | `book_loan` / `apply_loan_transition` — write the loan row **and** its `escrow_events` audit row in one transaction. |
+
+Key properties:
+
+- **Single source of transition truth.** `transitionLoan` reads the current
+  status, calls `assertTransition(from, to)` (throws on an illegal jump), then
+  applies it. The database does **not** re-decide legality.
+- **Atomic + race-safe.** `apply_loan_transition` does a compare-and-swap on the
+  expected from-status (`update … where status = p_from`). If the loan moved
+  under us it writes nothing and raises `23514`, surfaced as a `conflict`.
+- **Capability + credit checks.** `bookLoan` requires the buyer/seller to have
+  activated, KYC-verified profiles and the ticket to fit the buyer's credit
+  limit; missing rate/fee fall back to `system_config` defaults.
+- **Service-role only.** The RPCs are revoked from `anon`/`authenticated` and
+  granted to `service_role`; the admin client (`src/lib/supabase/admin.ts`)
+  needs `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Try it (no login required)
+
+A **dev-only** route handler drives the full path against the seed users —
+book a loan, walk it `booked → … → settled`, and prove an illegal transition is
+rejected. It returns 404 in production.
+
+```bash
+# with the dev server running and the schema + seed applied:
+curl -X POST http://localhost:3000/api/dev/exercise-loan
+```
+
+Expected: a `trace` ending in `settled`, plus a `rejectedIllegalTransition`
+showing `settled -> shipped` was refused by the validator.
+
 ## Deploying to Vercel
 
 1. Import the repo into Vercel.

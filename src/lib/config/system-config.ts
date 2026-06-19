@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -33,13 +34,17 @@ export type ConfigKey = keyof SystemConfig;
 
 /**
  * Read a single config value, falling back to the code default if there is no
- * override row or the read errors. Server-only (uses the server Supabase
- * client and request cookies).
+ * override row or the read errors. Server-only.
+ *
+ * Pass a `client` to reuse an existing Supabase client (e.g. the service-role
+ * admin client inside a mutation); omit it to use the cookie-based server
+ * client.
  */
 export async function getConfigValue<K extends ConfigKey>(
   key: K,
+  client?: SupabaseClient,
 ): Promise<SystemConfig[K]> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("system_config")
     .select("value")
@@ -54,12 +59,13 @@ export async function getConfigValue<K extends ConfigKey>(
 
 /**
  * Read the full config: code defaults merged with any overrides from the table.
- * Unknown keys in the table are ignored. Server-only.
+ * Unknown keys in the table are ignored. Server-only. Pass a `client` to reuse
+ * an existing Supabase client; omit it to use the cookie-based server client.
  */
-export async function getConfig(): Promise<SystemConfig> {
+export async function getConfig(client?: SupabaseClient): Promise<SystemConfig> {
   const merged: SystemConfig = { ...CONFIG_DEFAULTS };
 
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("system_config")
     .select("key, value");
