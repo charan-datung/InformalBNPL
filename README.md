@@ -403,23 +403,27 @@ operator console (overview, `/operator/releases`, loan detail) renders —
 `disputeWindow(shippedAt, dispute_window_days)` in `src/lib/loans/window.ts`.
 Nothing mutates on page load; the operator takes the action.
 
-### Moving this to a scheduled job later
+### The scheduled job (pg_cron)
 
-Replace the "compute on load" surfacing with a job that runs the same window
-math on a timer:
+This is now wired up (migration 0010):
 
-1. Add a `auto_clear_windows` routine (a Supabase Edge Function or `pg_cron`
-   job) that selects loans where `status = 'shipped'` and
-   `shipped_at + dispute_window_days < now()` with no open dispute, and calls a
-   service-role transition `shipped → auto_released` for each (recording the
-   `auto_released` event). This is the same step the operator does today.
-2. Schedule it (e.g. `pg_cron` hourly, or Edge Function on a cron trigger).
-3. Keep `dispute_window_days` as the only knob — the job reads it from
-   `system_config`, so admins still control the window. Payment stays manual:
-   the job only clears the window, it never releases escrow.
+- `public.auto_clear_dispute_windows()` runs the same window math server-side:
+  for every `shipped` loan whose first `shipped` event is older than
+  `dispute_window_days`, it compare-and-swaps `shipped → auto_released` and
+  records a system `auto_released` event. It reads `dispute_window_days` from
+  `system_config`, so admins still control the single knob. It **never releases
+  escrow** — payment stays manual.
+- It's scheduled every 15 minutes via `pg_cron`
+  (`cron.schedule('auto-clear-dispute-windows', '*/15 * * * *', …)`).
 
-The `auto_released` state and the release flow already exist, so the job is the
-only new piece.
+The on-load surfacing in `/operator/releases` still works as a live fallback
+between job runs (and if `pg_cron` isn't enabled). The scheduling is wrapped in
+a safety net: if `pg_cron` can't be enabled, the migration still succeeds and
+the function exists — enable `pg_cron` in the Supabase dashboard and re-run the
+`cron.schedule(...)` line, or just rely on the on-load surfacing.
+
+To change the cadence, re-run `cron.schedule` with a different cron expression;
+to stop it, `select cron.unschedule('auto-clear-dispute-windows');`.
 
 ## Server-side mutations
 
