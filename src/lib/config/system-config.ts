@@ -27,6 +27,10 @@ export const CONFIG_DEFAULTS = {
   default_reserve_pct: 10,
   /** Default buyer credit limit in centavos (5_000_000 = ₱50,000.00). */
   default_credit_limit_centavos: 5_000_000,
+  /** Default loan tenor (months) prefilled at checkout. */
+  default_tenor_months: 3,
+  /** Days after escrow release before the seller's payout is committed. */
+  seller_payout_days: 2,
 } as const;
 
 export type SystemConfig = typeof CONFIG_DEFAULTS;

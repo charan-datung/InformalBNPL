@@ -121,5 +121,7 @@ insert into public.system_config (key, value, updated_by) values
   ('default_interest_rate_monthly', '0.035',   '11111111-1111-1111-1111-111111111111'),
   ('default_merchant_fee_pct',      '5',       '11111111-1111-1111-1111-111111111111'),
   ('default_reserve_pct',           '10',      '11111111-1111-1111-1111-111111111111'),
-  ('default_credit_limit_centavos', '5000000', '11111111-1111-1111-1111-111111111111')
+  ('default_credit_limit_centavos', '5000000', '11111111-1111-1111-1111-111111111111'),
+  ('default_tenor_months',          '3',       '11111111-1111-1111-1111-111111111111'),
+  ('seller_payout_days',            '2',       '11111111-1111-1111-1111-111111111111')
 on conflict (key) do nothing;

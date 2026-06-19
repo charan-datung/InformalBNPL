@@ -30,6 +30,7 @@ export type LoanRow = {
   status: LoanStatus;
   created_at: string;
   updated_at: string;
+  shipment_proof_path: string | null;
   buyerName: string;
   sellerName: string;
 };
@@ -69,6 +70,7 @@ export async function getLoanWithEvents(loanId: string): Promise<{
   loan: LoanRow | null;
   events: EscrowEventRow[];
   repayments: RepaymentRow[];
+  shipmentProofUrl: string | null;
 }> {
   const admin = createAdminClient();
   const [{ data: loan }, { data: events }, { data: repayments }, users] =
@@ -87,9 +89,19 @@ export async function getLoanWithEvents(loanId: string): Promise<{
       usersMap(),
     ]);
 
-  if (!loan) return { loan: null, events: [], repayments: [] };
+  if (!loan)
+    return { loan: null, events: [], repayments: [], shipmentProofUrl: null };
+
+  let shipmentProofUrl: string | null = null;
+  if (loan.shipment_proof_path) {
+    const { data: signed } = await admin.storage
+      .from("shipment-proof")
+      .createSignedUrl(loan.shipment_proof_path, 300);
+    shipmentProofUrl = signed?.signedUrl ?? null;
+  }
 
   return {
+    shipmentProofUrl,
     loan: {
       ...(loan as Omit<LoanRow, "buyerName" | "sellerName">),
       buyerName: users.get(loan.buyer_user_id)?.name ?? loan.buyer_user_id,

@@ -257,6 +257,27 @@ buyer books → operator holds escrow → SELLER marks shipped →
   repayment → loan auto-settles when the last one is recorded
 ```
 
+### Active dashboards
+
+Once approved, each capability gets a working dashboard (with a Buy/Sell toggle
+for dual-capability identities):
+
+- **Buyer**: a **checkout** that previews the full repayment schedule
+  (principal + interest + due dates) live as the amount/tenor change — using the
+  same math as the server, so the preview matches what's generated later —
+  before confirming (which books the loan and immediately holds escrow). An
+  **impossible-to-miss "You owe" banner**, active loans with their schedule, and
+  on shipped items a positive **"Confirm receipt — all good"** plus a
+  **"Report a problem within the window"** path (required photo + description).
+- **Seller**: each order leads with a **payout tracker** (Held → Shipped →
+  Delivered → Paying out) showing the net-of-fee amount and the
+  committed/estimated payout date, so a seller always sees where their money is.
+  **"Mark as shipped"** requires a proof-of-shipment photo (private bucket;
+  operators view it via a signed URL on the loan detail page).
+
+Tenor default, interest rate, merchant fee, dispute window, and seller payout
+window all come from `system_config`.
+
 Repayment schedule = principal + flat monthly interest on principal
 (`monthly_interest = round(ticket × interest_rate_monthly)`,
 `total = ticket + monthly_interest × tenor`), split into `tenor` equal

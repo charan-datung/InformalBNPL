@@ -3,22 +3,49 @@
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { bookLoan } from "@/lib/loans/mutations";
+import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
 import { markShipped } from "@/lib/loans/seller";
 
 /**
- * Buyer-initiated actions from the dashboard. Identity comes from the verified
- * session; the buyer can only act on their own loans (enforced in the buyer
- * mutation helpers). Every action redirects back to /dashboard, with ?error=…
- * on failure.
+ * Buyer- and seller-initiated actions from the active dashboards. Identity comes
+ * from the verified session; users can only act on their own loans (enforced in
+ * the buyer/seller mutation helpers). Every action redirects back to /dashboard,
+ * with ?error=… on failure.
  */
 
 const DISPUTE_BUCKET = "dispute-evidence";
+const SHIPMENT_BUCKET = "shipment-proof";
 const BACK = "/dashboard";
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Unexpected error.";
+}
+
+/** Upload a required image to a private bucket; returns the stored path. */
+async function uploadImage(
+  bucket: string,
+  ownerId: string,
+  label: string,
+  file: FormDataEntryValue | null,
+): Promise<string> {
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error(`A ${label} image is required.`);
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error(`The ${label} must be an image.`);
+  }
+  const admin = createAdminClient();
+  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+  const path = `${ownerId}/${Date.now()}-${label}.${ext}`;
+  const { error } = await admin.storage
+    .from(bucket)
+    .upload(path, Buffer.from(await file.arrayBuffer()), {
+      contentType: file.type,
+      upsert: true,
+    });
+  if (error) throw new Error(`Upload failed: ${error.message}`);
+  return path;
 }
 
 async function requireBuyer(): Promise<string> {
@@ -41,19 +68,10 @@ async function requireSeller(): Promise<string> {
   return caps.userId;
 }
 
-export async function markShippedAction(formData: FormData) {
-  const sellerUserId = await requireSeller();
-  const loanId = String(formData.get("loanId") ?? "");
+// ---- Buyer -----------------------------------------------------------------
 
-  try {
-    await markShipped({ loanId, sellerUserId });
-  } catch (e) {
-    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
-  }
-  redirect(BACK);
-}
-
-export async function createPurchaseAction(formData: FormData) {
+/** Checkout: book the loan and immediately move it to escrow_held. */
+export async function checkoutAction(formData: FormData) {
   const buyerUserId = await requireBuyer();
 
   const sellerUserId = String(formData.get("seller_user_id") ?? "");
@@ -61,13 +79,20 @@ export async function createPurchaseAction(formData: FormData) {
   const tenorMonths = Number(formData.get("tenor_months") ?? 0);
 
   try {
-    await bookLoan({
+    const loan = await bookLoan({
       buyerUserId,
       sellerUserId,
       ticketCentavos: Math.round(amountPesos * 100),
       tenorMonths,
       actorUserId: buyerUserId,
-      note: "Buyer-initiated purchase",
+      note: "Buyer checkout",
+    });
+    await transitionLoan({
+      loanId: loan.id,
+      to: "escrow_held",
+      actorUserId: buyerUserId,
+      amountCentavos: loan.ticket_centavos,
+      note: "Escrow held on checkout",
     });
   } catch (e) {
     redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
@@ -75,7 +100,8 @@ export async function createPurchaseAction(formData: FormData) {
   redirect(BACK);
 }
 
-export async function confirmDeliveryAction(formData: FormData) {
+/** Buyer confirms receipt: shipped -> delivered_confirmed. */
+export async function confirmReceiptAction(formData: FormData) {
   const buyerUserId = await requireBuyer();
   const loanId = String(formData.get("loanId") ?? "");
 
@@ -87,39 +113,45 @@ export async function confirmDeliveryAction(formData: FormData) {
   redirect(BACK);
 }
 
-export async function raiseDisputeAction(formData: FormData) {
+/** Buyer reports a problem: required photo + description -> dispute_raised. */
+export async function reportProblemAction(formData: FormData) {
   const buyerUserId = await requireBuyer();
   const loanId = String(formData.get("loanId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
-  const photo = formData.get("evidence");
 
   if (!reason) {
-    redirect(`${BACK}?error=${encodeURIComponent("A reason is required.")}`);
+    redirect(`${BACK}?error=${encodeURIComponent("A description is required.")}`);
   }
 
   try {
-    let evidencePath: string | null = null;
-
-    // Optional evidence photo -> private bucket via service role.
-    if (photo instanceof File && photo.size > 0) {
-      if (!photo.type.startsWith("image/")) {
-        redirect(
-          `${BACK}?error=${encodeURIComponent("Evidence must be an image.")}`,
-        );
-      }
-      const admin = createAdminClient();
-      const ext = photo.name.includes(".") ? photo.name.split(".").pop() : "jpg";
-      evidencePath = `${buyerUserId}/${Date.now()}-evidence.${ext}`;
-      const { error: uploadError } = await admin.storage
-        .from(DISPUTE_BUCKET)
-        .upload(evidencePath, Buffer.from(await photo.arrayBuffer()), {
-          contentType: photo.type,
-          upsert: true,
-        });
-      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-
+    const evidencePath = await uploadImage(
+      DISPUTE_BUCKET,
+      buyerUserId,
+      "evidence",
+      formData.get("evidence"),
+    );
     await raiseDispute({ loanId, buyerUserId, reason, evidencePath });
+  } catch (e) {
+    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(BACK);
+}
+
+// ---- Seller ----------------------------------------------------------------
+
+/** Seller marks shipped with required proof: escrow_held -> shipped. */
+export async function markShippedAction(formData: FormData) {
+  const sellerUserId = await requireSeller();
+  const loanId = String(formData.get("loanId") ?? "");
+
+  try {
+    const proofPath = await uploadImage(
+      SHIPMENT_BUCKET,
+      sellerUserId,
+      "proof",
+      formData.get("proof"),
+    );
+    await markShipped({ loanId, sellerUserId, proofPath });
   } catch (e) {
     redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
   }

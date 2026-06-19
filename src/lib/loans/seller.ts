@@ -8,10 +8,11 @@ import { isLoanStatus } from "@/lib/loans/state-machine";
  * the loan is in the right state).
  */
 
-/** Seller marks the item shipped: escrow_held -> shipped. */
+/** Seller marks the item shipped (with proof): escrow_held -> shipped. */
 export async function markShipped(input: {
   loanId: string;
   sellerUserId: string;
+  proofPath: string;
 }): Promise<void> {
   const admin = createAdminClient();
   const { data: loan, error } = await admin
@@ -26,10 +27,17 @@ export async function markShipped(input: {
   }
   if (!isLoanStatus(loan.status)) throw new Error("Loan has an unknown status.");
 
+  // Store the proof path, then transition (the validator enforces escrow_held).
+  const { error: updErr } = await admin
+    .from("loans")
+    .update({ shipment_proof_path: input.proofPath })
+    .eq("id", input.loanId);
+  if (updErr) throw new Error(updErr.message);
+
   await transitionLoan({
     loanId: input.loanId,
     to: "shipped",
     actorUserId: input.sellerUserId,
-    note: "Seller marked shipped",
+    note: "Seller marked shipped (proof attached)",
   });
 }

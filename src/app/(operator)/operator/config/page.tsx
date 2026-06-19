@@ -31,6 +31,12 @@ const FIELDS: { key: ConfigKey; label: string; hint: string }[] = [
     label: "Default credit limit (centavos)",
     hint: "centavos, e.g. 5000000 = ₱50,000",
   },
+  { key: "default_tenor_months", label: "Default tenor (months)", hint: "integer" },
+  {
+    key: "seller_payout_days",
+    label: "Seller payout window (days)",
+    hint: "days after escrow release",
+  },
 ];
 
 export default async function ConfigPage({

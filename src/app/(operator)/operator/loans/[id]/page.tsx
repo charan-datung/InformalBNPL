@@ -24,7 +24,8 @@ export default async function LoanDetailPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const { loan, events, repayments } = await getLoanWithEvents(id);
+  const { loan, events, repayments, shipmentProofUrl } =
+    await getLoanWithEvents(id);
   if (!loan) notFound();
 
   const repaidCentavos = repayments
@@ -77,6 +78,19 @@ export default async function LoanDetailPage({
         <Fact k="Created" v={formatDateTime(loan.created_at)} />
         <Fact k="Updated" v={formatDateTime(loan.updated_at)} />
       </section>
+
+      {shipmentProofUrl ? (
+        <p className="text-sm">
+          <a
+            href={shipmentProofUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-4"
+          >
+            View shipment proof →
+          </a>
+        </p>
+      ) : null}
 
       {/* Transitions: only valid next states are enabled. */}
       <section className="space-y-2">
