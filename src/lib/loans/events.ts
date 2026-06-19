@@ -13,6 +13,7 @@ export const ESCROW_EVENT_TYPES = [
   "auto_released",
   "dispute_resolved",
   "escrow_released",
+  "merchant_fee_deducted",
   "repayment_recorded",
   "settled",
   "refunded",

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 
+// Session-dependent: must run per request, never statically cached.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   // Logged-in users go straight into the app; the dashboard sorts out which
   // stage they're at (role selection, under review, or active).

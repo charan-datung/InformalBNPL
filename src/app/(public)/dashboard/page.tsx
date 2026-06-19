@@ -10,6 +10,9 @@ import DashboardModes, {
   SellerPanel,
 } from "@/app/(public)/dashboard/DashboardModes";
 
+// Session-dependent: must run per request, never statically cached.
+export const dynamic = "force-dynamic";
+
 /**
  * Stage 4 — active dashboard. Routing rules:
  *   - not logged in        -> /login

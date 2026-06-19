@@ -13,6 +13,15 @@ export type Staff = { id: string; name: string; staff_role: StaffRole };
 
 /** The current logged-in staff member, or null if not logged in / not staff. */
 export async function getCurrentStaff(): Promise<Staff | null> {
+  // Before Supabase is configured, treat as not-logged-in so gated layouts
+  // redirect to /login instead of crashing.
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return null;
+  }
+
   const supabase = await createClient();
 
   const {

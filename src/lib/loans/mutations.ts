@@ -167,6 +167,81 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
   return data;
 }
 
+export type ReleaseEscrowInput = {
+  loanId: string;
+  actorUserId?: string | null;
+  note?: string | null;
+};
+
+export type ReleaseEscrowResult = {
+  loanId: string;
+  grossCentavos: number;
+  feeCentavos: number;
+  netCentavos: number;
+  merchantFeePct: number;
+};
+
+/**
+ * Release escrow to the seller: transition to `escrow_released`, record the
+ * gross release AND the merchant-fee deduction as two audit events, and return
+ * the net amount to actually pay the seller. Validates the transition first
+ * (escrow_released must be a legal next state) and applies it race-safely.
+ */
+export async function releaseEscrow(
+  input: ReleaseEscrowInput,
+): Promise<ReleaseEscrowResult> {
+  const supabase = createAdminClient();
+
+  const { data: current, error: readErr } = await supabase
+    .from("loans")
+    .select("status")
+    .eq("id", input.loanId)
+    .maybeSingle();
+  if (readErr) throw new LoanMutationError("db", readErr.message);
+  if (!current) {
+    throw new LoanMutationError("not_found", `Loan ${input.loanId} not found.`);
+  }
+  if (!isLoanStatus(current.status)) {
+    throw new LoanMutationError(
+      "db",
+      `Loan ${input.loanId} has unknown status "${current.status}".`,
+    );
+  }
+
+  assertTransition(current.status, "escrow_released");
+
+  const { data, error } = await supabase.rpc("release_escrow", {
+    p_loan_id: input.loanId,
+    p_from: current.status,
+    p_actor: input.actorUserId ?? null,
+    p_note: input.note ?? null,
+  });
+
+  if (error) {
+    if (error.code === "23514") {
+      throw new LoanMutationError(
+        "conflict",
+        `Loan ${input.loanId} was no longer in state "${current.status}".`,
+      );
+    }
+    throw new LoanMutationError("db", error.message);
+  }
+
+  const r = data as {
+    gross_centavos: number;
+    fee_centavos: number;
+    net_centavos: number;
+    merchant_fee_pct: number;
+  };
+  return {
+    loanId: input.loanId,
+    grossCentavos: r.gross_centavos,
+    feeCentavos: r.fee_centavos,
+    netCentavos: r.net_centavos,
+    merchantFeePct: Number(r.merchant_fee_pct),
+  };
+}
+
 export type TransitionLoanInput = {
   loanId: string;
   /** Target status. Must be a legal next state from the loan's current status. */

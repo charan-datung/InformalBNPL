@@ -1,32 +1,125 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth/staff";
-import {
-  bookLoan,
-  transitionLoan,
-  type BookLoanInput,
-  type TransitionLoanInput,
-  type Loan,
-} from "@/lib/loans/mutations";
+import { transitionLoan, releaseEscrow } from "@/lib/loans/mutations";
+import { isLoanStatus } from "@/lib/loans/state-machine";
+import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
+import { resolveDispute } from "@/lib/disputes/mutations";
 
 /**
- * Server actions are the auth-gated entry point to loan mutations for the
- * operator UI. They confirm the caller is staff, stamp the actor, then delegate
- * to the trusted mutation core. (A login flow is still pending; until then the
- * dev route handler at /api/dev/exercise-loan can drive the same core without a
- * session.)
+ * Auth-gated operator actions. Each confirms the caller is staff, stamps the
+ * actor server-side (never trusted from the client), runs the mutation, and
+ * redirects back — with ?error=… on failure so the page can show it. Every
+ * loan state change writes an append-only escrow_events row via the mutation
+ * core; nothing here deletes anything.
  */
 
-export async function bookLoanAction(
-  input: Omit<BookLoanInput, "actorUserId">,
-): Promise<Loan> {
-  const staff = await requireStaff();
-  return bookLoan({ ...input, actorUserId: staff.id });
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : "Unexpected error.";
 }
 
-export async function transitionLoanAction(
-  input: Omit<TransitionLoanInput, "actorUserId">,
-): Promise<Loan> {
+export async function transitionLoanAction(formData: FormData) {
   const staff = await requireStaff();
-  return transitionLoan({ ...input, actorUserId: staff.id });
+  const loanId = String(formData.get("loanId") ?? "");
+  const to = String(formData.get("to") ?? "");
+  const back = `/operator/loans/${loanId}`;
+
+  if (!isLoanStatus(to)) {
+    redirect(`${back}?error=${encodeURIComponent("Unknown target status.")}`);
+  }
+
+  try {
+    // Escrow release is special: it also records the merchant-fee deduction
+    // and computes the net to pay the seller.
+    if (to === "escrow_released") {
+      await releaseEscrow({ loanId, actorUserId: staff.id });
+    } else {
+      await transitionLoan({ loanId, to, actorUserId: staff.id });
+    }
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function reviewBuyerAction(formData: FormData) {
+  const staff = await requireStaff();
+  const back = "/operator/reviews/buyers";
+
+  const userId = String(formData.get("userId") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const creditLimitPesos = Number(formData.get("credit_limit_pesos") ?? 0);
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (decision !== "approve" && decision !== "reject") {
+    redirect(`${back}?error=${encodeURIComponent("Invalid decision.")}`);
+  }
+
+  try {
+    await reviewBuyer({
+      userId,
+      decision: decision as "approve" | "reject",
+      creditLimitCentavos: Math.round(creditLimitPesos * 100),
+      notes,
+      actorUserId: staff.id,
+    });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function reviewSellerAction(formData: FormData) {
+  const staff = await requireStaff();
+  const back = "/operator/reviews/sellers";
+
+  const userId = String(formData.get("userId") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const trustTier = String(formData.get("trust_tier") ?? "new");
+  const reservePct = Number(formData.get("reserve_pct") ?? 0);
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (decision !== "approve" && decision !== "reject") {
+    redirect(`${back}?error=${encodeURIComponent("Invalid decision.")}`);
+  }
+
+  try {
+    await reviewSeller({
+      userId,
+      decision: decision as "approve" | "reject",
+      trustTier: trustTier === "trusted" ? "trusted" : "new",
+      reservePct,
+      notes,
+      actorUserId: staff.id,
+    });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function resolveDisputeAction(formData: FormData) {
+  const staff = await requireStaff();
+  const back = "/operator/disputes";
+
+  const disputeId = String(formData.get("disputeId") ?? "");
+  const outcome = String(formData.get("outcome") ?? "");
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  if (outcome !== "buyer" && outcome !== "seller") {
+    redirect(`${back}?error=${encodeURIComponent("Invalid outcome.")}`);
+  }
+
+  try {
+    await resolveDispute({
+      disputeId,
+      outcome: outcome as "buyer" | "seller",
+      note,
+      actorUserId: staff.id,
+    });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
 }

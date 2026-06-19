@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { applyAsBuyer } from "@/app/(public)/onboarding/actions";
 
+// Session-dependent: must run per request, never statically cached.
+export const dynamic = "force-dynamic";
+
 /**
  * Stage 3 (buyer) — buyer application. This is where underwriting input is
  * collected; the operator decides manually afterwards. `next=seller` continues

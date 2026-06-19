@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { applyAsSeller } from "@/app/(public)/onboarding/actions";
 
+// Session-dependent: must run per request, never statically cached.
+export const dynamic = "force-dynamic";
+
 /**
  * Stage 3 (seller) — seller verification. Requires a live item photo, captured
  * with the device camera on mobile (capture="environment"). The photo is stored

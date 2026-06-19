@@ -249,6 +249,38 @@ server-side code (service role) reads it. This needs `SUPABASE_SERVICE_ROLE_KEY`
 set, and the server-action body limit is raised to 10 MB in `next.config.ts` for
 camera images.
 
+## Operator console
+
+Staff-only surface (`staff_role` operator **or** admin) where a human runs the
+whole pilot. Gated in `src/app/(operator)/layout.tsx` — non-staff are redirected
+to `/login`. Reads use the service-role client (the surface is already gated);
+every write is an auth-gated server action that stamps the actor server-side.
+
+| Route | What it does |
+| --- | --- |
+| `/operator` | Overview: pending/open counts + the live `system_config` values used as defaults. |
+| `/operator/loans` | All loans, color-coded by status. |
+| `/operator/loans/[id]` | Full append-only `escrow_events` audit trail; **only valid transitions are enabled** (invalid ones are rendered disabled, driven by `state-machine.ts`); escrow release shows the net-to-seller. |
+| `/operator/reviews/buyers` | Pending buyer applications → approve/reject + set `credit_limit_centavos` + notes. |
+| `/operator/reviews/sellers` | Pending sellers with the live item photo (signed URL) → approve/reject + set `trust_tier` + reserve % + notes. |
+| `/operator/disputes` | Open disputes with evidence → resolve for buyer (refund) or seller (release escrow). |
+
+Properties:
+
+- **Valid transitions only.** Buttons come from `LOAN_STATUSES`; each is enabled
+  iff `canTransition(current, target)`. The action re-validates server-side, so a
+  disabled/forged button still can't make an illegal jump.
+- **Escrow release records the fee.** Choosing "Release escrow" calls the
+  `release_escrow` RPC, which writes the gross `escrow_released` event **and** a
+  `merchant_fee_deducted` event, then returns the net to pay the seller. The fee
+  % is the per-loan value (sourced from `system_config` at booking).
+- **Append-only, actor-stamped.** Every loan state change writes an
+  `escrow_events` row with the actor's user id and a timestamp; nothing is
+  deleted (DB trigger enforces it).
+- **No hardcoded params.** Interest rate, merchant fee, reserve %, dispute
+  window, and default credit limit are read from `system_config` (see the
+  overview page and the prefilled review forms).
+
 ## Server-side mutations
 
 All loan state changes flow through one trusted path. Nothing on the client

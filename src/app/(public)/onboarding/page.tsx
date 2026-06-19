@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 
+// Session-dependent: must run per request, never statically cached.
+export const dynamic = "force-dynamic";
+
 /**
  * Stage 2 — role selection. Neutral screen shown right after signup and
  * whenever a logged-in user still has no capability. Choices are NOT exclusive:
