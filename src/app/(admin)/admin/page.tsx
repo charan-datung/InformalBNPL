@@ -28,6 +28,11 @@ export default async function AdminOverviewPage() {
       title: "Loans & overrides",
       body: "Read everything operators see, plus force a state with a reason.",
     },
+    {
+      href: "/operator/metrics",
+      title: "Metrics",
+      body: "Pilot measurements: funnel, loss rate, disputes, per-seller, timings. Exportable as CSV.",
+    },
   ];
 
   return (

@@ -381,6 +381,27 @@ Defence in depth across three layers — not just hidden buttons:
 `staff_role` is read server-side from `public.users` for the session user
 (`getCurrentStaff`); the client never asserts its own role.
 
+## Metrics
+
+`/operator/metrics` (visible to operators **and** admins — both reach the
+operator console) measures the pilot from real activity, to replace placeholder
+assumptions in the financial model. Computed on demand in
+`src/lib/metrics/compute.ts`; **every metric is exportable as CSV** (money as
+raw integer centavos, rates as decimals) via
+`/operator/metrics/export?metric=…`.
+
+| Metric | Definition |
+| --- | --- |
+| **Loan funnel** | Count + amount of loans in each status. |
+| **Realized loss** | `Disbursed` = escrow released (escrow_released/repaying/settled). `Settled` = fully repaid. `Defaulted` = in `repaying` with an overdue, unpaid installment (amount = outstanding balance). `Refunded` = reversed to buyer. Loss rate = defaulted ÷ disbursed, by count and amount. |
+| **Dispute rate** | disputes ÷ total loans, plus the resolution split (buyer-favor / seller-favor / open). |
+| **Per-seller** | loan count, dispute rate, default rate, and avg days-to-payout (`shipped` → `escrow_released`). |
+| **Avg time per stage** | Mean days between lifecycle events; `shipped → escrow_released` is how long sellers actually wait. |
+
+> There's no formal "default" state in the pilot, so default is defined
+> operationally (overdue unpaid installment) and labeled as such in the UI — the
+> numbers are honest about what they measure.
+
 ## Dispute window / auto-release
 
 `dispute_window_days` (one admin-editable `system_config` value) is the single
