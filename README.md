@@ -240,11 +240,29 @@ independently, each with its own approval status — never separate accounts.
 
 Once a buyer is approved, the **buyer dashboard is live**: pick a verified
 seller, enter an amount + tenor, and request a purchase — this books a loan
-(state `booked`) that appears in the operator's loan queue. When the operator
-marks the loan `shipped`, the buyer can **confirm delivery** or **raise a
-dispute** (with an optional evidence photo → private bucket), which opens a
-dispute in the operator queue. So the operator queues fill from real user
-actions: signups → review queues, purchases → loans, disputes → dispute queue.
+(state `booked`) that appears in the operator's loan queue. After the operator
+holds escrow, the **seller marks the item shipped** from their dashboard; the
+buyer can then **confirm delivery** or **raise a dispute** (with an optional
+evidence photo → private bucket), which opens a dispute in the operator queue.
+So the operator queues fill from real user actions: signups → review queues,
+purchases → loans, disputes → dispute queue.
+
+End to end, the loan walks:
+
+```
+buyer books → operator holds escrow → SELLER marks shipped →
+  buyer confirms delivery (or disputes) → operator releases escrow
+  (records merchant fee + net) → operator starts repayment
+  (generates the installment schedule) → operator records each
+  repayment → loan auto-settles when the last one is recorded
+```
+
+Repayment schedule = principal + flat monthly interest on principal
+(`monthly_interest = round(ticket × interest_rate_monthly)`,
+`total = ticket + monthly_interest × tenor`), split into `tenor` equal
+installments with the last absorbing the rounding remainder. Generated once,
+atomically, when the loan enters `repaying`; recording the final installment
+auto-transitions the loan to `settled`.
 
 Routing is centralized in `src/lib/profiles/capabilities.ts` (`getCapabilities`):
 the home page, onboarding, and dashboard all branch off the buyer/seller

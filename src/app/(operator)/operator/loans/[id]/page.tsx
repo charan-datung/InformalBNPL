@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLoanWithEvents } from "@/lib/operator/queries";
-import { transitionLoanAction } from "@/app/(operator)/operator/actions";
+import {
+  transitionLoanAction,
+  recordRepaymentAction,
+} from "@/app/(operator)/operator/actions";
 import {
   LOAN_STATUSES,
   canTransition,
@@ -21,8 +24,17 @@ export default async function LoanDetailPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const { loan, events } = await getLoanWithEvents(id);
+  const { loan, events, repayments } = await getLoanWithEvents(id);
   if (!loan) notFound();
+
+  const repaidCentavos = repayments
+    .filter((r) => r.status === "paid")
+    .reduce((sum, r) => sum + r.amount_centavos, 0);
+  const scheduledCentavos = repayments.reduce(
+    (sum, r) => sum + r.amount_centavos,
+    0,
+  );
+  const today = new Date().toISOString().slice(0, 10);
 
   // Net-to-seller preview for an escrow release (merchant fee is the per-loan
   // value, originally sourced from system_config at booking).
@@ -115,6 +127,75 @@ export default async function LoanDetailPage({
           </p>
         ) : null}
       </section>
+
+      {/* Repayment schedule (generated when the loan enters `repaying`) */}
+      {repayments.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
+            Repayment schedule — {formatPeso(repaidCentavos)} of{" "}
+            {formatPeso(scheduledCentavos)} recorded
+          </h2>
+          <table className="w-full max-w-xl text-sm">
+            <thead>
+              <tr className="border-b border-black/10 text-left text-xs text-black/50 dark:border-white/10 dark:text-white/50">
+                <th className="py-2 pr-3 font-medium">#</th>
+                <th className="py-2 pr-3 font-medium">Due</th>
+                <th className="py-2 pr-3 text-right font-medium">Amount</th>
+                <th className="py-2 pr-3 font-medium">Status</th>
+                <th className="py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {repayments.map((r, i) => {
+                const overdue = r.status !== "paid" && r.due_date < today;
+                return (
+                  <tr
+                    key={r.id}
+                    className="border-b border-black/5 dark:border-white/5"
+                  >
+                    <td className="py-2 pr-3 text-black/50 dark:text-white/50">
+                      {i + 1}
+                    </td>
+                    <td className="py-2 pr-3 tabular-nums">{r.due_date}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">
+                      {formatPeso(r.amount_centavos)}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {r.status === "paid" ? (
+                        <span className="text-green-600">paid</span>
+                      ) : overdue ? (
+                        <span className="text-red-600">overdue</span>
+                      ) : (
+                        <span className="text-black/50 dark:text-white/50">
+                          pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2">
+                      {r.status !== "paid" ? (
+                        <form action={recordRepaymentAction}>
+                          <input type="hidden" name="loanId" value={loan.id} />
+                          <input
+                            type="hidden"
+                            name="repaymentId"
+                            value={r.id}
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-md bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                          >
+                            Record paid
+                          </button>
+                        </form>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       {/* Append-only audit trail */}
       <section className="space-y-2">

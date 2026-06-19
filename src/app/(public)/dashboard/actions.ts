@@ -5,6 +5,7 @@ import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan } from "@/lib/loans/mutations";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
+import { markShipped } from "@/lib/loans/seller";
 
 /**
  * Buyer-initiated actions from the dashboard. Identity comes from the verified
@@ -27,6 +28,29 @@ async function requireBuyer(): Promise<string> {
     redirect(`${BACK}?error=${encodeURIComponent("Buyer capability not active.")}`);
   }
   return caps.userId;
+}
+
+async function requireSeller(): Promise<string> {
+  const caps = await getCapabilities();
+  if (!caps) redirect("/login");
+  if (caps.seller !== "verified") {
+    redirect(
+      `${BACK}?error=${encodeURIComponent("Seller capability not active.")}`,
+    );
+  }
+  return caps.userId;
+}
+
+export async function markShippedAction(formData: FormData) {
+  const sellerUserId = await requireSeller();
+  const loanId = String(formData.get("loanId") ?? "");
+
+  try {
+    await markShipped({ loanId, sellerUserId });
+  } catch (e) {
+    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(BACK);
 }
 
 export async function createPurchaseAction(formData: FormData) {

@@ -1,11 +1,12 @@
 import { listSellerLoans } from "@/lib/loans/views";
+import { markShippedAction } from "@/app/(public)/dashboard/actions";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDateTime } from "@/lib/format";
 
 /**
- * Seller side of the dashboard: read-only view of orders the seller is party
- * to. In the pilot the operator drives the escrow workflow (mark shipped,
- * release), so there are no seller actions here yet.
+ * Seller side of the dashboard: the seller's orders, with a "Mark shipped"
+ * action once the operator has held escrow. The rest of the escrow workflow
+ * (release, repayment) stays with the operator.
  */
 export default async function SellerPanel({ userId }: { userId: string }) {
   const loans = await listSellerLoans(userId);
@@ -23,16 +24,34 @@ export default async function SellerPanel({ userId }: { userId: string }) {
         loans.map((l) => (
           <div
             key={l.id}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-black/10 p-3 text-sm dark:border-white/10"
+            className="rounded-lg border border-black/10 p-3 text-sm dark:border-white/10"
           >
-            <StatusBadge status={l.status} />
-            <span className="font-medium">{formatPeso(l.ticket_centavos)}</span>
-            <span className="text-black/60 dark:text-white/60">
-              · {l.tenor_months}mo · buyer {l.counterpartyName}
-            </span>
-            <span className="ml-auto text-xs text-black/40 dark:text-white/40">
-              {formatDateTime(l.created_at)}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={l.status} />
+              <span className="font-medium">{formatPeso(l.ticket_centavos)}</span>
+              <span className="text-black/60 dark:text-white/60">
+                · {l.tenor_months}mo · buyer {l.counterpartyName}
+              </span>
+              <span className="ml-auto text-xs text-black/40 dark:text-white/40">
+                {formatDateTime(l.created_at)}
+              </span>
+            </div>
+
+            {/* Seller can mark shipped once the operator is holding escrow. */}
+            {l.status === "escrow_held" ? (
+              <form
+                action={markShippedAction}
+                className="mt-3 border-t border-black/5 pt-3 dark:border-white/5"
+              >
+                <input type="hidden" name="loanId" value={l.id} />
+                <button
+                  type="submit"
+                  className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                >
+                  Mark shipped
+                </button>
+              </form>
+            ) : null}
           </div>
         ))
       )}

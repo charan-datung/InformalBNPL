@@ -57,22 +57,37 @@ export type EscrowEventRow = {
   actorName: string | null;
 };
 
+export type RepaymentRow = {
+  id: string;
+  amount_centavos: number;
+  due_date: string;
+  paid_at: string | null;
+  status: string;
+};
+
 export async function getLoanWithEvents(loanId: string): Promise<{
   loan: LoanRow | null;
   events: EscrowEventRow[];
+  repayments: RepaymentRow[];
 }> {
   const admin = createAdminClient();
-  const [{ data: loan }, { data: events }, users] = await Promise.all([
-    admin.from("loans").select("*").eq("id", loanId).maybeSingle(),
-    admin
-      .from("escrow_events")
-      .select("*")
-      .eq("loan_id", loanId)
-      .order("created_at", { ascending: true }),
-    usersMap(),
-  ]);
+  const [{ data: loan }, { data: events }, { data: repayments }, users] =
+    await Promise.all([
+      admin.from("loans").select("*").eq("id", loanId).maybeSingle(),
+      admin
+        .from("escrow_events")
+        .select("*")
+        .eq("loan_id", loanId)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("repayments")
+        .select("id, amount_centavos, due_date, paid_at, status")
+        .eq("loan_id", loanId)
+        .order("due_date", { ascending: true }),
+      usersMap(),
+    ]);
 
-  if (!loan) return { loan: null, events: [] };
+  if (!loan) return { loan: null, events: [], repayments: [] };
 
   return {
     loan: {
@@ -86,6 +101,7 @@ export async function getLoanWithEvents(loanId: string): Promise<{
         ? (users.get(e.actor_user_id)?.name ?? e.actor_user_id)
         : null,
     })),
+    repayments: (repayments ?? []) as RepaymentRow[],
   };
 }
 

@@ -312,3 +312,91 @@ export async function transitionLoan(
   }
   return data;
 }
+
+export type StartRepaymentResult = {
+  loanId: string;
+  installments: number;
+  totalCentavos?: number;
+};
+
+/**
+ * Begin repayment: transition escrow_released -> repaying and generate the
+ * installment schedule (once) from the loan's stored ticket/rate/tenor.
+ * Validates the transition first, then applies it atomically via RPC.
+ */
+export async function startRepayment(input: {
+  loanId: string;
+  actorUserId?: string | null;
+}): Promise<StartRepaymentResult> {
+  const supabase = createAdminClient();
+
+  const { data: current, error: readErr } = await supabase
+    .from("loans")
+    .select("status")
+    .eq("id", input.loanId)
+    .maybeSingle();
+  if (readErr) throw new LoanMutationError("db", readErr.message);
+  if (!current) {
+    throw new LoanMutationError("not_found", `Loan ${input.loanId} not found.`);
+  }
+  if (!isLoanStatus(current.status)) {
+    throw new LoanMutationError(
+      "db",
+      `Loan ${input.loanId} has unknown status "${current.status}".`,
+    );
+  }
+
+  assertTransition(current.status, "repaying");
+
+  const { data, error } = await supabase.rpc("start_repayment", {
+    p_loan_id: input.loanId,
+    p_from: current.status,
+    p_actor: input.actorUserId ?? null,
+  });
+  if (error) {
+    if (error.code === "23514") {
+      throw new LoanMutationError(
+        "conflict",
+        `Loan ${input.loanId} was no longer in state "${current.status}".`,
+      );
+    }
+    throw new LoanMutationError("db", error.message);
+  }
+
+  const r = data as { installments: number; total_centavos?: number };
+  return {
+    loanId: input.loanId,
+    installments: r.installments,
+    totalCentavos: r.total_centavos,
+  };
+}
+
+export type RecordRepaymentResult = { loanId: string; remaining: number };
+
+/**
+ * Record one installment as paid, append a repayment_recorded audit row, and
+ * auto-settle the loan once nothing is outstanding. Atomic via RPC.
+ */
+export async function recordRepayment(input: {
+  repaymentId: string;
+  actorUserId?: string | null;
+}): Promise<RecordRepaymentResult> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("record_repayment", {
+    p_repayment_id: input.repaymentId,
+    p_actor: input.actorUserId ?? null,
+  });
+  if (error) {
+    if (error.code === "23514") {
+      throw new LoanMutationError(
+        "conflict",
+        "Repayment not found or already recorded.",
+      );
+    }
+    throw new LoanMutationError("db", error.message);
+  }
+
+  const r = data as { loan_id: string; remaining: number };
+  return { loanId: r.loan_id, remaining: r.remaining };
+}

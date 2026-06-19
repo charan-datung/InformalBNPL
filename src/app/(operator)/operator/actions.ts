@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { requireStaff, requireAdmin } from "@/lib/auth/staff";
-import { transitionLoan, releaseEscrow } from "@/lib/loans/mutations";
+import {
+  transitionLoan,
+  releaseEscrow,
+  startRepayment,
+  recordRepayment,
+} from "@/lib/loans/mutations";
 import { isLoanStatus } from "@/lib/loans/state-machine";
 import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
 import { resolveDispute } from "@/lib/disputes/mutations";
@@ -32,13 +37,30 @@ export async function transitionLoanAction(formData: FormData) {
   }
 
   try {
-    // Escrow release is special: it also records the merchant-fee deduction
-    // and computes the net to pay the seller.
+    // Two transitions are special-cased:
+    //  - escrow_released also records the merchant-fee deduction + net.
+    //  - repaying also generates the installment schedule.
     if (to === "escrow_released") {
       await releaseEscrow({ loanId, actorUserId: staff.id });
+    } else if (to === "repaying") {
+      await startRepayment({ loanId, actorUserId: staff.id });
     } else {
       await transitionLoan({ loanId, to, actorUserId: staff.id });
     }
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function recordRepaymentAction(formData: FormData) {
+  const staff = await requireStaff();
+  const repaymentId = String(formData.get("repaymentId") ?? "");
+  const loanId = String(formData.get("loanId") ?? "");
+  const back = `/operator/loans/${loanId}`;
+
+  try {
+    await recordRepayment({ repaymentId, actorUserId: staff.id });
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
