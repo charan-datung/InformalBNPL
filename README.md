@@ -381,6 +381,23 @@ Defence in depth across three layers — not just hidden buttons:
 `staff_role` is read server-side from `public.users` for the session user
 (`getCurrentStaff`); the client never asserts its own role.
 
+## PWA (installable)
+
+The app is an installable, mobile-first PWA (buyers and sellers are on phones):
+
+- `public/manifest.webmanifest` — name, `standalone` display, portrait,
+  theme/background colors, and PNG icons (192, 512, and a 512 maskable).
+- `public/icon-*.png` / `apple-touch-icon.png` — app icons; Apple web-app meta
+  and `apple-touch-icon` are set in the root layout.
+- `public/sw.js` — a deliberately minimal service worker: it makes the app
+  installable (a `fetch` handler is required) and shows `offline.html` when the
+  network is down. It is **network-first for navigations and never caches live
+  data** — loan/escrow state is always fetched fresh. Registered (production
+  only) by `src/app/ServiceWorkerRegister.tsx`.
+
+On Android Chrome you'll get an "Install app" prompt; on iOS Safari use
+Share → "Add to Home Screen".
+
 ## Metrics
 
 `/operator/metrics` (visible to operators **and** admins — both reach the
