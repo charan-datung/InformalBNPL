@@ -41,10 +41,10 @@ export default async function DisputesPage({
               <div className="flex flex-col gap-4 sm:flex-row">
                 {/* Evidence photo */}
                 <div className="shrink-0">
-                  {d.evidence_url ? (
+                  {d.evidenceUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={d.evidence_url}
+                      src={d.evidenceUrl}
                       alt="Dispute evidence"
                       className="h-32 w-32 rounded-md border border-black/10 object-cover dark:border-white/10"
                     />

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordAudit } from "@/lib/audit/log";
 
 /**
  * Operator review of pending buyer/seller applications. Approval is fully
@@ -39,6 +40,18 @@ export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
     .update(patch)
     .eq("user_id", input.userId);
   if (error) throw new Error(error.message);
+
+  await recordAudit(admin, {
+    actorUserId: input.actorUserId,
+    action: input.decision === "approve" ? "buyer_approved" : "buyer_rejected",
+    entityType: "buyer_profile",
+    entityId: input.userId,
+    detail: {
+      credit_limit_centavos:
+        input.decision === "approve" ? input.creditLimitCentavos : null,
+      notes: input.notes ?? null,
+    },
+  });
 }
 
 export type SellerReviewInput = {
@@ -73,4 +86,16 @@ export async function reviewSeller(input: SellerReviewInput): Promise<void> {
     .update(patch)
     .eq("user_id", input.userId);
   if (error) throw new Error(error.message);
+
+  await recordAudit(admin, {
+    actorUserId: input.actorUserId,
+    action: input.decision === "approve" ? "seller_approved" : "seller_rejected",
+    entityType: "seller_profile",
+    entityId: input.userId,
+    detail: {
+      trust_tier: input.decision === "approve" ? input.trustTier : null,
+      reserve_pct: input.decision === "approve" ? input.reservePct : null,
+      notes: input.notes ?? null,
+    },
+  });
 }

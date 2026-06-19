@@ -162,7 +162,7 @@ export type OpenDispute = {
   id: string;
   loan_id: string;
   reason: string;
-  evidence_url: string | null;
+  evidenceUrl: string | null;
   status: string;
   created_at: string;
   raiserName: string;
@@ -191,20 +191,37 @@ export async function listOpenDisputes(): Promise<OpenDispute[]> {
     .in("id", loanIds);
   const loanMap = new Map((loans ?? []).map((l) => [l.id, l]));
 
-  return disputes.map((d) => {
-    const loan = loanMap.get(d.loan_id);
-    return {
-      id: d.id,
-      loan_id: d.loan_id,
-      reason: d.reason,
-      evidence_url: d.evidence_url,
-      status: d.status,
-      created_at: d.created_at,
-      raiserName: users.get(d.raised_by_user_id)?.name ?? d.raised_by_user_id,
-      loanStatus: (loan?.status as LoanStatus) ?? "booked",
-      ticket_centavos: loan?.ticket_centavos ?? 0,
-    };
-  });
+  return Promise.all(
+    disputes.map(async (d) => {
+      const loan = loanMap.get(d.loan_id);
+
+      // Evidence is stored as a private-bucket path; sign it for viewing.
+      // (Tolerate a full URL too, in case one was stored directly.)
+      let evidenceUrl: string | null = null;
+      if (d.evidence_url) {
+        if (d.evidence_url.startsWith("http")) {
+          evidenceUrl = d.evidence_url;
+        } else {
+          const { data: signed } = await admin.storage
+            .from("dispute-evidence")
+            .createSignedUrl(d.evidence_url, 300);
+          evidenceUrl = signed?.signedUrl ?? null;
+        }
+      }
+
+      return {
+        id: d.id,
+        loan_id: d.loan_id,
+        reason: d.reason,
+        evidenceUrl,
+        status: d.status,
+        created_at: d.created_at,
+        raiserName: users.get(d.raised_by_user_id)?.name ?? d.raised_by_user_id,
+        loanStatus: (loan?.status as LoanStatus) ?? "booked",
+        ticket_centavos: loan?.ticket_centavos ?? 0,
+      };
+    }),
+  );
 }
 
 export type OperatorCounts = {

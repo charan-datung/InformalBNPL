@@ -1,11 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireStaff } from "@/lib/auth/staff";
+import { requireStaff, requireAdmin } from "@/lib/auth/staff";
 import { transitionLoan, releaseEscrow } from "@/lib/loans/mutations";
 import { isLoanStatus } from "@/lib/loans/state-machine";
 import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
 import { resolveDispute } from "@/lib/disputes/mutations";
+import { updateSystemConfig } from "@/lib/config/update";
+import { CONFIG_DEFAULTS, type ConfigKey } from "@/lib/config/system-config";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -117,6 +119,28 @@ export async function resolveDisputeAction(formData: FormData) {
       outcome: outcome as "buyer" | "seller",
       note,
       actorUserId: staff.id,
+    });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function updateConfigAction(formData: FormData) {
+  const back = "/operator/config";
+  const key = String(formData.get("key") ?? "");
+  const value = Number(formData.get("value"));
+
+  try {
+    // Config edits are admin-only (highest privilege).
+    const admin = await requireAdmin();
+    if (!(key in CONFIG_DEFAULTS)) {
+      throw new Error("Unknown config key.");
+    }
+    await updateSystemConfig({
+      key: key as ConfigKey,
+      value,
+      actorUserId: admin.id,
     });
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);

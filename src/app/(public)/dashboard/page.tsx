@@ -5,10 +5,9 @@ import {
   hasNoCapability,
   type CapabilityStatus,
 } from "@/lib/profiles/capabilities";
-import DashboardModes, {
-  BuyerPanel,
-  SellerPanel,
-} from "@/app/(public)/dashboard/DashboardModes";
+import DashboardModes from "@/app/(public)/dashboard/DashboardModes";
+import BuyerPanel from "@/app/(public)/dashboard/BuyerPanel";
+import SellerPanel from "@/app/(public)/dashboard/SellerPanel";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -22,14 +21,24 @@ export const dynamic = "force-dynamic";
  * Each capability is shown independently with its own approval status, and any
  * capability the user hasn't applied for surfaces an obvious "add it" path.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const caps = await getCapabilities();
   if (!caps) redirect("/login");
   if (hasNoCapability(caps)) redirect("/onboarding");
 
+  const { error } = await searchParams;
   const buyerVerified = caps.buyer === "verified";
   const sellerVerified = caps.seller === "verified";
   const bothVerified = buyerVerified && sellerVerified;
+
+  const buyerNode = buyerVerified ? <BuyerPanel userId={caps.userId} /> : null;
+  const sellerNode = sellerVerified ? (
+    <SellerPanel userId={caps.userId} />
+  ) : null;
 
   return (
     <div className="space-y-8">
@@ -38,13 +47,19 @@ export default async function DashboardPage() {
         <p className="text-sm text-black/60 dark:text-white/60">{caps.email}</p>
       </header>
 
+      {error ? (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      ) : null}
+
       {/* Active area: a mode toggle when both are approved, else the one panel. */}
       {bothVerified ? (
-        <DashboardModes />
+        <DashboardModes buyer={buyerNode} seller={sellerNode} />
       ) : (
         <div className="space-y-4">
-          {buyerVerified ? <BuyerPanel /> : null}
-          {sellerVerified ? <SellerPanel /> : null}
+          {buyerNode}
+          {sellerNode}
         </div>
       )}
 

@@ -238,6 +238,14 @@ independently, each with its own approval status — never separate accounts.
 | 3 — Onboarding | `/onboarding/buyer`, `/onboarding/seller` | **Underwriting starts here.** Buyer application or seller verification (with a required live item photo → private Storage). Creates the profile with `kyc_status 'pending'`. |
 | 4 — Dashboard | `/dashboard` | Approved capability panels. A both-approved user gets a Buy/Sell mode toggle. Pending shows "under review"; missing capabilities show an "add it" path. |
 
+Once a buyer is approved, the **buyer dashboard is live**: pick a verified
+seller, enter an amount + tenor, and request a purchase — this books a loan
+(state `booked`) that appears in the operator's loan queue. When the operator
+marks the loan `shipped`, the buyer can **confirm delivery** or **raise a
+dispute** (with an optional evidence photo → private bucket), which opens a
+dispute in the operator queue. So the operator queues fill from real user
+actions: signups → review queues, purchases → loans, disputes → dispute queue.
+
 Routing is centralized in `src/lib/profiles/capabilities.ts` (`getCapabilities`):
 the home page, onboarding, and dashboard all branch off the buyer/seller
 `kyc_status`. Approval itself is **manual** — an operator flips `kyc_status` to
@@ -264,6 +272,16 @@ every write is an auth-gated server action that stamps the actor server-side.
 | `/operator/reviews/buyers` | Pending buyer applications → approve/reject + set `credit_limit_centavos` + notes. |
 | `/operator/reviews/sellers` | Pending sellers with the live item photo (signed URL) → approve/reject + set `trust_tier` + reserve % + notes. |
 | `/operator/disputes` | Open disputes with evidence → resolve for buyer (refund) or seller (release escrow). |
+| `/operator/config` | View all `system_config` values; **admin-only** edits, each logged to the audit log. |
+| `/operator/audit` | Unified audit log (profile approvals, config changes, dispute decisions). |
+
+### Two audit trails
+
+- **`escrow_events`** — the loan lifecycle (every status change + money line),
+  per loan, shown on the loan detail page.
+- **`audit_log`** — staff actions that aren't loan-scoped: buyer/seller
+  approvals and rejections, `system_config` edits, and dispute decisions. Both
+  tables are append-only (DB trigger blocks update/delete).
 
 Properties:
 

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { transitionLoan, releaseEscrow } from "@/lib/loans/mutations";
+import { recordAudit } from "@/lib/audit/log";
 
 /**
  * Resolve a dispute and move the underlying loan accordingly:
@@ -51,6 +52,14 @@ export async function resolveDispute(input: ResolveDisputeInput): Promise<void> 
     })
     .eq("id", input.disputeId);
   if (dErr) throw new Error(dErr.message);
+
+  await recordAudit(admin, {
+    actorUserId: input.actorUserId,
+    action: `dispute_resolved_${input.outcome}`,
+    entityType: "dispute",
+    entityId: input.disputeId,
+    detail: { loan_id: dispute.loan_id, note: input.note ?? null },
+  });
 
   // Move the loan. These run the state-machine validator (valid from
   // dispute_raised) and write their own audit events.
