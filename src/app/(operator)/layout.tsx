@@ -17,6 +17,7 @@ export default async function OperatorLayout({
   const nav = [
     { href: "/operator", label: "Overview" },
     { href: "/operator/loans", label: "Loans" },
+    { href: "/operator/releases", label: "Releases" },
     { href: "/operator/reviews/buyers", label: "Buyer reviews" },
     { href: "/operator/reviews/sellers", label: "Seller reviews" },
     { href: "/operator/disputes", label: "Disputes" },

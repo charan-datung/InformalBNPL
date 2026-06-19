@@ -28,7 +28,12 @@ export async function transitionLoanAction(formData: FormData) {
   const staff = await requireStaff();
   const loanId = String(formData.get("loanId") ?? "");
   const to = String(formData.get("to") ?? "");
-  const back = `/operator/loans/${loanId}`;
+  // Optional return path (e.g. the releases queue); defaults to the loan detail.
+  const redirectTo = String(formData.get("redirectTo") ?? "");
+  const back =
+    redirectTo === "/operator/releases"
+      ? "/operator/releases"
+      : `/operator/loans/${loanId}`;
 
   if (!isLoanStatus(to)) {
     redirect(`${back}?error=${encodeURIComponent("Unknown target status.")}`);

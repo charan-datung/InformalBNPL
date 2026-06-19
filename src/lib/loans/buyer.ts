@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { transitionLoan } from "@/lib/loans/mutations";
 import { assertTransition, isLoanStatus } from "@/lib/loans/state-machine";
+import { getConfigValue } from "@/lib/config/system-config";
+import { disputeWindow } from "@/lib/loans/window";
 
 /**
  * Buyer-initiated loan actions. Each verifies the loan actually belongs to the
@@ -50,6 +52,24 @@ export async function raiseDispute(input: {
 
   // Source of truth for legality (only valid from `shipped`).
   assertTransition(status, "dispute_raised");
+
+  // Enforce the dispute window at the data layer (not just the UI): once it has
+  // elapsed, the buyer can no longer report a problem.
+  const [{ data: shippedEvent }, disputeWindowDays] = await Promise.all([
+    admin
+      .from("escrow_events")
+      .select("created_at")
+      .eq("loan_id", input.loanId)
+      .eq("event_type", "shipped")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    getConfigValue("dispute_window_days", admin),
+  ]);
+  const win = disputeWindow(shippedEvent?.created_at ?? null, disputeWindowDays);
+  if (win.applicable && win.elapsed) {
+    throw new Error("The reporting window for this order has closed.");
+  }
 
   const { data, error } = await admin.rpc("raise_dispute", {
     p_loan_id: input.loanId,

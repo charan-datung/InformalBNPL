@@ -381,6 +381,46 @@ Defence in depth across three layers — not just hidden buttons:
 `staff_role` is read server-side from `public.users` for the session user
 (`getCurrentStaff`); the client never asserts its own role.
 
+## Dispute window / auto-release
+
+`dispute_window_days` (one admin-editable `system_config` value) is the single
+source of truth for "how long after shipment a buyer can dispute". The window
+starts when the loan is marked `shipped`.
+
+- **Within the window** — the buyer can **Confirm receipt** or **Report a
+  problem**. A report moves the loan to `dispute_raised` (operator disputes
+  queue) and **freezes the release** (escrow can't be released until the dispute
+  is resolved). The window is enforced at the data layer too:
+  `raiseDispute` rejects a report after it has elapsed (`src/lib/loans/buyer.ts`).
+- **Window elapses with no dispute** — the loan **surfaces to the operator as
+  "ready"** in `/operator/releases`. The app **never auto-pays**: the operator
+  clears the window (`shipped → auto_released`) and then executes the release
+  (`auto_released → escrow_released`, which records the merchant fee + net)
+  manually. Buyer-confirmed loans (`delivered_confirmed`) surface there too.
+
+**No cron in the pilot.** Elapsed windows are computed on demand whenever the
+operator console (overview, `/operator/releases`, loan detail) renders —
+`disputeWindow(shippedAt, dispute_window_days)` in `src/lib/loans/window.ts`.
+Nothing mutates on page load; the operator takes the action.
+
+### Moving this to a scheduled job later
+
+Replace the "compute on load" surfacing with a job that runs the same window
+math on a timer:
+
+1. Add a `auto_clear_windows` routine (a Supabase Edge Function or `pg_cron`
+   job) that selects loans where `status = 'shipped'` and
+   `shipped_at + dispute_window_days < now()` with no open dispute, and calls a
+   service-role transition `shipped → auto_released` for each (recording the
+   `auto_released` event). This is the same step the operator does today.
+2. Schedule it (e.g. `pg_cron` hourly, or Edge Function on a cron trigger).
+3. Keep `dispute_window_days` as the only knob — the job reads it from
+   `system_config`, so admins still control the window. Payment stays manual:
+   the job only clears the window, it never releases escrow.
+
+The `auto_released` state and the release flow already exist, so the job is the
+only new piece.
+
 ## Server-side mutations
 
 All loan state changes flow through one trusted path. Nothing on the client

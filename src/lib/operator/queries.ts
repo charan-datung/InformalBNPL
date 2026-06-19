@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { LoanStatus } from "@/lib/loans/state-machine";
 import type { EscrowEventType } from "@/lib/loans/events";
+import { getConfig } from "@/lib/config/system-config";
+import { disputeWindow } from "@/lib/loans/window";
 
 /**
  * Read helpers for the operator console. The whole surface is staff-gated, so
@@ -300,4 +302,93 @@ export async function getOperatorCounts(): Promise<OperatorCounts> {
     openDisputes: disputes.count ?? 0,
     loans: loans.count ?? 0,
   };
+}
+
+// ---- Dispute window / auto-release queue -----------------------------------
+
+export type ReleaseItem = {
+  id: string;
+  buyerName: string;
+  sellerName: string;
+  ticket_centavos: number;
+  feeCentavos: number;
+  netCentavos: number;
+  status: LoanStatus;
+  shippedAt: string | null;
+  windowEndsAt: string | null;
+  daysLeft: number;
+};
+
+export type ReleaseQueue = {
+  /** delivered_confirmed / auto_released — ready for the operator to release. */
+  toRelease: ReleaseItem[];
+  /** shipped + window elapsed — clear (no dispute) before releasing. */
+  toClear: ReleaseItem[];
+  /** shipped + still within the dispute window — waiting. */
+  waiting: ReleaseItem[];
+};
+
+/**
+ * Build the release queue by computing each in-flight loan's dispute window on
+ * the fly (no cron). Loans in dispute sit in `dispute_raised` and so never
+ * appear here — a dispute freezes the release.
+ */
+export async function listReleaseQueue(): Promise<ReleaseQueue> {
+  const admin = createAdminClient();
+  const [{ data: loans }, users, config] = await Promise.all([
+    admin
+      .from("loans")
+      .select("id, status, ticket_centavos, merchant_fee_pct, buyer_user_id, seller_user_id")
+      .in("status", ["shipped", "delivered_confirmed", "auto_released"])
+      .order("created_at", { ascending: true }),
+    usersMap(),
+    getConfig(),
+  ]);
+
+  const rows = loans ?? [];
+  const ids = rows.map((l) => l.id);
+
+  // First `shipped` timestamp per loan (when the window started).
+  const shippedAt = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: se } = await admin
+      .from("escrow_events")
+      .select("loan_id, created_at")
+      .eq("event_type", "shipped")
+      .in("loan_id", ids)
+      .order("created_at", { ascending: true });
+    for (const e of se ?? []) {
+      if (!shippedAt.has(e.loan_id)) shippedAt.set(e.loan_id, e.created_at);
+    }
+  }
+
+  const queue: ReleaseQueue = { toRelease: [], toClear: [], waiting: [] };
+
+  for (const l of rows) {
+    const fee = Math.round((l.ticket_centavos * l.merchant_fee_pct) / 100);
+    const shipped = shippedAt.get(l.id) ?? null;
+    const win = disputeWindow(shipped, config.dispute_window_days);
+    const item: ReleaseItem = {
+      id: l.id,
+      buyerName: users.get(l.buyer_user_id)?.name ?? l.buyer_user_id,
+      sellerName: users.get(l.seller_user_id)?.name ?? l.seller_user_id,
+      ticket_centavos: l.ticket_centavos,
+      feeCentavos: fee,
+      netCentavos: l.ticket_centavos - fee,
+      status: l.status as LoanStatus,
+      shippedAt: shipped,
+      windowEndsAt: win.applicable ? win.endsAt.toISOString() : null,
+      daysLeft: win.applicable ? win.daysLeft : 0,
+    };
+
+    if (l.status === "delivered_confirmed" || l.status === "auto_released") {
+      queue.toRelease.push(item);
+    } else if (win.applicable && win.elapsed) {
+      queue.toClear.push(item);
+    } else {
+      queue.waiting.push(item);
+    }
+  }
+
+  return queue;
 }

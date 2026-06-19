@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLoanWithEvents } from "@/lib/operator/queries";
+import { getConfig } from "@/lib/config/system-config";
+import { disputeWindow } from "@/lib/loans/window";
 import {
   transitionLoanAction,
   recordRepaymentAction,
@@ -43,6 +45,14 @@ export default async function LoanDetailPage({
     (loan.ticket_centavos * loan.merchant_fee_pct) / 100,
   );
   const netCentavos = loan.ticket_centavos - feeCentavos;
+
+  // Dispute window (only meaningful while shipped). Computed on load — no cron.
+  const config = await getConfig();
+  const shippedEvent = events.find((e) => e.event_type === "shipped");
+  const win =
+    loan.status === "shipped"
+      ? disputeWindow(shippedEvent?.created_at ?? null, config.dispute_window_days)
+      : { applicable: false as const };
 
   const candidates = LOAN_STATUSES.filter((s) => s !== loan.status);
 
@@ -102,6 +112,22 @@ export default async function LoanDetailPage({
             View shipment proof →
           </a>
         </p>
+      ) : null}
+
+      {/* Dispute window status (while shipped) */}
+      {win.applicable ? (
+        win.elapsed ? (
+          <p className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300">
+            Dispute window passed ({formatDateTime(win.endsAt.toISOString())}) —
+            no dispute. Ready to clear (→ auto-released) and release.
+          </p>
+        ) : (
+          <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+            In dispute window — buyer may dispute until{" "}
+            {formatDateTime(win.endsAt.toISOString())} ({win.daysLeft} day(s)
+            left). Hold release until then.
+          </p>
+        )
       ) : null}
 
       {/* Transitions: only valid next states are enabled. */}

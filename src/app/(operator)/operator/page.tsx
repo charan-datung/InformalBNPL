@@ -1,15 +1,25 @@
 import Link from "next/link";
-import { getOperatorCounts } from "@/lib/operator/queries";
+import { getOperatorCounts, listReleaseQueue } from "@/lib/operator/queries";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function OperatorOverviewPage() {
-  const [counts, config] = await Promise.all([getOperatorCounts(), getConfig()]);
+  const [counts, config, queue] = await Promise.all([
+    getOperatorCounts(),
+    getConfig(),
+    listReleaseQueue(),
+  ]);
+  const readyToRelease = queue.toRelease.length + queue.toClear.length;
 
   const cards = [
     { label: "Loans", value: counts.loans, href: "/operator/loans" },
+    {
+      label: "Ready to release",
+      value: readyToRelease,
+      href: "/operator/releases",
+    },
     {
       label: "Pending buyers",
       value: counts.pendingBuyers,
@@ -31,7 +41,7 @@ export default async function OperatorOverviewPage() {
     <div className="space-y-8">
       <h1 className="text-xl font-semibold">Overview</h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {cards.map((c) => (
           <Link
             key={c.label}
