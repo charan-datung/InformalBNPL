@@ -6,7 +6,21 @@ import { LogoMark } from "@/components/brand/Logo";
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  // Fallback for email confirmation: if Supabase's Site URL points at the app
+  // root, the verification link lands here as `/?code=...`. Hand it to the auth
+  // callback so the code is exchanged for a session and sign-up proceeds.
+  const { code } = await searchParams;
+  if (code) {
+    redirect(
+      `/auth/confirm?code=${encodeURIComponent(code)}&next=/onboarding`,
+    );
+  }
+
   // Logged-in users go straight into the app; the dashboard sorts out which
   // stage they're at (role selection, under review, or active). Staff go to
   // their console instead.
