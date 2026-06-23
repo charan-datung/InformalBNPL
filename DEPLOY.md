@@ -18,7 +18,7 @@ later.
 ## 2. Apply the schema
 
 In the Supabase **SQL Editor**, paste and run **`supabase/full_schema.sql`**
-(all 15 migrations in order). This creates every table, the RLS policies, the
+(every migration, in order). This creates every table, the RLS policies, the
 loan/payout functions, and — because it runs on Supabase where the `storage`
 schema exists — the private storage buckets (`seller-verification`, `buyer-id`,
 `shipment-proof`, `dispute-evidence`) via the guarded blocks.
