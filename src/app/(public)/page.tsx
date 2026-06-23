@@ -8,8 +8,11 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   // Logged-in users go straight into the app; the dashboard sorts out which
-  // stage they're at (role selection, under review, or active).
-  if (await getCapabilities()) redirect("/dashboard");
+  // stage they're at (role selection, under review, or active). Staff go to
+  // their console instead.
+  const caps = await getCapabilities();
+  if (caps?.staffRole) redirect("/operator");
+  if (caps) redirect("/dashboard");
 
   return (
     <div className="space-y-10">

@@ -14,6 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function OnboardingPage() {
   const caps = await getCapabilities();
   if (!caps) redirect("/login");
+  // Staff belong in the operator console, never buyer/seller onboarding.
+  if (caps.staffRole) redirect("/operator");
 
   // If they already applied for something, the dashboard is the right place.
   if (caps.buyer !== "none" || caps.seller !== "none") redirect("/dashboard");

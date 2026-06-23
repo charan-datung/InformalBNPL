@@ -28,6 +28,8 @@ export default async function DashboardPage({
 }) {
   const caps = await getCapabilities();
   if (!caps) redirect("/login");
+  // Staff run the back office, not the buyer/seller dashboard.
+  if (caps.staffRole) redirect("/operator");
   if (hasNoCapability(caps)) redirect("/onboarding");
 
   const { error } = await searchParams;

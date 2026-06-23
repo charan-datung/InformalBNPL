@@ -17,6 +17,8 @@ export type Capabilities = {
   email: string | null;
   buyer: CapabilityStatus;
   seller: CapabilityStatus;
+  /** 'operator' | 'admin' for staff; null for normal users. */
+  staffRole: string | null;
 };
 
 /**
@@ -41,7 +43,7 @@ export async function getCapabilities(): Promise<Capabilities | null> {
     } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const [{ data: buyer }, { data: seller }] = await Promise.all([
+    const [{ data: buyer }, { data: seller }, { data: self }] = await Promise.all([
       supabase
         .from("buyer_profiles")
         .select("kyc_status")
@@ -52,6 +54,11 @@ export async function getCapabilities(): Promise<Capabilities | null> {
         .select("kyc_status")
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase
+        .from("users")
+        .select("staff_role")
+        .eq("id", user.id)
+        .maybeSingle(),
     ]);
 
     return {
@@ -59,6 +66,7 @@ export async function getCapabilities(): Promise<Capabilities | null> {
       email: user.email ?? null,
       buyer: (buyer?.kyc_status as CapabilityStatus) ?? "none",
       seller: (seller?.kyc_status as CapabilityStatus) ?? "none",
+      staffRole: (self?.staff_role as string | null) ?? null,
     };
   } catch (e) {
     // Never crash a page over a session read — treat as logged out and log it.
