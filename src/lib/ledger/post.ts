@@ -15,29 +15,72 @@ export const LEDGER_ACCOUNTS = {
   merchantFeeIncome: "merchant_fee_income", // income: our fee on the sale
 } as const;
 
-type Line = {
+export type Line = {
   account: string;
   direction: "debit" | "credit";
   amountCentavos: number;
   memo?: string;
 };
 
-async function postTransaction(
-  admin: SupabaseClient,
-  loanId: string,
-  lines: Line[],
-): Promise<string> {
-  const debits = lines
-    .filter((l) => l.direction === "debit")
-    .reduce((s, l) => s + l.amountCentavos, 0);
-  const credits = lines
-    .filter((l) => l.direction === "credit")
-    .reduce((s, l) => s + l.amountCentavos, 0);
+/** Sum the debit and credit sides of a set of lines. Pure. */
+export function balanceOf(lines: Line[]): { debits: number; credits: number } {
+  let debits = 0;
+  let credits = 0;
+  for (const l of lines) {
+    if (l.direction === "debit") debits += l.amountCentavos;
+    else credits += l.amountCentavos;
+  }
+  return { debits, credits };
+}
+
+/** Throw unless every line nets to a balanced (double-entry) transaction. Pure. */
+export function assertBalanced(lines: Line[]): void {
+  const { debits, credits } = balanceOf(lines);
   if (debits !== credits) {
     throw new Error(
       `Unbalanced ledger transaction: debits ${debits} ≠ credits ${credits}`,
     );
   }
+}
+
+/**
+ * The three balanced lines for a loan disbursement (principal flow). Pure, so
+ * the fee/net split and the balance invariant are unit-testable without a DB.
+ */
+export function disbursementLines(
+  ticketCentavos: number,
+  merchantFeePct: number,
+): Line[] {
+  const fee = Math.round((ticketCentavos * merchantFeePct) / 100);
+  const sellerNet = ticketCentavos - fee;
+  return [
+    {
+      account: LEDGER_ACCOUNTS.buyerReceivable,
+      direction: "debit",
+      amountCentavos: ticketCentavos,
+      memo: "Principal receivable from buyer",
+    },
+    {
+      account: LEDGER_ACCOUNTS.sellerPayable,
+      direction: "credit",
+      amountCentavos: sellerNet,
+      memo: "Net payable to seller",
+    },
+    {
+      account: LEDGER_ACCOUNTS.merchantFeeIncome,
+      direction: "credit",
+      amountCentavos: fee,
+      memo: `Merchant fee ${merchantFeePct}%`,
+    },
+  ];
+}
+
+async function postTransaction(
+  admin: SupabaseClient,
+  loanId: string,
+  lines: Line[],
+): Promise<string> {
+  assertBalanced(lines);
   const txnId = randomUUID();
   const { error } = await admin.from("ledger_entries").insert(
     lines.map((l) => ({
@@ -62,26 +105,9 @@ export async function postLoanDisbursement(
   admin: SupabaseClient,
   input: { loanId: string; ticketCentavos: number; merchantFeePct: number },
 ): Promise<string> {
-  const fee = Math.round((input.ticketCentavos * input.merchantFeePct) / 100);
-  const sellerNet = input.ticketCentavos - fee;
-  return postTransaction(admin, input.loanId, [
-    {
-      account: LEDGER_ACCOUNTS.buyerReceivable,
-      direction: "debit",
-      amountCentavos: input.ticketCentavos,
-      memo: "Principal receivable from buyer",
-    },
-    {
-      account: LEDGER_ACCOUNTS.sellerPayable,
-      direction: "credit",
-      amountCentavos: sellerNet,
-      memo: "Net payable to seller",
-    },
-    {
-      account: LEDGER_ACCOUNTS.merchantFeeIncome,
-      direction: "credit",
-      amountCentavos: fee,
-      memo: `Merchant fee ${input.merchantFeePct}%`,
-    },
-  ]);
+  return postTransaction(
+    admin,
+    input.loanId,
+    disbursementLines(input.ticketCentavos, input.merchantFeePct),
+  );
 }

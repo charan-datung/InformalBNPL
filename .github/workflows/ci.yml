@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Static checks + unit tests + production build. No database needed.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - name: Build
+        run: npm run build
+        env:
+          # Dummy values: the build reads these lazily; real secrets are not
+          # needed to compile.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+      - name: Typecheck
+        run: npm run typecheck
+      - run: npm run test:unit
+
+  # Migrations apply cleanly + database-invariant integration tests.
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bnpl
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bnpl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply auth shim, migrations, and seed
+        run: |
+          set -e
+          PSQL="psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d bnpl"
+          $PSQL -f test/ci/auth-shim.sql
+          for f in supabase/migrations/*.sql; do
+            echo "applying $f"
+            $PSQL -f "$f"
+          done
+          $PSQL -f supabase/seed.sql
+      - name: Integration tests
+        run: npm run test

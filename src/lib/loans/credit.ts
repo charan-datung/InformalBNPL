@@ -16,8 +16,27 @@ export type BuyerCredit = {
   availableCentavos: number;
 };
 
-// Loans in these states no longer tie up the line.
-const RELEASED_STATUSES = ["settled", "refunded"];
+// Loans in these states no longer tie up the line. Kept in sync with the
+// outstanding-exposure filter inside the book_loan SQL guard (migration 0013).
+export const RELEASED_STATUSES = ["settled", "refunded"];
+
+/**
+ * Pure revolving-credit math: available = limit − outstanding (sum of every
+ * loan that hasn't settled/refunded), clamped at zero. Unit-testable.
+ */
+export function availableFromLoans(
+  limitCentavos: number,
+  loans: { ticket_centavos: number; status: string }[],
+): BuyerCredit {
+  const outstandingCentavos = loans
+    .filter((l) => !RELEASED_STATUSES.includes(l.status))
+    .reduce((sum, l) => sum + l.ticket_centavos, 0);
+  return {
+    limitCentavos,
+    outstandingCentavos,
+    availableCentavos: Math.max(0, limitCentavos - outstandingCentavos),
+  };
+}
 
 export async function getBuyerCredit(userId: string): Promise<BuyerCredit> {
   const admin = createAdminClient();
@@ -34,14 +53,5 @@ export async function getBuyerCredit(userId: string): Promise<BuyerCredit> {
       .eq("buyer_user_id", userId),
   ]);
 
-  const limitCentavos = profile?.credit_limit_centavos ?? 0;
-  const outstandingCentavos = (loans ?? [])
-    .filter((l) => !RELEASED_STATUSES.includes(l.status))
-    .reduce((sum, l) => sum + l.ticket_centavos, 0);
-
-  return {
-    limitCentavos,
-    outstandingCentavos,
-    availableCentavos: Math.max(0, limitCentavos - outstandingCentavos),
-  };
+  return availableFromLoans(profile?.credit_limit_centavos ?? 0, loans ?? []);
 }

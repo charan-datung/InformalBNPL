@@ -1,8 +1,9 @@
 import { randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
+import { bookLoan, transitionLoan, startRepayment } from "@/lib/loans/mutations";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { postLoanDisbursement } from "@/lib/ledger/post";
+import { captureException } from "@/lib/observability/logger";
 
 /**
  * Datung Pay — the seller-initiated Payment Request ("Charge").
@@ -204,6 +205,44 @@ export async function authorizeCharge(input: {
       ticketCentavos: loan.ticket_centavos,
       merchantFeePct: loan.merchant_fee_pct,
     });
+
+    // Authorization is now committed (loan booked, escrow held, ledger posted,
+    // charge marked authorized). For an in-person sale the goods change hands
+    // at the stall, so fast-forward through escrow and begin repayment now.
+    // This runs AFTER the commit as best-effort: if a step fails the loan is
+    // simply left at escrow_held (recoverable via the normal seller controls),
+    // never rolled back into a re-bookable state that could double the loan.
+    if (charge.fulfillment === "in_person") {
+      try {
+        await transitionLoan({
+          loanId: loan.id,
+          to: "shipped",
+          actorUserId: input.buyerUserId,
+          note: "In-person hand-off",
+        });
+        await transitionLoan({
+          loanId: loan.id,
+          to: "auto_released",
+          actorUserId: input.buyerUserId,
+          note: "In-person auto-release",
+        });
+        await transitionLoan({
+          loanId: loan.id,
+          to: "escrow_released",
+          actorUserId: input.buyerUserId,
+          amountCentavos: loan.ticket_centavos,
+          note: "Escrow released (in-person)",
+        });
+        await startRepayment({ loanId: loan.id, actorUserId: input.buyerUserId });
+      } catch (advanceErr) {
+        captureException(advanceErr, {
+          where: "authorizeCharge.inPersonAdvance",
+          loanId: loan.id,
+          chargeId: charge.id,
+        });
+      }
+    }
+
     return { loanId: loan.id };
   } catch (e) {
     // Roll the claim back so the buyer can retry / the QR stays valid.
