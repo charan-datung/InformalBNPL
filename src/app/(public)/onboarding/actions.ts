@@ -51,14 +51,20 @@ function ageFrom(dob: string): number | null {
   return age;
 }
 
-function buyerError(message: string): never {
-  redirect("/onboarding/buyer?error=" + encodeURIComponent(message));
-}
-
 export async function applyAsBuyer(formData: FormData) {
   const userId = await requireUserId();
 
   const next = str(formData, "next");
+
+  // Preserve the "Both" step context (next=seller) on validation errors so the
+  // applicant stays in the two-step flow instead of silently dropping to a
+  // standalone buyer form.
+  const buyerError = (message: string): never => {
+    const suffix = next === "seller" ? "&next=seller" : "";
+    redirect(
+      "/onboarding/buyer?error=" + encodeURIComponent(message) + suffix,
+    );
+  };
   const kind = str(formData, "buyer_kind") === "personal" ? "personal" : "business";
   const name = str(formData, "name");
   const contact = str(formData, "contact");
@@ -73,7 +79,7 @@ export async function applyAsBuyer(formData: FormData) {
   if (!dob) buyerError("Date of birth is required.");
   const age = ageFrom(dob);
   if (age === null) buyerError("Date of birth is invalid.");
-  if (age < 18) buyerError("Applicants must be at least 18 years old.");
+  else if (age < 18) buyerError("Applicants must be at least 18 years old.");
   if (!idType || !idNumber) buyerError("A valid government ID is required.");
   const idErr = validateIdNumber(idType, idNumber);
   if (idErr) buyerError(idErr);

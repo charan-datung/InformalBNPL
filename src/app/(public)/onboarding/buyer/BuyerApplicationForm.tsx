@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { applyAsBuyer } from "@/app/(public)/onboarding/actions";
 import {
   ID_TYPES,
@@ -13,7 +13,7 @@ import {
   type BuyerKind,
 } from "@/lib/profiles/buyer-application";
 import PhLocation from "@/app/(public)/onboarding/PhLocation";
-import { idHint } from "@/lib/profiles/id-validation";
+import { idHint, validateIdNumber } from "@/lib/profiles/id-validation";
 
 const input =
   "w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent";
@@ -39,7 +39,17 @@ function Section({
 export default function BuyerApplicationForm({ next }: { next?: string }) {
   const [kind, setKind] = useState<BuyerKind>("business");
   const [idType, setIdType] = useState("");
+  const [idNumber, setIdNumber] = useState("");
   const [payout, setPayout] = useState<"ewallet" | "bank">("ewallet");
+
+  // Validate the ID number inline (client-side) so a typo shows under the field
+  // and blocks submit via native form validation — instead of a server redirect
+  // that would wipe everything the applicant has typed.
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const idError = idType && idNumber ? validateIdNumber(idType, idNumber) : null;
+  useEffect(() => {
+    idInputRef.current?.setCustomValidity(idError ?? "");
+  }, [idError]);
 
   return (
     <form
@@ -136,8 +146,20 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
           </label>
           <label className={label}>
             <span className={labelText}>ID number</span>
-            <input name="id_number" required className={input} />
-            {idHint(idType) ? (
+            <input
+              name="id_number"
+              ref={idInputRef}
+              required
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              aria-invalid={idError ? true : undefined}
+              className={input}
+            />
+            {idError ? (
+              <span className="text-xs text-red-600 dark:text-red-400">
+                {idError}
+              </span>
+            ) : idHint(idType) ? (
               <span className={hint}>Format: {idHint(idType)}</span>
             ) : null}
           </label>
