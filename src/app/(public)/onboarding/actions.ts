@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getConfig } from "@/lib/config/system-config";
 
 /**
  * Stage 3 onboarding: a logged-in user applies for buyer and/or seller
@@ -64,7 +65,6 @@ export async function applyAsBuyer(formData: FormData) {
   const idType = str(formData, "id_type");
   const idNumber = str(formData, "id_number");
   const consent = str(formData, "consent") === "yes";
-  const requestedAmount = centavos(formData, "requested_amount");
   const idPhoto = formData.get("id_photo");
 
   // ---- Required core ----
@@ -80,7 +80,6 @@ export async function applyAsBuyer(formData: FormData) {
   if (!(idPhoto as File).type.startsWith("image/")) {
     buyerError("The ID photo must be an image.");
   }
-  if (!requestedAmount) buyerError("Enter the amount you're applying for.");
   if (!consent) buyerError("Please confirm and consent to proceed.");
 
   // ---- Branch-specific required ----
@@ -156,13 +155,18 @@ export async function applyAsBuyer(formData: FormData) {
   // Onboarding is the first place we capture a real name/contact.
   await admin.from("users").update({ name, contact }).eq("id", userId);
 
+  // BNPL buyers are pre-approved to a standard starting limit (no requested
+  // amount). Identity is still verified before the line is activated; the
+  // operator can adjust the limit for risk.
+  const config = await getConfig(admin);
+
   const { error } = await admin.from("buyer_profiles").upsert(
     {
       user_id: userId,
       kyc_status: "pending",
       buyer_kind: kind,
       id_document_path: idPath,
-      requested_amount_centavos: requestedAmount,
+      credit_limit_centavos: config.default_credit_limit_centavos,
       application,
     },
     { onConflict: "user_id" },

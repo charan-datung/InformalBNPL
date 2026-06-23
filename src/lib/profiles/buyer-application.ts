@@ -54,7 +54,39 @@ export const EMPLOYMENT_STATUS = [
   "Unemployed",
 ] as const;
 
-export const EWALLETS = ["GCash", "Maya", "Other"] as const;
+export const EWALLETS = [
+  "GCash",
+  "Maya",
+  "GrabPay",
+  "ShopeePay",
+  "Coins.ph",
+  "UnionBank Online",
+  "PayPal",
+  "Other",
+] as const;
+
+// Major PH banks for disbursement reconciliation (operator-side; app moves no
+// money). Kept broad — digital banks included for the informal market.
+export const BANKS = [
+  "BDO",
+  "BPI",
+  "Metrobank",
+  "Landbank",
+  "PNB",
+  "Security Bank",
+  "UnionBank",
+  "RCBC",
+  "China Bank",
+  "EastWest",
+  "PSBank",
+  "Maybank",
+  "CIMB",
+  "GoTyme",
+  "Tonik",
+  "SeaBank",
+  "DBP",
+  "Other",
+] as const;
 
 export type BuyerKind = "business" | "personal";
 

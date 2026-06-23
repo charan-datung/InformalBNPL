@@ -143,10 +143,13 @@ export default async function BuyerReviewsPage({
                     {formatDateTime(b.created_at)}
                   </div>
                   <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
-                    Requested:{" "}
+                    Pre-approved limit:{" "}
                     <span className="font-medium">
-                      {formatPeso(b.requested_amount_centavos)}
-                    </span>
+                      {formatPeso(
+                        b.requested_amount_centavos ?? config.default_credit_limit_centavos,
+                      )}
+                    </span>{" "}
+                    — verify identity, adjust only for risk
                   </div>
                 </div>
                 {b.idPhotoUrl ? (

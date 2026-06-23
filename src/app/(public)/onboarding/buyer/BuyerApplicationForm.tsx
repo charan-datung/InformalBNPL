@@ -88,7 +88,8 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
               name="contact"
               required
               inputMode="tel"
-              placeholder="+63 9XX XXX XXXX"
+              defaultValue="+639"
+              placeholder="+639XX XXX XXXX"
               className={input}
             />
           </label>
@@ -374,26 +375,18 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
         </div>
       </Section>
 
-      {/* Request + consent */}
-      <Section title="Your request">
-        <label className={label}>
-          <span className={labelText}>
-            How much credit are you applying for? (PHP)
-          </span>
-          <input
-            name="requested_amount"
-            type="number"
-            min={1}
-            inputMode="numeric"
-            required
-            className={input}
-          />
-        </label>
+      {/* Consent (no credit amount — BNPL buyers are pre-approved to a
+          standard starting limit after we verify identity) */}
+      <Section title="Confirm & consent">
+        <p className={hint}>
+          No need to request an amount — approved buyers start with a standard
+          pre-approved BNPL limit that grows with good repayment.
+        </p>
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="consent" value="yes" required className="mt-1" />
           <span>
-            I confirm the information is true, and consent to manual review and
-            verification of my details and references.
+            I confirm the information is true, and consent to verification of my
+            details and references.
           </span>
         </label>
       </Section>
