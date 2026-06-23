@@ -99,6 +99,15 @@ export type BuyerApplication = {
   // Identity
   id_type?: string;
   id_number?: string;
+  proof_of_billing_path?: string;
+  // OCR results (filled by an operator-triggered check; see lib/ocr)
+  ocr_id_check?: {
+    idNumberFound: boolean;
+    typeKeywordFound: boolean;
+    textPreview: string;
+    ranAt: string;
+  } | null;
+  ocr_billing_preview?: string | null;
   // Disbursement (operator reconciles manual transfers; app moves no money)
   ewallet_provider?: string;
   ewallet_number?: string;

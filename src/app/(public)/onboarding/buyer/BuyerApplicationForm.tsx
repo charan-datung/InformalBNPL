@@ -172,6 +172,21 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             On a phone this opens the camera. Stored privately for review.
           </span>
         </label>
+        <label className={label}>
+          <span className={labelText}>
+            Proof of billing <span className={hint}>(optional — utility bill, address)</span>
+          </span>
+          <input
+            type="file"
+            name="proof_of_billing"
+            accept="image/*"
+            capture="environment"
+            className="block text-sm"
+          />
+          <span className={hint}>
+            A recent bill in your name helps verify your address.
+          </span>
+        </label>
       </Section>
 
       {/* Business branch */}

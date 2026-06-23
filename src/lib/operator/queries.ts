@@ -146,6 +146,7 @@ export type PendingBuyer = {
   requested_amount_centavos: number | null;
   application: Record<string, unknown> | null;
   idPhotoUrl: string | null;
+  proofUrl: string | null;
 };
 
 export async function listPendingBuyers(): Promise<PendingBuyer[]> {
@@ -163,13 +164,18 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
 
   return Promise.all(
     (data ?? []).map(async (b) => {
-      let idPhotoUrl: string | null = null;
-      if (b.id_document_path) {
+      const app = (b.application as Record<string, unknown> | null) ?? null;
+      const sign = async (path: string | null | undefined) => {
+        if (!path) return null;
         const { data: signed } = await admin.storage
           .from("buyer-id")
-          .createSignedUrl(b.id_document_path, 300);
-        idPhotoUrl = signed?.signedUrl ?? null;
-      }
+          .createSignedUrl(path, 300);
+        return signed?.signedUrl ?? null;
+      };
+      const [idPhotoUrl, proofUrl] = await Promise.all([
+        sign(b.id_document_path),
+        sign(app?.proof_of_billing_path as string | undefined),
+      ]);
       return {
         user_id: b.user_id,
         created_at: b.created_at,
@@ -177,8 +183,9 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
         contact: users.get(b.user_id)?.contact ?? null,
         buyer_kind: b.buyer_kind,
         requested_amount_centavos: b.requested_amount_centavos,
-        application: (b.application as Record<string, unknown> | null) ?? null,
+        application: app,
         idPhotoUrl,
+        proofUrl,
       };
     }),
   );

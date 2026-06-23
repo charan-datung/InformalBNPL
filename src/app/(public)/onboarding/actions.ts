@@ -112,6 +112,21 @@ export async function applyAsBuyer(formData: FormData) {
     });
   if (uploadError) buyerError("ID upload failed: " + uploadError.message);
 
+  // ---- Optional proof of billing (address verification) ----
+  let proofOfBillingPath: string | undefined;
+  const proof = formData.get("proof_of_billing");
+  if (proof instanceof File && proof.size > 0 && proof.type.startsWith("image/")) {
+    const pext = proof.name.includes(".") ? proof.name.split(".").pop() : "jpg";
+    const ppath = `${userId}/${Date.now()}-proof.${pext}`;
+    const { error: pErr } = await admin.storage
+      .from(BUYER_ID_BUCKET)
+      .upload(ppath, Buffer.from(await proof.arrayBuffer()), {
+        contentType: proof.type,
+        upsert: true,
+      });
+    if (!pErr) proofOfBillingPath = ppath;
+  }
+
   // ---- Build the structured application payload ----
   const references = [
     { name: str(formData, "ref1_name"), contact: str(formData, "ref1_contact") },
@@ -125,6 +140,7 @@ export async function applyAsBuyer(formData: FormData) {
     province: str(formData, "province") || undefined,
     id_type: idType,
     id_number: idNumber,
+    proof_of_billing_path: proofOfBillingPath,
     ewallet_provider: str(formData, "ewallet_provider") || undefined,
     ewallet_number: str(formData, "ewallet_number") || undefined,
     bank_name: str(formData, "bank_name") || undefined,

@@ -1,5 +1,10 @@
 import { listPendingBuyers } from "@/lib/operator/queries";
 import { reviewBuyerAction } from "@/app/(operator)/operator/actions";
+import {
+  runBuyerIdOcr,
+  runBuyerBillingOcr,
+} from "@/app/(operator)/operator/reviews/buyers/ocr-actions";
+import type { BuyerApplication } from "@/lib/profiles/buyer-application";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso, formatDateTime } from "@/lib/format";
 
@@ -120,7 +125,11 @@ export default async function BuyerReviewsPage({
         </p>
       ) : (
         <div className="space-y-4">
-          {buyers.map((b) => (
+          {buyers.map((b) => {
+            const app = b.application as BuyerApplication | null;
+            const idCheck = app?.ocr_id_check;
+            const billingPreview = app?.ocr_billing_preview;
+            return (
             <form
               key={b.user_id}
               action={reviewBuyerAction}
@@ -168,6 +177,65 @@ export default async function BuyerReviewsPage({
 
               <div className="mt-3 rounded bg-black/[0.03] p-3 dark:bg-white/[0.04]">
                 <ApplicationDetails app={b.application} />
+              </div>
+
+              {/* OCR verification — runs server-side on demand */}
+              <div className="mt-3 space-y-2 rounded border border-black/10 p-3 dark:border-white/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold">ID OCR check</span>
+                  <button
+                    type="submit"
+                    formAction={runBuyerIdOcr}
+                    className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
+                  >
+                    Run ID OCR
+                  </button>
+                  {idCheck ? (
+                    <span className="text-xs">
+                      {idCheck.idNumberFound ? "✓" : "✗"} ID number ·{" "}
+                      {idCheck.typeKeywordFound ? "✓" : "✗"} ID type
+                    </span>
+                  ) : (
+                    <span className="text-xs text-black/40 dark:text-white/40">not run</span>
+                  )}
+                </div>
+                {idCheck?.textPreview ? (
+                  <p className="line-clamp-2 text-[11px] text-black/50 dark:text-white/50">
+                    “{idCheck.textPreview}”
+                  </p>
+                ) : null}
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-xs font-semibold">Proof of billing</span>
+                  {b.proofUrl ? (
+                    <a href={b.proofUrl} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={b.proofUrl}
+                        alt="Proof of billing"
+                        className="h-12 w-16 rounded border border-black/10 object-cover dark:border-white/10"
+                      />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-black/40 dark:text-white/40">
+                      none uploaded
+                    </span>
+                  )}
+                  {b.proofUrl ? (
+                    <button
+                      type="submit"
+                      formAction={runBuyerBillingOcr}
+                      className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
+                    >
+                      Run billing OCR
+                    </button>
+                  ) : null}
+                </div>
+                {billingPreview ? (
+                  <p className="line-clamp-2 text-[11px] text-black/50 dark:text-white/50">
+                    “{billingPreview}”
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -220,7 +288,8 @@ export default async function BuyerReviewsPage({
                 </button>
               </div>
             </form>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
