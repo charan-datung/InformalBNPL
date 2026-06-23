@@ -192,4 +192,69 @@ describe.skipIf(!DB)("database invariants", () => {
     expect(rows[0].trust_tier).toBe("trusted");
     expect(Number(rows[0].max_outstanding_centavos)).toBe(5_000_000);
   });
+
+  it("maker-checker payout: approves (balanced), blocks self-approval & double-pay", async () => {
+    const { b, s } = await makeParty(5_000_000);
+    const maker = randomUUID();
+    const checker = randomUUID();
+    await client.query("insert into auth.users (id,email) values ($1,$2),($3,$4)", [
+      maker, `mk+${maker}@t`, checker, `ck+${checker}@t`,
+    ]);
+    await client.query(
+      "insert into public.users (id,name,staff_role) values ($1,'Mk','operator'),($2,'Ck','operator') on conflict (id) do nothing",
+      [maker, checker],
+    );
+
+    // Book + release a loan, post one balanced disbursement (payable 85,000).
+    const loanId = (
+      await client.query(
+        "select (public.book_loan($1,$2,100000,3,0.035,5,null,'x')).id as id",
+        [b, s],
+      )
+    ).rows[0].id;
+    const txn = randomUUID();
+    await client.query(
+      `insert into public.ledger_entries (txn_id, loan_id, account, direction, amount_centavos) values
+        ($1,$2,'buyer_receivable','debit',100000), ($1,$2,'seller_payable','credit',85000),
+        ($1,$2,'merchant_fee_income','credit',5000), ($1,$2,'seller_reserve','credit',10000)`,
+      [txn, loanId],
+    );
+    await client.query("update public.loans set status='escrow_released' where id=$1", [loanId]);
+
+    const payoutId = (
+      await client.query(
+        "insert into public.payouts (seller_user_id, amount_centavos, maker_user_id) values ($1,85000,$2) returning id",
+        [s, maker],
+      )
+    ).rows[0].id;
+
+    // Maker cannot approve their own proposal.
+    await expect(
+      client.query("select public.approve_payout($1,$2)", [payoutId, maker]),
+    ).rejects.toThrow(/Maker cannot approve/);
+
+    // A different checker can.
+    await client.query("select public.approve_payout($1,$2)", [payoutId, checker]);
+    const status = (
+      await client.query("select status from public.payouts where id=$1", [payoutId])
+    ).rows[0].status;
+    expect(status).toBe("approved");
+
+    // Ledger stays balanced (disbursement + settlement txns both net zero).
+    const imb = (
+      await client.query("select count(*)::int as n from public.ledger_imbalances")
+    ).rows[0].n;
+    expect(imb).toBe(0);
+
+    // Nothing left to pay out → a second payout is rejected.
+    const p2 = (
+      await client.query(
+        "insert into public.payouts (seller_user_id, amount_centavos, maker_user_id) values ($1,1,$2) returning id",
+        [s, maker],
+      )
+    ).rows[0].id;
+    await expect(
+      client.query("select public.approve_payout($1,$2)", [p2, checker]),
+    ).rejects.toThrow(/exceeds available payable/);
+  });
 });

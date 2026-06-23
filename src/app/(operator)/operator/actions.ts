@@ -11,6 +11,11 @@ import {
 import { isLoanStatus } from "@/lib/loans/state-machine";
 import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
 import { resolveDispute } from "@/lib/disputes/mutations";
+import {
+  proposePayout,
+  approvePayout,
+  rejectPayout,
+} from "@/lib/payouts/payouts";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -124,6 +129,52 @@ export async function reviewSellerAction(formData: FormData) {
       notes,
       actorUserId: staff.id,
     });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+// ---- Maker-checker seller payouts ----
+
+export async function proposePayoutAction(formData: FormData) {
+  const staff = await requireStaff();
+  const back = "/operator/payouts";
+  const sellerUserId = String(formData.get("seller_user_id") ?? "");
+  const amountPesos = Number(formData.get("amount_pesos") ?? NaN);
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  if (!Number.isFinite(amountPesos) || amountPesos <= 0) {
+    redirect(`${back}?error=${encodeURIComponent("Enter a valid amount.")}`);
+  }
+  try {
+    await proposePayout({
+      sellerUserId,
+      amountCentavos: Math.round(amountPesos * 100),
+      makerUserId: staff.id,
+      note,
+    });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+export async function decidePayoutAction(formData: FormData) {
+  const staff = await requireStaff();
+  const back = "/operator/payouts";
+  const payoutId = String(formData.get("payoutId") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  try {
+    if (decision === "approve") {
+      await approvePayout({ payoutId, checkerUserId: staff.id });
+    } else if (decision === "reject") {
+      await rejectPayout({ payoutId, checkerUserId: staff.id, note });
+    } else {
+      redirect(`${back}?error=${encodeURIComponent("Invalid decision.")}`);
+    }
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
