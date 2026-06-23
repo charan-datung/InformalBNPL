@@ -11,7 +11,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const LEDGER_ACCOUNTS = {
   buyerReceivable: "buyer_receivable", // asset: principal the buyer owes us
-  sellerPayable: "seller_payable", // liability: net we owe the seller
+  sellerPayable: "seller_payable", // liability: net we owe the seller now
+  sellerReserve: "seller_reserve", // liability: rolling reserve withheld
   merchantFeeIncome: "merchant_fee_income", // income: our fee on the sale
 } as const;
 
@@ -44,16 +45,22 @@ export function assertBalanced(lines: Line[]): void {
 }
 
 /**
- * The three balanced lines for a loan disbursement (principal flow). Pure, so
- * the fee/net split and the balance invariant are unit-testable without a DB.
+ * The balanced lines for a loan disbursement (principal flow). The buyer owes
+ * the principal; we recognise our merchant fee; for an informal seller we
+ * withhold a rolling reserve as a separate liability; and the remainder is what
+ * we owe the seller now. Pure, so the splits and the balance invariant are
+ * unit-testable without a DB. Zero-value lines are omitted (the ledger requires
+ * positive amounts).
  */
 export function disbursementLines(
   ticketCentavos: number,
   merchantFeePct: number,
+  reservePct = 0,
 ): Line[] {
   const fee = Math.round((ticketCentavos * merchantFeePct) / 100);
-  const sellerNet = ticketCentavos - fee;
-  return [
+  const reserve = Math.round((ticketCentavos * reservePct) / 100);
+  const sellerNet = ticketCentavos - fee - reserve;
+  const lines: Line[] = [
     {
       account: LEDGER_ACCOUNTS.buyerReceivable,
       direction: "debit",
@@ -73,6 +80,15 @@ export function disbursementLines(
       memo: `Merchant fee ${merchantFeePct}%`,
     },
   ];
+  if (reserve > 0) {
+    lines.push({
+      account: LEDGER_ACCOUNTS.sellerReserve,
+      direction: "credit",
+      amountCentavos: reserve,
+      memo: `Rolling reserve ${reservePct}% withheld`,
+    });
+  }
+  return lines;
 }
 
 async function postTransaction(
@@ -103,11 +119,20 @@ async function postTransaction(
  */
 export async function postLoanDisbursement(
   admin: SupabaseClient,
-  input: { loanId: string; ticketCentavos: number; merchantFeePct: number },
+  input: {
+    loanId: string;
+    ticketCentavos: number;
+    merchantFeePct: number;
+    reservePct?: number;
+  },
 ): Promise<string> {
   return postTransaction(
     admin,
     input.loanId,
-    disbursementLines(input.ticketCentavos, input.merchantFeePct),
+    disbursementLines(
+      input.ticketCentavos,
+      input.merchantFeePct,
+      input.reservePct ?? 0,
+    ),
   );
 }

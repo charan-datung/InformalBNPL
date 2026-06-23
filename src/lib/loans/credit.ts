@@ -55,3 +55,26 @@ export async function getBuyerCredit(userId: string): Promise<BuyerCredit> {
 
   return availableFromLoans(profile?.credit_limit_centavos ?? 0, loans ?? []);
 }
+
+/**
+ * Seller exposure: how much more the platform will carry for this seller right
+ * now. available = max_outstanding − outstanding (unsettled loans they sold).
+ * Mirrors the seller-side guard inside book_loan (migration 0014).
+ */
+export async function getSellerExposure(userId: string): Promise<BuyerCredit> {
+  const admin = createAdminClient();
+
+  const [{ data: profile }, { data: loans }] = await Promise.all([
+    admin
+      .from("seller_profiles")
+      .select("max_outstanding_centavos")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    admin
+      .from("loans")
+      .select("ticket_centavos, status")
+      .eq("seller_user_id", userId),
+  ]);
+
+  return availableFromLoans(profile?.max_outstanding_centavos ?? 0, loans ?? []);
+}

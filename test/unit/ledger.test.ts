@@ -25,6 +25,21 @@ describe("double-entry ledger", () => {
     expect(balanceOf(lines)).toEqual({ debits: 150_000, credits: 150_000 });
   });
 
+  it("withholds a rolling reserve as a separate balanced line", () => {
+    const lines = disbursementLines(100_000, 5, 10); // fee 5k, reserve 10k
+    const reserve = lines.find((l) => l.account === LEDGER_ACCOUNTS.sellerReserve)!;
+    const net = lines.find((l) => l.account === LEDGER_ACCOUNTS.sellerPayable)!;
+    expect(reserve.amountCentavos).toBe(10_000);
+    expect(net.amountCentavos).toBe(85_000); // 100k - 5k fee - 10k reserve
+    expect(balanceOf(lines)).toEqual({ debits: 100_000, credits: 100_000 });
+  });
+
+  it("omits the reserve line when reserve is zero (no zero-value lines)", () => {
+    const lines = disbursementLines(100_000, 5, 0);
+    expect(lines.some((l) => l.account === LEDGER_ACCOUNTS.sellerReserve)).toBe(false);
+    expect(lines).toHaveLength(3);
+  });
+
   it("throws on an unbalanced transaction", () => {
     expect(() =>
       assertBalanced([

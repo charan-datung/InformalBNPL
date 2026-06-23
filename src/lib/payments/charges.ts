@@ -200,10 +200,17 @@ export async function authorizeCharge(input: {
       .from("payment_requests")
       .update({ loan_id: loan.id })
       .eq("id", charge.id);
+    // Withhold the seller's rolling reserve as a separate ledger liability.
+    const { data: sellerProfile } = await admin
+      .from("seller_profiles")
+      .select("rolling_reserve_pct")
+      .eq("user_id", charge.seller_user_id)
+      .maybeSingle();
     await postLoanDisbursement(admin, {
       loanId: loan.id,
       ticketCentavos: loan.ticket_centavos,
       merchantFeePct: loan.merchant_fee_pct,
+      reservePct: sellerProfile?.rolling_reserve_pct ?? 0,
     });
 
     // Authorization is now committed (loan booked, escrow held, ledger posted,

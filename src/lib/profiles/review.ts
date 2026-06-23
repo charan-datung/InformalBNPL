@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAudit } from "@/lib/audit/log";
+import { getConfig } from "@/lib/config/system-config";
 
 /**
  * Operator review of pending buyer/seller applications. Approval is fully
@@ -59,6 +60,8 @@ export type SellerReviewInput = {
   decision: "approve" | "reject";
   trustTier: "new" | "trusted";
   reservePct: number;
+  /** Optional explicit exposure cap; defaults to the tier cap from config. */
+  maxOutstandingCentavos?: number;
   notes?: string | null;
   actorUserId: string;
 };
@@ -66,12 +69,21 @@ export type SellerReviewInput = {
 export async function reviewSeller(input: SellerReviewInput): Promise<void> {
   const admin = createAdminClient();
 
+  // Exposure cap follows the tier (conservative for `new`, higher once trusted)
+  // unless the operator passes an explicit override.
+  const config = await getConfig(admin);
+  const tierCap =
+    input.trustTier === "trusted"
+      ? config.seller_cap_trusted_centavos
+      : config.seller_cap_new_centavos;
+
   const patch =
     input.decision === "approve"
       ? {
           kyc_status: "verified" as const,
           trust_tier: input.trustTier,
           rolling_reserve_pct: input.reservePct,
+          max_outstanding_centavos: input.maxOutstandingCentavos ?? tierCap,
           verification_notes: input.notes ?? null,
           activated_at: new Date().toISOString(),
         }
@@ -95,6 +107,10 @@ export async function reviewSeller(input: SellerReviewInput): Promise<void> {
     detail: {
       trust_tier: input.decision === "approve" ? input.trustTier : null,
       reserve_pct: input.decision === "approve" ? input.reservePct : null,
+      max_outstanding_centavos:
+        input.decision === "approve"
+          ? (input.maxOutstandingCentavos ?? tierCap)
+          : null,
       notes: input.notes ?? null,
     },
   });

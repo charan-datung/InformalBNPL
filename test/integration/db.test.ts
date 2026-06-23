@@ -130,4 +130,66 @@ describe.skipIf(!DB)("database invariants", () => {
     expect(first.rowCount).toBe(1);
     expect(second.rowCount).toBe(0); // already claimed
   });
+
+  // Fresh buyer (high limit) + seller (given cap/tier) so guard/graduation
+  // tests are isolated from the shared fixture's exposure.
+  async function makeParty(sellerCap: number, tier = "new") {
+    const b = randomUUID();
+    const s = randomUUID();
+    await client.query("insert into auth.users (id,email) values ($1,$2),($3,$4)", [
+      b, `b+${b}@test.local`, s, `s+${s}@test.local`,
+    ]);
+    await client.query(
+      "insert into public.users (id,name) values ($1,'B'),($2,'S') on conflict (id) do nothing",
+      [b, s],
+    );
+    await client.query(
+      `insert into public.buyer_profiles (user_id, kyc_status, credit_limit_centavos, activated_at)
+       values ($1,'verified',10000000, now())
+       on conflict (user_id) do update set credit_limit_centavos=10000000, kyc_status='verified', activated_at=now()`,
+      [b],
+    );
+    await client.query(
+      `insert into public.seller_profiles (user_id, kyc_status, trust_tier, activated_at, max_outstanding_centavos, rolling_reserve_pct)
+       values ($1,'verified',$2, now(), $3, 10)
+       on conflict (user_id) do update set trust_tier=$2, max_outstanding_centavos=$3, rolling_reserve_pct=10`,
+      [s, tier, sellerCap],
+    );
+    return { b, s };
+  }
+
+  it("rejects a booking above the seller exposure cap", async () => {
+    const { b, s } = await makeParty(200_000);
+    await expect(
+      client.query("select public.book_loan($1,$2,200001,3,0.035,5,null,'x')", [b, s]),
+    ).rejects.toThrow(/exceeds seller exposure cap/);
+  });
+
+  it("auto-graduates a new seller after enough settled fulfilments", async () => {
+    const { b, s } = await makeParty(500_000, "new");
+    await client.query(
+      "update public.system_config set value='2' where key='seller_graduation_threshold'",
+    );
+    const ids: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const r = await client.query(
+        "select (public.book_loan($1,$2,50000,3,0.035,5,null,'g')).id as id",
+        [b, s],
+      );
+      ids.push(r.rows[0].id);
+    }
+    let { rows } = await client.query(
+      "select trust_tier from public.seller_profiles where user_id=$1",
+      [s],
+    );
+    expect(rows[0].trust_tier).toBe("new"); // not yet
+
+    await client.query("update public.loans set status='settled' where id = any($1)", [ids]);
+    ({ rows } = await client.query(
+      "select trust_tier, max_outstanding_centavos from public.seller_profiles where user_id=$1",
+      [s],
+    ));
+    expect(rows[0].trust_tier).toBe("trusted");
+    expect(Number(rows[0].max_outstanding_centavos)).toBe(5_000_000);
+  });
 });

@@ -123,5 +123,10 @@ insert into public.system_config (key, value, updated_by) values
   ('default_reserve_pct',           '10',      '11111111-1111-1111-1111-111111111111'),
   ('default_credit_limit_centavos', '5000000', '11111111-1111-1111-1111-111111111111'),
   ('default_tenor_months',          '3',       '11111111-1111-1111-1111-111111111111'),
-  ('seller_payout_days',            '2',       '11111111-1111-1111-1111-111111111111')
+  ('seller_payout_days',            '2',       '11111111-1111-1111-1111-111111111111'),
+  ('seller_cap_new_centavos',       '500000',  '11111111-1111-1111-1111-111111111111'),
+  ('seller_cap_trusted_centavos',   '5000000', '11111111-1111-1111-1111-111111111111'),
+  ('seller_reserve_new_pct',        '10',      '11111111-1111-1111-1111-111111111111'),
+  ('seller_reserve_trusted_pct',    '5',       '11111111-1111-1111-1111-111111111111'),
+  ('seller_graduation_threshold',   '10',      '11111111-1111-1111-1111-111111111111')
 on conflict (key) do nothing;

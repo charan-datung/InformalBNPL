@@ -31,6 +31,16 @@ export const CONFIG_DEFAULTS = {
   default_tenor_months: 3,
   /** Days after escrow release before the seller's payout is committed. */
   seller_payout_days: 2,
+  /** Exposure cap (centavos) for a `new`, ungraduated seller (₱5,000). */
+  seller_cap_new_centavos: 500_000,
+  /** Exposure cap (centavos) for a `trusted` seller (₱50,000). */
+  seller_cap_trusted_centavos: 5_000_000,
+  /** Rolling reserve % withheld from a `new` seller's payouts. */
+  seller_reserve_new_pct: 10,
+  /** Rolling reserve % withheld from a `trusted` seller's payouts. */
+  seller_reserve_trusted_pct: 5,
+  /** Clean (settled) fulfilments before a `new` seller auto-graduates. */
+  seller_graduation_threshold: 10,
 } as const;
 
 export type SystemConfig = typeof CONFIG_DEFAULTS;
