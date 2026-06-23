@@ -1,0 +1,87 @@
+import { randomUUID } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Double-entry ledger posting.
+ *
+ * Every business event is one balanced transaction (sum of debits === sum of
+ * credits). We assert the balance in code before inserting, so the ledger can
+ * never hold a lopsided transaction even though the rows go in together.
+ */
+
+export const LEDGER_ACCOUNTS = {
+  buyerReceivable: "buyer_receivable", // asset: principal the buyer owes us
+  sellerPayable: "seller_payable", // liability: net we owe the seller
+  merchantFeeIncome: "merchant_fee_income", // income: our fee on the sale
+} as const;
+
+type Line = {
+  account: string;
+  direction: "debit" | "credit";
+  amountCentavos: number;
+  memo?: string;
+};
+
+async function postTransaction(
+  admin: SupabaseClient,
+  loanId: string,
+  lines: Line[],
+): Promise<string> {
+  const debits = lines
+    .filter((l) => l.direction === "debit")
+    .reduce((s, l) => s + l.amountCentavos, 0);
+  const credits = lines
+    .filter((l) => l.direction === "credit")
+    .reduce((s, l) => s + l.amountCentavos, 0);
+  if (debits !== credits) {
+    throw new Error(
+      `Unbalanced ledger transaction: debits ${debits} ≠ credits ${credits}`,
+    );
+  }
+  const txnId = randomUUID();
+  const { error } = await admin.from("ledger_entries").insert(
+    lines.map((l) => ({
+      txn_id: txnId,
+      loan_id: loanId,
+      account: l.account,
+      direction: l.direction,
+      amount_centavos: l.amountCentavos,
+      memo: l.memo ?? null,
+    })),
+  );
+  if (error) throw new Error(`Ledger post failed: ${error.message}`);
+  return txnId;
+}
+
+/**
+ * Record the principal flow when a loan is disbursed (credit extended at
+ * checkout): the buyer owes us the principal, we owe the seller the principal
+ * net of our merchant fee, and we recognise that fee as income.
+ */
+export async function postLoanDisbursement(
+  admin: SupabaseClient,
+  input: { loanId: string; ticketCentavos: number; merchantFeePct: number },
+): Promise<string> {
+  const fee = Math.round((input.ticketCentavos * input.merchantFeePct) / 100);
+  const sellerNet = input.ticketCentavos - fee;
+  return postTransaction(admin, input.loanId, [
+    {
+      account: LEDGER_ACCOUNTS.buyerReceivable,
+      direction: "debit",
+      amountCentavos: input.ticketCentavos,
+      memo: "Principal receivable from buyer",
+    },
+    {
+      account: LEDGER_ACCOUNTS.sellerPayable,
+      direction: "credit",
+      amountCentavos: sellerNet,
+      memo: "Net payable to seller",
+    },
+    {
+      account: LEDGER_ACCOUNTS.merchantFeeIncome,
+      direction: "credit",
+      amountCentavos: fee,
+      memo: `Merchant fee ${input.merchantFeePct}%`,
+    },
+  ]);
+}

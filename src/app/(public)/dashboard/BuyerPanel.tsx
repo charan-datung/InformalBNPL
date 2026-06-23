@@ -1,8 +1,5 @@
-import {
-  listBuyerLoans,
-  listVerifiedSellers,
-  getBuyerCreditLimit,
-} from "@/lib/loans/views";
+import { listBuyerLoans, listVerifiedSellers } from "@/lib/loans/views";
+import { getBuyerCredit } from "@/lib/loans/credit";
 import { getConfig } from "@/lib/config/system-config";
 import {
   confirmReceiptAction,
@@ -26,10 +23,10 @@ function addDays(iso: string, days: number): Date {
 }
 
 export default async function BuyerPanel({ userId }: { userId: string }) {
-  const [loans, sellers, creditLimit, config] = await Promise.all([
+  const [loans, sellers, credit, config] = await Promise.all([
     listBuyerLoans(userId),
     listVerifiedSellers(),
-    getBuyerCreditLimit(userId),
+    getBuyerCredit(userId),
     getConfig(),
   ]);
 
@@ -42,13 +39,39 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
     a.due_date < b.due_date ? -1 : 1,
   )[0];
 
+  const usedPct =
+    credit.limitCentavos > 0
+      ? Math.round((credit.outstandingCentavos / credit.limitCentavos) * 100)
+      : 0;
+
   return (
     <div className="space-y-6">
+      {/* Revolving credit line — the heart of repeat instant checkout */}
+      <div className="rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4 dark:border-white/10 dark:from-brand-950 dark:to-brand-900">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs uppercase tracking-wide text-black/45 dark:text-white/45">
+            Available credit
+          </span>
+          <span className="text-xs text-black/45 dark:text-white/45">
+            of {formatPeso(credit.limitCentavos)}
+          </span>
+        </div>
+        <div className="text-3xl font-bold tabular-nums text-brand-800 dark:text-white">
+          {formatPeso(credit.availableCentavos)}
+        </div>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
+          <div className="h-full rounded-full bg-brand-500" style={{ width: `${usedPct}%` }} />
+        </div>
+        <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">
+          Scan a seller&apos;s Datung Pay QR to buy instantly. {formatPeso(credit.outstandingCentavos)} in use.
+        </p>
+      </div>
+
       <Checkout
         sellers={sellers}
         monthlyRate={config.default_interest_rate_monthly}
         defaultTenor={config.default_tenor_months}
-        creditLimitCentavos={creditLimit}
+        creditLimitCentavos={credit.availableCentavos}
       />
 
       {/* Amounts due — impossible to miss */}

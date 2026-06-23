@@ -1,8 +1,65 @@
 import { listSellerLoans } from "@/lib/loans/views";
 import { getConfig } from "@/lib/config/system-config";
 import { markShippedAction } from "@/app/(public)/dashboard/actions";
+import { createChargeAction } from "@/app/(public)/charge/actions";
 import PayoutTracker from "@/app/(public)/dashboard/PayoutTracker";
 import { formatPeso } from "@/lib/format";
+
+/** Datung Pay: mint a Payment Request (QR + exclusive link) for a sale. */
+function NewSale() {
+  return (
+    <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 dark:border-white/10 dark:bg-brand-950/40">
+      <h2 className="font-semibold text-brand-800 dark:text-brand-100">New sale</h2>
+      <p className="mt-0.5 text-xs text-black/55 dark:text-white/55">
+        Enter the amount — we&apos;ll make a QR and an exclusive link for the buyer
+        to pay with their Datung credit.
+      </p>
+      <form action={createChargeAction} className="mt-3 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Amount (PHP)</span>
+            <input
+              type="number"
+              name="amount_pesos"
+              min={1}
+              step="1"
+              required
+              inputMode="numeric"
+              className="w-full rounded-md border border-black/15 bg-white px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">
+              What for? <span className="text-black/40 dark:text-white/40">(optional)</span>
+            </span>
+            <input
+              type="text"
+              name="memo"
+              placeholder="e.g. 2 ukay bundles"
+              className="w-full rounded-md border border-black/15 bg-white px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+        </div>
+        <fieldset className="flex flex-wrap gap-3 text-sm">
+          <label className="flex items-center gap-1.5">
+            <input type="radio" name="fulfillment" value="in_person" defaultChecked />
+            In-person (hand over now)
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" name="fulfillment" value="ship" />
+            Ship (escrow until delivered)
+          </label>
+        </fieldset>
+        <button
+          type="submit"
+          className="rounded-md bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+        >
+          Generate QR / link
+        </button>
+      </form>
+    </div>
+  );
+}
 
 /**
  * Seller dashboard. Each order leads with a payout tracker (Held → Shipped →
@@ -25,6 +82,8 @@ export default async function SellerPanel({ userId }: { userId: string }) {
 
   return (
     <section className="space-y-4">
+      <NewSale />
+
       <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
         Your orders ({loans.length})
       </h2>
