@@ -105,6 +105,7 @@ export async function reviewSellerAction(formData: FormData) {
   const decision = String(formData.get("decision") ?? "");
   const trustTier = String(formData.get("trust_tier") ?? "new");
   const reservePct = Number(formData.get("reserve_pct") ?? 0);
+  const capPesos = Number(formData.get("max_outstanding_pesos") ?? NaN);
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (decision !== "approve" && decision !== "reject") {
@@ -117,6 +118,9 @@ export async function reviewSellerAction(formData: FormData) {
       decision: decision as "approve" | "reject",
       trustTier: trustTier === "trusted" ? "trusted" : "new",
       reservePct,
+      maxOutstandingCentavos: Number.isFinite(capPesos)
+        ? Math.round(capPesos * 100)
+        : undefined,
       notes,
       actorUserId: staff.id,
     });

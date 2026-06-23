@@ -176,48 +176,55 @@ export async function applyAsBuyer(formData: FormData) {
 export async function applyAsSeller(formData: FormData) {
   const userId = await requireUserId();
 
+  const sellerError = (msg: string): never =>
+    redirect("/onboarding/seller?error=" + encodeURIComponent(msg));
+
   const name = String(formData.get("name") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
+  const idType = String(formData.get("id_type") ?? "").trim();
   const socialHandle = String(formData.get("social_handle") ?? "").trim();
+  const marketplaceUrl = String(formData.get("marketplace_url") ?? "").trim();
+  const sellingSince = String(formData.get("selling_since") ?? "").trim();
+  const storefrontLocation = String(formData.get("storefront_location") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const photo = formData.get("photo");
+  const lat = parseFloat(String(formData.get("storefront_lat") ?? ""));
+  const lng = parseFloat(String(formData.get("storefront_lng") ?? ""));
 
   if (!name || !contact || !socialHandle) {
-    redirect(
-      "/onboarding/seller?error=" +
-        encodeURIComponent("Name, contact, and social handle are required."),
-    );
+    sellerError("Name, contact, and social handle are required.");
   }
-  if (!(photo instanceof File) || photo.size === 0) {
-    redirect(
-      "/onboarding/seller?error=" +
-        encodeURIComponent("A live item photo is required."),
-    );
-  }
-  if (!photo.type.startsWith("image/")) {
-    redirect(
-      "/onboarding/seller?error=" +
-        encodeURIComponent("The item photo must be an image."),
-    );
-  }
+  if (!idType) sellerError("Select your government ID type.");
+  if (!storefrontLocation) sellerError("Tell us where you sell.");
 
   const admin = createAdminClient();
 
-  // Upload the live item photo to the private bucket (service role).
-  const ext = photo.name.includes(".") ? photo.name.split(".").pop() : "jpg";
-  const path = `${userId}/${Date.now()}-live-item.${ext}`;
-  const buffer = Buffer.from(await photo.arrayBuffer());
-
-  const { error: uploadError } = await admin.storage
-    .from(SELLER_BUCKET)
-    .upload(path, buffer, { contentType: photo.type, upsert: true });
-
-  if (uploadError) {
-    redirect(
-      "/onboarding/seller?error=" +
-        encodeURIComponent("Photo upload failed: " + uploadError.message),
-    );
+  // Upload an image field to the private seller bucket, returning its path.
+  async function uploadImage(field: string, label: string, tag: string): Promise<string> {
+    const file = formData.get(field);
+    if (!(file instanceof File) || file.size === 0) {
+      sellerError(`${label} is required.`);
+    }
+    const f = file as File;
+    if (!f.type.startsWith("image/")) sellerError(`${label} must be an image.`);
+    const ext = f.name.includes(".") ? f.name.split(".").pop() : "jpg";
+    const path = `${userId}/${Date.now()}-${tag}.${ext}`;
+    const { error } = await admin.storage
+      .from(SELLER_BUCKET)
+      .upload(path, Buffer.from(await f.arrayBuffer()), {
+        contentType: f.type,
+        upsert: true,
+      });
+    if (error) sellerError(`${label} upload failed: ${error.message}`);
+    return path;
   }
+
+  const idPath = await uploadImage("id_document", "Government ID photo", "id");
+  const storefrontPath = await uploadImage(
+    "storefront_photo",
+    "Storefront photo",
+    "storefront",
+  );
+  const itemPath = await uploadImage("photo", "Live item photo", "live-item");
 
   await admin.from("users").update({ name, contact }).eq("id", userId);
 
@@ -225,9 +232,17 @@ export async function applyAsSeller(formData: FormData) {
     {
       user_id: userId,
       social_handle: socialHandle,
+      marketplace_url: marketplaceUrl || null,
+      selling_since: sellingSince || null,
+      id_type: idType,
+      id_document_path: idPath,
+      storefront_photo_path: storefrontPath,
+      storefront_location: storefrontLocation,
+      storefront_lat: Number.isFinite(lat) ? lat : null,
+      storefront_lng: Number.isFinite(lng) ? lng : null,
       kyc_status: "pending",
       verification_notes: notes || null,
-      verification_photo_path: path,
+      verification_photo_path: itemPath,
     },
     { onConflict: "user_id" },
   );

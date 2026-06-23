@@ -187,12 +187,22 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
 export type PendingSeller = {
   user_id: string;
   social_handle: string | null;
+  marketplace_url: string | null;
+  selling_since: string | null;
+  id_type: string | null;
+  storefront_location: string | null;
+  storefront_lat: number | null;
+  storefront_lng: number | null;
   verification_notes: string | null;
-  verification_photo_path: string | null;
   created_at: string;
   name: string;
   contact: string | null;
+  /** Live item photo (proof of selling). */
   photoUrl: string | null;
+  /** Government ID photo. */
+  idUrl: string | null;
+  /** Storefront / stall photo. */
+  storefrontUrl: string | null;
 };
 
 export async function listPendingSellers(): Promise<PendingSeller[]> {
@@ -201,28 +211,45 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, social_handle, verification_notes, verification_photo_path, created_at",
+        "user_id, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, created_at",
       )
       .eq("kyc_status", "pending")
       .order("created_at", { ascending: true }),
     usersMap(),
   ]);
 
+  const sign = async (path: string | null): Promise<string | null> => {
+    if (!path) return null;
+    const { data: signed } = await admin.storage
+      .from("seller-verification")
+      .createSignedUrl(path, 300);
+    return signed?.signedUrl ?? null;
+  };
+
   const rows = data ?? [];
   return Promise.all(
     rows.map(async (s) => {
-      let photoUrl: string | null = null;
-      if (s.verification_photo_path) {
-        const { data: signed } = await admin.storage
-          .from("seller-verification")
-          .createSignedUrl(s.verification_photo_path, 300);
-        photoUrl = signed?.signedUrl ?? null;
-      }
+      const [photoUrl, idUrl, storefrontUrl] = await Promise.all([
+        sign(s.verification_photo_path),
+        sign(s.id_document_path),
+        sign(s.storefront_photo_path),
+      ]);
       return {
-        ...s,
+        user_id: s.user_id,
+        social_handle: s.social_handle,
+        marketplace_url: s.marketplace_url,
+        selling_since: s.selling_since,
+        id_type: s.id_type,
+        storefront_location: s.storefront_location,
+        storefront_lat: s.storefront_lat,
+        storefront_lng: s.storefront_lng,
+        verification_notes: s.verification_notes,
+        created_at: s.created_at,
         name: users.get(s.user_id)?.name ?? s.user_id,
         contact: users.get(s.user_id)?.contact ?? null,
         photoUrl,
+        idUrl,
+        storefrontUrl,
       };
     }),
   );
