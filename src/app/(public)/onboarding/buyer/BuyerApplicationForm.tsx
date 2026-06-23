@@ -9,8 +9,11 @@ import {
   RESTOCK_FREQUENCY,
   EMPLOYMENT_STATUS,
   EWALLETS,
+  BANKS,
   type BuyerKind,
 } from "@/lib/profiles/buyer-application";
+import { PROVINCES } from "@/lib/profiles/ph-locations";
+import { idHint } from "@/lib/profiles/id-validation";
 
 const input =
   "w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent";
@@ -35,6 +38,8 @@ function Section({
 
 export default function BuyerApplicationForm({ next }: { next?: string }) {
   const [kind, setKind] = useState<BuyerKind>("business");
+  const [idType, setIdType] = useState("");
+  const [payout, setPayout] = useState<"ewallet" | "bank">("ewallet");
 
   return (
     <form
@@ -110,7 +115,14 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             </label>
             <label className={label}>
               <span className={labelText}>Province</span>
-              <input name="province" className={input} />
+              <select name="province" defaultValue="" className={input}>
+                <option value="">Choose…</option>
+                {PROVINCES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </div>
@@ -121,7 +133,13 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className={label}>
             <span className={labelText}>ID type</span>
-            <select name="id_type" required defaultValue="" className={input}>
+            <select
+              name="id_type"
+              required
+              defaultValue=""
+              onChange={(e) => setIdType(e.target.value)}
+              className={input}
+            >
               <option value="" disabled>
                 Choose…
               </option>
@@ -135,6 +153,9 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
           <label className={label}>
             <span className={labelText}>ID number</span>
             <input name="id_number" required className={input} />
+            {idHint(idType) ? (
+              <span className={hint}>Format: {idHint(idType)}</span>
+            ) : null}
           </label>
         </div>
         <label className={label}>
@@ -342,37 +363,86 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
       <Section title="Where you'd receive / send money">
         <p className={hint}>
           For the operator to reconcile transfers. The app itself never moves
-          money. Provide at least one.
+          money.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>
-            <span className={labelText}>E-wallet</span>
-            <select name="ewallet_provider" defaultValue="" className={input}>
-              <option value="">None</option>
-              {EWALLETS.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={label}>
-            <span className={labelText}>E-wallet number</span>
-            <input name="ewallet_number" inputMode="tel" className={input} />
-          </label>
-          <label className={label}>
-            <span className={labelText}>Bank</span>
-            <input name="bank_name" className={input} />
-          </label>
-          <label className={label}>
-            <span className={labelText}>Bank account number</span>
-            <input name="bank_account_number" inputMode="numeric" className={input} />
-          </label>
-          <label className={`${label} sm:col-span-2`}>
-            <span className={labelText}>Bank account name</span>
-            <input name="bank_account_name" className={input} />
-          </label>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["ewallet", "E-wallet"],
+              ["bank", "Bank account"],
+            ] as ["ewallet" | "bank", string][]
+          ).map(([value, text]) => (
+            <label
+              key={value}
+              className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
+                payout === value
+                  ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                  : "border-black/15 dark:border-white/15"
+              }`}
+            >
+              <input
+                type="radio"
+                name="payout_method"
+                value={value}
+                checked={payout === value}
+                onChange={() => setPayout(value)}
+                className="sr-only"
+              />
+              {text}
+            </label>
+          ))}
         </div>
+
+        {payout === "ewallet" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={label}>
+              <span className={labelText}>E-wallet</span>
+              <select name="ewallet_provider" defaultValue="" required className={input}>
+                <option value="" disabled>
+                  Choose…
+                </option>
+                {EWALLETS.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={label}>
+              <span className={labelText}>E-wallet mobile number</span>
+              <input
+                name="ewallet_number"
+                inputMode="tel"
+                defaultValue="+639"
+                className={input}
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={label}>
+              <span className={labelText}>Bank</span>
+              <select name="bank_name" defaultValue="" required className={input}>
+                <option value="" disabled>
+                  Choose…
+                </option>
+                {BANKS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={label}>
+              <span className={labelText}>Account number</span>
+              <input name="bank_account_number" inputMode="numeric" className={input} />
+            </label>
+            <label className={`${label} sm:col-span-2`}>
+              <span className={labelText}>Account name</span>
+              <input name="bank_account_name" className={input} />
+            </label>
+          </div>
+        )}
       </Section>
 
       {/* Consent (no credit amount — BNPL buyers are pre-approved to a

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfig } from "@/lib/config/system-config";
+import { validateIdNumber } from "@/lib/profiles/id-validation";
 
 /**
  * Stage 3 onboarding: a logged-in user applies for buyer and/or seller
@@ -74,6 +75,8 @@ export async function applyAsBuyer(formData: FormData) {
   if (age === null) buyerError("Date of birth is invalid.");
   if (age < 18) buyerError("Applicants must be at least 18 years old.");
   if (!idType || !idNumber) buyerError("A valid government ID is required.");
+  const idErr = validateIdNumber(idType, idNumber);
+  if (idErr) buyerError(idErr);
   if (!(idPhoto instanceof File) || idPhoto.size === 0) {
     buyerError("A photo of your ID is required.");
   }
@@ -189,7 +192,11 @@ export async function applyAsSeller(formData: FormData) {
   const socialHandle = String(formData.get("social_handle") ?? "").trim();
   const marketplaceUrl = String(formData.get("marketplace_url") ?? "").trim();
   const sellingSince = String(formData.get("selling_since") ?? "").trim();
-  const storefrontLocation = String(formData.get("storefront_location") ?? "").trim();
+  const storefrontAddress = String(formData.get("storefront_location") ?? "").trim();
+  const storefrontProvince = String(formData.get("storefront_province") ?? "").trim();
+  const storefrontLocation = [storefrontAddress, storefrontProvince]
+    .filter(Boolean)
+    .join(", ");
   const notes = String(formData.get("notes") ?? "").trim();
   const lat = parseFloat(String(formData.get("storefront_lat") ?? ""));
   const lng = parseFloat(String(formData.get("storefront_lng") ?? ""));
@@ -198,7 +205,7 @@ export async function applyAsSeller(formData: FormData) {
     sellerError("Name, contact, and social handle are required.");
   }
   if (!idType) sellerError("Select your government ID type.");
-  if (!storefrontLocation) sellerError("Tell us where you sell.");
+  if (!storefrontAddress) sellerError("Tell us where you sell.");
 
   const admin = createAdminClient();
 
