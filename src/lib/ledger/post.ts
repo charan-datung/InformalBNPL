@@ -14,6 +14,8 @@ export const LEDGER_ACCOUNTS = {
   sellerPayable: "seller_payable", // liability: net we owe the seller now
   sellerReserve: "seller_reserve", // liability: rolling reserve withheld
   merchantFeeIncome: "merchant_fee_income", // income: our fee on the sale
+  interestIncome: "interest_income", // income: financing interest earned
+  cashClearing: "cash_clearing", // clearing: buyer repayments received
   payoutClearing: "payout_clearing", // clearing: payouts staged for rails
 } as const;
 

@@ -257,4 +257,63 @@ describe.skipIf(!DB)("database invariants", () => {
       client.query("select public.approve_payout($1,$2)", [p2, checker]),
     ).rejects.toThrow(/exceeds available payable/);
   });
+
+  it("repayments draw down buyer_receivable and recognize interest (balanced)", async () => {
+    const { b, s } = await makeParty(5_000_000);
+    const loanId = (
+      await client.query(
+        "select (public.book_loan($1,$2,100000,3,0.035,5,null,'x')).id as id",
+        [b, s],
+      )
+    ).rows[0].id;
+
+    // Disbursement debits buyer_receivable for the principal (₱1,000).
+    const dt = randomUUID();
+    await client.query(
+      `insert into public.ledger_entries (txn_id, loan_id, account, direction, amount_centavos) values
+        ($1,$2,'buyer_receivable','debit',100000), ($1,$2,'seller_payable','credit',95000),
+        ($1,$2,'merchant_fee_income','credit',5000)`,
+      [dt, loanId],
+    );
+
+    await client.query("update public.loans set status='escrow_released' where id=$1", [loanId]);
+    await client.query("select public.start_repayment($1,'escrow_released',null)", [loanId]);
+
+    const ids = (
+      await client.query("select id from public.repayments where loan_id=$1 order by due_date", [
+        loanId,
+      ])
+    ).rows.map((r) => r.id);
+    for (const id of ids) {
+      await client.query("select public.record_repayment($1,null)", [id]);
+    }
+
+    // Receivable fully drawn down; interest recognized; ledger balanced.
+    const receivable = (
+      await client.query(
+        `select coalesce(sum(case when direction='debit' then amount_centavos else -amount_centavos end),0)::int as n
+           from public.ledger_entries where account='buyer_receivable' and loan_id=$1`,
+        [loanId],
+      )
+    ).rows[0].n;
+    expect(receivable).toBe(0);
+
+    const interest = (
+      await client.query(
+        "select coalesce(sum(amount_centavos),0)::int as n from public.ledger_entries where account='interest_income' and loan_id=$1",
+        [loanId],
+      )
+    ).rows[0].n;
+    expect(interest).toBe(10_500);
+
+    const imb = (
+      await client.query("select count(*)::int as n from public.ledger_imbalances")
+    ).rows[0].n;
+    expect(imb).toBe(0);
+
+    const status = (
+      await client.query("select status from public.loans where id=$1", [loanId])
+    ).rows[0].status;
+    expect(status).toBe("settled");
+  });
 });
