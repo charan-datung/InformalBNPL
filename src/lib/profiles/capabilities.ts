@@ -35,30 +35,36 @@ export async function getCapabilities(): Promise<Capabilities | null> {
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const [{ data: buyer }, { data: seller }] = await Promise.all([
-    supabase
-      .from("buyer_profiles")
-      .select("kyc_status")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("seller_profiles")
-      .select("kyc_status")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
+    const [{ data: buyer }, { data: seller }] = await Promise.all([
+      supabase
+        .from("buyer_profiles")
+        .select("kyc_status")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("seller_profiles")
+        .select("kyc_status")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+    ]);
 
-  return {
-    userId: user.id,
-    email: user.email ?? null,
-    buyer: (buyer?.kyc_status as CapabilityStatus) ?? "none",
-    seller: (seller?.kyc_status as CapabilityStatus) ?? "none",
-  };
+    return {
+      userId: user.id,
+      email: user.email ?? null,
+      buyer: (buyer?.kyc_status as CapabilityStatus) ?? "none",
+      seller: (seller?.kyc_status as CapabilityStatus) ?? "none",
+    };
+  } catch (e) {
+    // Never crash a page over a session read — treat as logged out and log it.
+    console.error("getCapabilities failed:", e);
+    return null;
+  }
 }
 
 /** True if the user has applied for neither capability (Stage 2 territory). */

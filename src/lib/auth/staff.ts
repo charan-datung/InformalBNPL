@@ -25,19 +25,24 @@ export async function getCurrentStaff(): Promise<Staff | null> {
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data } = await supabase
-    .from("users")
-    .select("id, name, staff_role")
-    .eq("id", user.id)
-    .maybeSingle();
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, staff_role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (!data || !data.staff_role) return null;
-  return data as Staff;
+    if (!data || !data.staff_role) return null;
+    return data as Staff;
+  } catch (e) {
+    console.error("getCurrentStaff failed:", e);
+    return null;
+  }
 }
 
 /** Require any staff member (operator or admin); throws otherwise. */
