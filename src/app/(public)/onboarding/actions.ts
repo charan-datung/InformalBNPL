@@ -209,8 +209,9 @@ export async function applyAsSeller(formData: FormData) {
   const marketplaceUrl = String(formData.get("marketplace_url") ?? "").trim();
   const sellingSince = String(formData.get("selling_since") ?? "").trim();
   const storefrontAddress = String(formData.get("storefront_location") ?? "").trim();
+  const storefrontCity = String(formData.get("storefront_city") ?? "").trim();
   const storefrontProvince = String(formData.get("storefront_province") ?? "").trim();
-  const storefrontLocation = [storefrontAddress, storefrontProvince]
+  const storefrontLocation = [storefrontAddress, storefrontCity, storefrontProvince]
     .filter(Boolean)
     .join(", ");
   const notes = String(formData.get("notes") ?? "").trim();

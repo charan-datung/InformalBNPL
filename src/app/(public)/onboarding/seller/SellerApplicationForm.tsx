@@ -1,6 +1,6 @@
 import { applyAsSeller } from "@/app/(public)/onboarding/actions";
 import PinLocation from "@/app/(public)/onboarding/seller/PinLocation";
-import { PROVINCES } from "@/lib/profiles/ph-locations";
+import PhLocation from "@/app/(public)/onboarding/PhLocation";
 
 const INPUT =
   "w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent";
@@ -108,31 +108,22 @@ export default function SellerApplicationForm() {
             Your stall, shelf, or where you pack orders. Required.
           </span>
         </label>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">Address / area</span>
-            <input
-              type="text"
-              name="storefront_location"
-              required
-              placeholder="e.g. Stall 14, Bankerohan Public Market"
-              className={INPUT}
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">Province</span>
-            <select name="storefront_province" defaultValue="" required className={INPUT}>
-              <option value="" disabled>
-                Choose…
-              </option>
-              {PROVINCES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">Address / area</span>
+          <input
+            type="text"
+            name="storefront_location"
+            required
+            placeholder="e.g. Stall 14, Bankerohan Public Market"
+            className={INPUT}
+          />
+        </label>
+        <PhLocation
+          inputClassName={INPUT}
+          required
+          provinceName="storefront_province"
+          cityName="storefront_city"
+        />
         <PinLocation />
       </fieldset>
 

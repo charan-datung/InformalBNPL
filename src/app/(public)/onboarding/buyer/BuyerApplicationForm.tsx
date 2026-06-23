@@ -12,7 +12,7 @@ import {
   BANKS,
   type BuyerKind,
 } from "@/lib/profiles/buyer-application";
-import { PROVINCES } from "@/lib/profiles/ph-locations";
+import PhLocation from "@/app/(public)/onboarding/PhLocation";
 import { idHint } from "@/lib/profiles/id-validation";
 
 const input =
@@ -108,23 +108,7 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             <span className={labelText}>Date of birth</span>
             <input name="date_of_birth" type="date" required className={input} />
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={label}>
-              <span className={labelText}>City/Municipality</span>
-              <input name="city" className={input} />
-            </label>
-            <label className={label}>
-              <span className={labelText}>Province</span>
-              <select name="province" defaultValue="" className={input}>
-                <option value="">Choose…</option>
-                {PROVINCES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <PhLocation inputClassName={input} />
         </div>
       </Section>
 
