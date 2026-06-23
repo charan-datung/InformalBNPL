@@ -1,9 +1,95 @@
 import { listPendingBuyers } from "@/lib/operator/queries";
 import { reviewBuyerAction } from "@/app/(operator)/operator/actions";
 import { getConfig } from "@/lib/config/system-config";
-import { formatDateTime } from "@/lib/format";
+import { formatPeso, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+/** Pretty-print the application JSONB as labeled rows (money in centavos -> ₱). */
+function ApplicationDetails({ app }: { app: Record<string, unknown> | null }) {
+  if (!app) {
+    return (
+      <p className="text-sm text-black/40 dark:text-white/40">
+        (no application details)
+      </p>
+    );
+  }
+  const money = (k: string) =>
+    typeof app[k] === "number" ? formatPeso(app[k] as number) : null;
+
+  const rows: [string, string | null][] = [
+    ["DOB", (app.date_of_birth as string) ?? null],
+    [
+      "Location",
+      [app.city, app.province].filter(Boolean).join(", ") || null,
+    ],
+    ["Email", (app.email as string) ?? null],
+    ["ID", [app.id_type, app.id_number].filter(Boolean).join(" · ") || null],
+    ["Sells", (app.product_category as string) ?? null],
+    [
+      "Channels",
+      Array.isArray(app.sell_channels) && app.sell_channels.length
+        ? (app.sell_channels as string[]).join(", ")
+        : null,
+    ],
+    ["Handles", (app.social_handles as string) ?? null],
+    [
+      "Months selling",
+      app.months_selling != null ? String(app.months_selling) : null,
+    ],
+    ["Monthly sales", money("monthly_sales_centavos")],
+    [
+      "Sourcing",
+      Array.isArray(app.sourcing) && app.sourcing.length
+        ? (app.sourcing as string[]).join(", ")
+        : null,
+    ],
+    ["Restocks", (app.restock_frequency as string) ?? null],
+    ["Typical restock", money("typical_restock_centavos")],
+    ["Employment", (app.employment_status as string) ?? null],
+    ["Occupation", (app.occupation as string) ?? null],
+    ["Monthly income", money("monthly_income_centavos")],
+    ["Other income", money("other_income_centavos")],
+    ["Existing loan/mo", money("existing_loan_monthly_centavos")],
+    [
+      "E-wallet",
+      [app.ewallet_provider, app.ewallet_number].filter(Boolean).join(" ") ||
+        null,
+    ],
+    [
+      "Bank",
+      [app.bank_name, app.bank_account_number, app.bank_account_name]
+        .filter(Boolean)
+        .join(" · ") || null,
+    ],
+  ];
+
+  const refs = Array.isArray(app.references)
+    ? (app.references as { name?: string; contact?: string }[])
+    : [];
+
+  return (
+    <div className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+      {rows
+        .filter(([, v]) => v)
+        .map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-2">
+            <span className="text-black/45 dark:text-white/45">{k}</span>
+            <span className="text-right font-medium">{v}</span>
+          </div>
+        ))}
+      {refs.length > 0 ? (
+        <div className="sm:col-span-2">
+          <span className="text-black/45 dark:text-white/45">References: </span>
+          {refs
+            .map((r) => [r.name, r.contact].filter(Boolean).join(" "))
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default async function BuyerReviewsPage({
   searchParams,
@@ -42,25 +128,44 @@ export default async function BuyerReviewsPage({
             >
               <input type="hidden" name="userId" value={b.user_id} />
 
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium">{b.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{b.name}</span>
+                    {b.buyer_kind ? (
+                      <span className="rounded bg-black/10 px-1.5 py-0.5 text-[11px] font-medium dark:bg-white/10">
+                        {b.buyer_kind}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-black/60 dark:text-white/60">
                     {b.contact ?? "no contact"} · applied{" "}
                     {formatDateTime(b.created_at)}
                   </div>
+                  <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
+                    Requested:{" "}
+                    <span className="font-medium">
+                      {formatPeso(b.requested_amount_centavos)}
+                    </span>
+                  </div>
                 </div>
+                {b.idPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={b.idPhotoUrl}
+                    alt="Government ID"
+                    className="h-24 w-36 rounded-md border border-black/10 object-cover dark:border-white/10"
+                  />
+                ) : (
+                  <div className="flex h-24 w-36 items-center justify-center rounded-md border border-dashed border-black/20 text-xs text-black/40 dark:border-white/20 dark:text-white/40">
+                    no ID
+                  </div>
+                )}
               </div>
 
-              {b.underwriting_notes ? (
-                <p className="mt-2 whitespace-pre-wrap rounded bg-black/[0.03] p-2 text-sm dark:bg-white/[0.04]">
-                  {b.underwriting_notes}
-                </p>
-              ) : (
-                <p className="mt-2 text-sm text-black/40 dark:text-white/40">
-                  (no application details provided)
-                </p>
-              )}
+              <div className="mt-3 rounded bg-black/[0.03] p-3 dark:bg-white/[0.04]">
+                <ApplicationDetails app={b.application} />
+              </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
@@ -72,7 +177,11 @@ export default async function BuyerReviewsPage({
                     name="credit_limit_pesos"
                     min={0}
                     step="1"
-                    defaultValue={defaultLimitPesos}
+                    defaultValue={
+                      b.requested_amount_centavos != null
+                        ? b.requested_amount_centavos / 100
+                        : defaultLimitPesos
+                    }
                     className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
                   />
                 </label>
