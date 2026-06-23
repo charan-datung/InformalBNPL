@@ -252,7 +252,42 @@ export async function applyAsSeller(formData: FormData) {
     return path;
   }
 
-  const idPath = await uploadImage("id_document", "Government ID photo", "id");
+  // Reuse the ID photo from the buyer step if the seller didn't upload a new
+  // one — the "Both" flow shouldn't ask for the same government ID twice.
+  async function reuseBuyerId(): Promise<string> {
+    const { data: bp } = await admin
+      .from("buyer_profiles")
+      .select("id_document_path")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const src = bp?.id_document_path as string | undefined;
+    if (!src) sellerError("A photo of your government ID is required.");
+    const { data: file, error: dlErr } = await admin.storage
+      .from(BUYER_ID_BUCKET)
+      .download(src as string);
+    if (dlErr || !file) {
+      sellerError("A photo of your government ID is required.");
+    }
+    const blob = file as Blob;
+    const ext = (src as string).split(".").pop() || "jpg";
+    const path = `${userId}/${Date.now()}-id.${ext}`;
+    const { error: upErr } = await admin.storage
+      .from(SELLER_BUCKET)
+      .upload(path, Buffer.from(await blob.arrayBuffer()), {
+        contentType: blob.type || "image/jpeg",
+        upsert: true,
+      });
+    if (upErr) {
+      sellerError("Could not reuse your buyer ID — please upload your ID photo.");
+    }
+    return path;
+  }
+
+  const idFile = formData.get("id_document");
+  const idPath =
+    idFile instanceof File && idFile.size > 0
+      ? await uploadImage("id_document", "Government ID photo", "id")
+      : await reuseBuyerId();
   const storefrontPath = await uploadImage(
     "storefront_photo",
     "Storefront photo",

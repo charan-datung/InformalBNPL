@@ -8,11 +8,29 @@ const FILE =
   "w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white dark:file:bg-white dark:file:text-slate-900";
 
 /**
+ * Details carried over from the buyer step in the "Both" flow so the same
+ * person isn't asked twice. All fields stay editable (e.g. storefront city may
+ * differ from home), and the ID photo is reused server-side when not re-added.
+ */
+export type SellerPrefill = {
+  name?: string;
+  contact?: string;
+  idType?: string;
+  city?: string;
+  province?: string;
+  hasBuyerId: boolean;
+};
+
+/**
  * Seller verification form for the informal market — three signals, no business
  * documents: a government ID, a storefront/stall photo + location, and
  * social/marketplace proof.
  */
-export default function SellerApplicationForm() {
+export default function SellerApplicationForm({
+  prefill,
+}: {
+  prefill?: SellerPrefill | null;
+}) {
   return (
     <form action={applyAsSeller} encType="multipart/form-data" className="space-y-5">
       {/* Who you are */}
@@ -22,15 +40,32 @@ export default function SellerApplicationForm() {
         </legend>
         <label className="block space-y-1">
           <span className="text-sm font-medium">Full name</span>
-          <input type="text" name="name" required className={INPUT} />
+          <input
+            type="text"
+            name="name"
+            required
+            defaultValue={prefill?.name ?? ""}
+            className={INPUT}
+          />
         </label>
         <label className="block space-y-1">
           <span className="text-sm font-medium">Contact (phone or email)</span>
-          <input type="text" name="contact" required defaultValue="+639" className={INPUT} />
+          <input
+            type="text"
+            name="contact"
+            required
+            defaultValue={prefill?.contact ?? "+639"}
+            className={INPUT}
+          />
         </label>
         <label className="block space-y-1">
           <span className="text-sm font-medium">Government ID type</span>
-          <select name="id_type" required defaultValue="" className={INPUT}>
+          <select
+            name="id_type"
+            required
+            defaultValue={prefill?.idType ?? ""}
+            className={INPUT}
+          >
             <option value="" disabled>
               Select an ID…
             </option>
@@ -43,17 +78,24 @@ export default function SellerApplicationForm() {
           </select>
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium">Photo of your government ID</span>
+          <span className="text-sm font-medium">
+            Photo of your government ID
+            {prefill?.hasBuyerId ? (
+              <span className="text-black/40 dark:text-white/40"> (optional)</span>
+            ) : null}
+          </span>
           <input
             type="file"
             name="id_document"
             accept="image/*"
             capture="environment"
-            required
+            required={!prefill?.hasBuyerId}
             className={FILE}
           />
           <span className="block text-xs text-black/40 dark:text-white/40">
-            Held by you, photographed clearly. Stored privately for review only.
+            {prefill?.hasBuyerId
+              ? "We'll reuse the ID you uploaded as a buyer — only add a photo if it's a different ID."
+              : "Held by you, photographed clearly. Stored privately for review only."}
           </span>
         </label>
       </fieldset>
@@ -123,6 +165,8 @@ export default function SellerApplicationForm() {
           required
           provinceName="storefront_province"
           cityName="storefront_city"
+          defaultProvince={prefill?.province}
+          defaultCity={prefill?.city}
         />
         <PinLocation />
       </fieldset>

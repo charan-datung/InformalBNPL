@@ -14,13 +14,17 @@ export default function PhLocation({
   required,
   provinceName = "province",
   cityName = "city",
+  defaultProvince,
+  defaultCity,
 }: {
   inputClassName: string;
   required?: boolean;
   provinceName?: string;
   cityName?: string;
+  defaultProvince?: string;
+  defaultCity?: string;
 }) {
-  const [province, setProvince] = useState("");
+  const [province, setProvince] = useState(defaultProvince ?? "");
   const cities = CITIES_BY_PROVINCE[province] ?? [];
 
   return (
@@ -52,7 +56,7 @@ export default function PhLocation({
           name={cityName}
           required={required}
           disabled={!province}
-          defaultValue=""
+          defaultValue={province === (defaultProvince ?? "") ? defaultCity ?? "" : ""}
           className={inputClassName}
         >
           <option value="" disabled>
