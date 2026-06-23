@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LOAN_STATUSES, type LoanStatus } from "@/lib/loans/state-machine";
+import {
+  computeUnderwriting,
+  type UnderwritingMetrics,
+} from "@/lib/metrics/underwriting";
 
 /**
  * Pilot metrics — computed from real activity to replace placeholder
@@ -77,6 +81,7 @@ export type Metrics = {
   disputes: DisputeMetrics;
   sellers: SellerStat[];
   durations: DurationStat[];
+  underwriting: UnderwritingMetrics;
 };
 
 function avg(nums: number[]): number | null {
@@ -92,6 +97,7 @@ export async function computeMetrics(): Promise<Metrics> {
     { data: repayments },
     { data: events },
     { data: users },
+    underwriting,
   ] = await Promise.all([
     admin
       .from("loans")
@@ -105,6 +111,7 @@ export async function computeMetrics(): Promise<Metrics> {
       .select("loan_id, event_type, created_at")
       .order("created_at", { ascending: true }),
     admin.from("users").select("id, name"),
+    computeUnderwriting(),
   ]);
 
   const loanRows = loans ?? [];
@@ -262,5 +269,6 @@ export async function computeMetrics(): Promise<Metrics> {
     disputes: disputeMetrics,
     sellers,
     durations,
+    underwriting,
   };
 }

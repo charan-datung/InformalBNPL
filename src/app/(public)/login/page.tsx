@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signInAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
+import { LogoMark } from "@/components/brand/Logo";
 
 export default async function LoginPage({
   searchParams,
@@ -14,7 +15,10 @@ export default async function LoginPage({
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <h1 className="text-2xl font-semibold">Log in</h1>
+      <div className="space-y-3">
+        <LogoMark className="h-10 w-auto" />
+        <h1 className="text-2xl font-semibold">Log in to Datung</h1>
+      </div>
 
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

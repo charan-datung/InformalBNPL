@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminOrRedirect } from "@/lib/auth/staff";
 import { signOutAction } from "@/app/(public)/auth/actions";
+import { Wordmark } from "@/components/brand/Logo";
 
 /**
  * Admin portal layout. ROUTE-LAYER access control: requireAdminOrRedirect runs
@@ -23,10 +24,15 @@ export default async function AdminLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-black/10 bg-slate-900 text-white dark:border-white/10">
+      <header className="border-b border-white/10 bg-brand-700 text-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
           <div className="flex items-center gap-4">
-            <span className="font-semibold">Admin Portal</span>
+            <span className="inline-flex items-center gap-2">
+              <Wordmark href="/admin" onDark markClassName="h-6 w-auto" />
+              <span className="rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                Admin
+              </span>
+            </span>
             <nav className="flex flex-wrap gap-3 text-sm">
               {nav.map((n) => (
                 <Link

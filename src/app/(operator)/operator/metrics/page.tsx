@@ -54,6 +54,62 @@ export default async function MetricsPage() {
         </span>
       </div>
 
+      {/* Underwriting (application pipeline — front of the funnel) */}
+      <section className="space-y-3">
+        <SectionHead
+          title="Underwriting"
+          metric="underwriting"
+          note="Buyer applications, underwritten manually today. These are the signals a future automated scorecard (credit-bureau pulls + internal logic) will threshold on. Exposure = requested amount ÷ monthly cash flow."
+        />
+        <div className="grid gap-3 sm:grid-cols-4">
+          <Kpi label="Applications" value={String(m.underwriting.totalApplications)} />
+          <Kpi label="Approval rate" value={pct(m.underwriting.approvalRate)} />
+          <Kpi
+            label="Avg requested"
+            value={formatPeso(m.underwriting.avgRequestedCentavos ?? null)}
+          />
+          <Kpi
+            label="Approved ÷ requested"
+            value={pct(m.underwriting.approvedToRequestedRatio)}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Kpi label="Pending review" value={String(m.underwriting.pending)} />
+          <Kpi
+            label="Business / personal"
+            value={`${m.underwriting.business} / ${m.underwriting.personal}`}
+          />
+          <Kpi
+            label="With existing loans"
+            value={String(m.underwriting.withExistingLoans)}
+          />
+        </div>
+        <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          <BandTable
+            title="Monthly cash flow"
+            unit="applicants"
+            bands={m.underwriting.cashflowBands}
+          />
+          <BandTable
+            title="Exposure (requested ÷ cash flow)"
+            unit="applicants"
+            bands={m.underwriting.exposureBands}
+          />
+          <BandTable
+            title="Sourcing channels"
+            unit="mentions"
+            bands={m.underwriting.sourcing}
+            empty="No business applicants yet."
+          />
+          <BandTable
+            title="Selling channels"
+            unit="mentions"
+            bands={m.underwriting.channels}
+            empty="No business applicants yet."
+          />
+        </div>
+      </section>
+
       {/* Loan funnel */}
       <section className="space-y-2">
         <SectionHead title="Loan funnel" metric="funnel" />
@@ -201,6 +257,60 @@ function Kpi({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-black/10 p-3 dark:border-white/10">
       <div className="text-2xl font-semibold tabular-nums">{value}</div>
       <div className="text-xs text-black/55 dark:text-white/55">{label}</div>
+    </div>
+  );
+}
+
+function BandTable({
+  title,
+  unit,
+  bands,
+  empty,
+}: {
+  title: string;
+  unit: string;
+  bands: { label: string; count: number }[];
+  empty?: string;
+}) {
+  const total = bands.reduce((s, b) => s + b.count, 0);
+  const shown = bands.filter((b) => b.count > 0 || b.label !== "Unknown");
+  return (
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-xs font-semibold">{title}</h3>
+        <span className="text-[11px] text-black/40 dark:text-white/40">
+          {total} {unit}
+        </span>
+      </div>
+      {total === 0 && empty ? (
+        <p className="text-xs text-black/45 dark:text-white/45">{empty}</p>
+      ) : (
+        <table className="w-full text-sm">
+          <tbody>
+            {shown.map((b) => {
+              const frac = total > 0 ? b.count / total : 0;
+              return (
+                <tr key={b.label}>
+                  <td className="w-40 py-0.5 pr-3 text-xs text-black/60 dark:text-white/60">
+                    {b.label}
+                  </td>
+                  <td className="py-0.5">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-brand-500"
+                        style={{ width: `${Math.round(frac * 100)}%` }}
+                      />
+                    </div>
+                  </td>
+                  <td className="w-8 py-0.5 pl-2 text-right text-xs tabular-nums">
+                    {b.count}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

@@ -14,24 +14,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Informal BNPL — Pilot",
+  title: "Datung — Buy now, pay later",
   description:
-    "Pilot BNPL platform for the Philippines. Records loan and escrow state only — no money movement.",
-  applicationName: "Informal BNPL",
+    "Datung is a BNPL platform for the Philippines, built for informal merchants. Records loan and escrow state only — no money movement.",
+  applicationName: "Datung",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon-192.png",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Informal BNPL",
+    title: "Datung",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#0e4d45",
   width: "device-width",
   initialScale: 1,
   // Comfortable on phones; allow zoom for accessibility.

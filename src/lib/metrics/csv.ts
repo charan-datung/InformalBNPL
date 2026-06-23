@@ -11,7 +11,8 @@ export type MetricName =
   | "outcomes"
   | "disputes"
   | "sellers"
-  | "durations";
+  | "durations"
+  | "underwriting";
 
 function cell(v: string | number | null | undefined): string {
   const s = v === null || v === undefined ? "" : String(v);
@@ -93,5 +94,31 @@ export function metricToCsv(m: Metrics, which: MetricName): string {
         ["transition", "samples", "avg_days"],
         m.durations.map((d) => [d.transition, d.samples, days(d.avgDays)]),
       );
+
+    case "underwriting": {
+      const u = m.underwriting;
+      return table(
+        ["section", "label", "value"],
+        [
+          ["summary", "total_applications", u.totalApplications],
+          ["summary", "pending", u.pending],
+          ["summary", "verified", u.verified],
+          ["summary", "rejected", u.rejected],
+          ["summary", "approval_rate", rate(u.approvalRate)],
+          ["summary", "business", u.business],
+          ["summary", "personal", u.personal],
+          ["summary", "with_existing_loans", u.withExistingLoans],
+          ["credit", "requested_total_centavos", u.requestedTotalCentavos],
+          ["credit", "approved_total_centavos", u.approvedTotalCentavos],
+          ["credit", "avg_requested_centavos", u.avgRequestedCentavos ?? ""],
+          ["credit", "avg_approved_centavos", u.avgApprovedCentavos ?? ""],
+          ["credit", "approved_to_requested_ratio", rate(u.approvedToRequestedRatio)],
+          ...u.cashflowBands.map((b) => ["cashflow_band", b.label, b.count]),
+          ...u.exposureBands.map((b) => ["exposure_band", b.label, b.count]),
+          ...u.sourcing.map((b) => ["sourcing", b.label, b.count]),
+          ...u.channels.map((b) => ["channel", b.label, b.count]),
+        ],
+      );
+    }
   }
 }

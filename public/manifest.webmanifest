@@ -1,14 +1,14 @@
 {
-  "name": "Informal BNPL — Pilot",
-  "short_name": "Informal BNPL",
-  "description": "Pilot BNPL platform for the Philippines. Records loan and escrow state only.",
+  "name": "Datung — Buy now, pay later",
+  "short_name": "Datung",
+  "description": "BNPL platform for the Philippines, built for informal merchants. Records loan and escrow state only.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#0f172a",
+  "theme_color": "#0e4d45",
   "categories": ["finance", "shopping"],
   "icons": [
     {

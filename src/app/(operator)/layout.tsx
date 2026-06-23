@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentStaff } from "@/lib/auth/staff";
 import { signOutAction } from "@/app/(public)/auth/actions";
+import { Wordmark } from "@/components/brand/Logo";
 
 /**
  * Operator console layout. Gated to staff (operator OR admin) — anyone else is
@@ -28,10 +29,15 @@ export default async function OperatorLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-black/10 bg-slate-50 dark:border-white/10 dark:bg-slate-900">
+      <header className="border-b border-black/10 bg-brand-50 dark:border-white/10 dark:bg-brand-950">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2">
           <div className="flex items-center gap-4">
-            <span className="font-semibold">Operator Console</span>
+            <span className="inline-flex items-center gap-2">
+              <Wordmark href="/operator" markClassName="h-6 w-auto" />
+              <span className="rounded bg-brand-700/10 px-1.5 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-white/10 dark:text-brand-100">
+                Operator
+              </span>
+            </span>
             <nav className="flex flex-wrap gap-3 text-sm">
               {nav.map((n) => (
                 <Link

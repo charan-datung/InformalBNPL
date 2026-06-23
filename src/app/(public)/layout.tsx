@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { signOutAction } from "@/app/(public)/auth/actions";
+import { Wordmark } from "@/components/brand/Logo";
 
 /**
  * Layout for the public PWA — buyer and seller surfaces.
@@ -17,11 +18,9 @@ export default async function PublicLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-black/10 dark:border-white/10">
+      <header className="border-b border-black/10 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-brand-950/40">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <Link href="/" className="font-semibold">
-            Informal BNPL
-          </Link>
+          <Wordmark href="/" markClassName="h-7 w-auto" />
 
           {caps ? (
             <div className="flex items-center gap-3 text-sm">

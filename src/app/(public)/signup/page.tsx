@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signUpAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
+import { LogoMark } from "@/components/brand/Logo";
 
 export default async function SignupPage({
   searchParams,
@@ -30,8 +31,9 @@ export default async function SignupPage({
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Create your account</h1>
+      <div className="space-y-2">
+        <LogoMark className="h-10 w-auto" />
+        <h1 className="text-2xl font-semibold">Create your Datung account</h1>
         <p className="text-sm text-black/60 dark:text-white/60">
           Just your sign-in details for now — you&apos;ll pick what you want to
           do next.

@@ -1,8 +1,51 @@
 @import "tailwindcss";
 
+/*
+ * Datung brand design tokens.
+ *
+ * The brand mark is a teal "d" with bright-green accents. Rather than rewrite
+ * every component, we (1) expose a brand/accent color scale for new UI, and
+ * (2) re-point the few neutral shades the app already uses as its "primary"
+ * (slate-900/800 for buttons & headings) to brand teal. One edit re-skins the
+ * whole app.
+ */
+@theme {
+  /* Brand teal */
+  --color-brand-50: #ecf6f3;
+  --color-brand-100: #d0e8e2;
+  --color-brand-200: #a3d2c7;
+  --color-brand-300: #6fb8a8;
+  --color-brand-400: #3e9685;
+  --color-brand-500: #1c766a;
+  --color-brand-600: #14655a;
+  --color-brand-700: #0e4d45;
+  --color-brand-800: #0b3d37;
+  --color-brand-900: #08302b;
+  --color-brand-950: #052420;
+
+  /* Bright-green accent (from the logo slashes / swoosh) */
+  --color-accent-50: #e9fbf1;
+  --color-accent-100: #c8f4da;
+  --color-accent-200: #93e9b9;
+  --color-accent-300: #5cdc95;
+  --color-accent-400: #34d17e;
+  --color-accent-500: #22c55e;
+  --color-accent-600: #16a34a;
+  --color-accent-700: #11833c;
+  --color-accent-800: #116733;
+  --color-accent-900: #0f522b;
+
+  /* Re-point the app's existing "primary" neutrals to brand teal. */
+  --color-slate-900: #0e4d45;
+  --color-slate-800: #14655a;
+  --color-slate-700: #1c766a;
+}
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #122a26;
+  --brand: #0e4d45;
+  --accent: #22c55e;
 }
 
 @theme inline {
@@ -14,13 +57,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #07201c;
+    --foreground: #e7f2ee;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Brand-tinted text selection. */
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }

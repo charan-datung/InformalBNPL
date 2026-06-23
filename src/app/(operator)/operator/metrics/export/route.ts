@@ -11,6 +11,7 @@ const VALID: MetricName[] = [
   "disputes",
   "sellers",
   "durations",
+  "underwriting",
 ];
 
 /**
