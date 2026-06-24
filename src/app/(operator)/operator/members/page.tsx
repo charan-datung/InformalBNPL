@@ -7,6 +7,8 @@ import {
 } from "@/lib/operator/queries";
 import { formatPeso, formatDateTime } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
+import { getRequestOrigin } from "@/lib/http/origin";
+import BuyerInviteCard from "@/components/invite/BuyerInviteCard";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +121,10 @@ async function BuyersTable() {
 }
 
 async function SellersTable() {
-  const sellers = await listApprovedSellers();
+  const [sellers, origin] = await Promise.all([
+    listApprovedSellers(),
+    getRequestOrigin(),
+  ]);
   if (sellers.length === 0) {
     return (
       <p className="text-sm text-black/55 dark:text-white/55">
@@ -128,6 +133,7 @@ async function SellersTable() {
     );
   }
   return (
+    <div className="space-y-6">
     <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/10">
       <table className="w-full text-sm">
         <thead className="border-b border-black/10 bg-black/[0.02] text-xs dark:border-white/10 dark:bg-white/[0.03]">
@@ -186,6 +192,25 @@ async function SellersTable() {
           ))}
         </tbody>
       </table>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-xs font-medium text-black/50 dark:text-white/50">
+          Buyer invite links — share a seller’s QR or link so their customers can
+          sign up for credit
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {sellers.map((s: ApprovedSeller) => (
+            <BuyerInviteCard
+              key={s.user_id}
+              origin={origin}
+              sellerUserId={s.user_id}
+              label={s.name}
+              qrSize={120}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
