@@ -1,5 +1,6 @@
 import { listPendingBuyers } from "@/lib/operator/queries";
 import { reviewBuyerAction } from "@/app/(operator)/operator/actions";
+import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
 import {
   runBuyerIdOcr,
   runBuyerBillingOcr,
@@ -186,13 +187,12 @@ export default async function BuyerReviewsPage({
               <div className="mt-3 space-y-2 rounded border border-black/10 p-3 dark:border-white/10">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold">ID OCR check</span>
-                  <button
-                    type="submit"
-                    formAction={runBuyerIdOcr}
+                  <OcrButton
+                    action={runBuyerIdOcr}
                     className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
                   >
                     Run ID OCR
-                  </button>
+                  </OcrButton>
                   {idCheck ? (
                     <span className="text-xs">
                       {idCheck.idNumberFound ? "✓" : "✗"} ID number ·{" "}
@@ -225,13 +225,12 @@ export default async function BuyerReviewsPage({
                     </span>
                   )}
                   {b.proofUrl ? (
-                    <button
-                      type="submit"
-                      formAction={runBuyerBillingOcr}
+                    <OcrButton
+                      action={runBuyerBillingOcr}
                       className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
                     >
                       Run billing OCR
-                    </button>
+                    </OcrButton>
                   ) : null}
                 </div>
                 {billingPreview ? (

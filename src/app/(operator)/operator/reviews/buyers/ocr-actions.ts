@@ -67,10 +67,12 @@ export async function runBuyerIdOcr(formData: FormData) {
             ranAt,
           };
 
-  await admin
+  const { error: updateError } = await admin
     .from("buyer_profiles")
     .update({ application: { ...app, ocr_id_check } })
     .eq("user_id", userId);
+  if (updateError)
+    console.error("Saving buyer ID OCR result failed:", updateError.message);
   revalidatePath(BACK);
 }
 
@@ -101,9 +103,11 @@ export async function runBuyerBillingOcr(formData: FormData) {
           "OCR ran but found no readable text in this document."
         : `OCR failed: ${result.error}`.slice(0, 400);
 
-  await admin
+  const { error: updateError } = await admin
     .from("buyer_profiles")
     .update({ application: { ...app, ocr_billing_preview } })
     .eq("user_id", userId);
+  if (updateError)
+    console.error("Saving buyer billing OCR result failed:", updateError.message);
   revalidatePath(BACK);
 }

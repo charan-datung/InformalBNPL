@@ -49,10 +49,18 @@ async function ocrColumn(
           "OCR ran but found no readable text in this photo."
         : `OCR failed: ${result.error}`.slice(0, 400);
 
-  await admin
+  const { error: updateError } = await admin
     .from("seller_profiles")
     .update({ [textColumn]: value })
     .eq("user_id", userId);
+  if (updateError) {
+    // Most likely the ocr_* columns are missing because migration
+    // 20260624000000_seller_ocr.sql hasn't been applied to this database.
+    console.error(
+      `Saving OCR result to seller_profiles.${textColumn} failed:`,
+      updateError.message,
+    );
+  }
   revalidatePath(BACK);
 }
 
