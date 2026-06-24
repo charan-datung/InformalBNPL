@@ -14,6 +14,11 @@ export default async function OperatorOverviewPage() {
   const readyToRelease = queue.toRelease.length + queue.toClear.length;
 
   const cards = [
+    {
+      label: "Approved members",
+      value: counts.approvedBuyers + counts.approvedSellers,
+      href: "/operator/members",
+    },
     { label: "Loans", value: counts.loans, href: "/operator/loans" },
     {
       label: "Ready to release",

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { RELEASED_STATUSES } from "@/lib/loans/credit";
 import type { LoanStatus } from "@/lib/loans/state-machine";
 import type { EscrowEventType } from "@/lib/loans/events";
 import { getConfig } from "@/lib/config/system-config";
@@ -336,30 +337,36 @@ export async function listOpenDisputes(): Promise<OpenDispute[]> {
 export type OperatorCounts = {
   pendingBuyers: number;
   pendingSellers: number;
+  approvedBuyers: number;
+  approvedSellers: number;
   openDisputes: number;
   loans: number;
 };
 
 export async function getOperatorCounts(): Promise<OperatorCounts> {
   const admin = createAdminClient();
-  const [buyers, sellers, disputes, loans] = await Promise.all([
+  const countBy = (table: string, column: string, value: string) =>
     admin
-      .from("buyer_profiles")
+      .from(table)
       .select("*", { count: "exact", head: true })
-      .eq("kyc_status", "pending"),
-    admin
-      .from("seller_profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("kyc_status", "pending"),
-    admin
-      .from("disputes")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["open", "under_review"]),
-    admin.from("loans").select("*", { count: "exact", head: true }),
-  ]);
+      .eq(column, value);
+  const [buyers, sellers, approvedBuyers, approvedSellers, disputes, loans] =
+    await Promise.all([
+      countBy("buyer_profiles", "kyc_status", "pending"),
+      countBy("seller_profiles", "kyc_status", "pending"),
+      countBy("buyer_profiles", "kyc_status", "verified"),
+      countBy("seller_profiles", "kyc_status", "verified"),
+      admin
+        .from("disputes")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["open", "under_review"]),
+      admin.from("loans").select("*", { count: "exact", head: true }),
+    ]);
   return {
     pendingBuyers: buyers.count ?? 0,
     pendingSellers: sellers.count ?? 0,
+    approvedBuyers: approvedBuyers.count ?? 0,
+    approvedSellers: approvedSellers.count ?? 0,
     openDisputes: disputes.count ?? 0,
     loans: loans.count ?? 0,
   };
@@ -452,4 +459,128 @@ export async function listReleaseQueue(): Promise<ReleaseQueue> {
   }
 
   return queue;
+}
+
+// ---- Approved member directories ----
+
+/** A loan row reduced to what the exposure/activity rollups need. */
+type LoanLite = {
+  buyer_user_id: string;
+  seller_user_id: string;
+  ticket_centavos: number;
+  status: string;
+};
+
+/** Sum of unsettled ticket exposure + total loan count, keyed by a user id. */
+function rollupExposure(
+  loans: LoanLite[],
+  key: "buyer_user_id" | "seller_user_id",
+) {
+  const map = new Map<string, { outstanding: number; total: number }>();
+  for (const l of loans) {
+    const id = l[key];
+    const agg = map.get(id) ?? { outstanding: 0, total: 0 };
+    agg.total += 1;
+    if (!RELEASED_STATUSES.includes(l.status)) agg.outstanding += l.ticket_centavos;
+    map.set(id, agg);
+  }
+  return map;
+}
+
+export type ApprovedBuyer = {
+  user_id: string;
+  name: string;
+  contact: string | null;
+  buyer_kind: string | null;
+  approved_at: string;
+  credit_limit_centavos: number;
+  outstanding_centavos: number;
+  available_centavos: number;
+  loan_count: number;
+};
+
+export async function listApprovedBuyers(): Promise<ApprovedBuyer[]> {
+  const admin = createAdminClient();
+  const [{ data }, users, { data: loans }] = await Promise.all([
+    admin
+      .from("buyer_profiles")
+      .select("user_id, created_at, buyer_kind, credit_limit_centavos")
+      .eq("kyc_status", "verified")
+      .order("created_at", { ascending: false }),
+    usersMap(),
+    admin.from("loans").select("buyer_user_id, ticket_centavos, status"),
+  ]);
+
+  const exposure = rollupExposure((loans ?? []) as LoanLite[], "buyer_user_id");
+
+  return (data ?? []).map((b) => {
+    const agg = exposure.get(b.user_id) ?? { outstanding: 0, total: 0 };
+    const limit = b.credit_limit_centavos ?? 0;
+    return {
+      user_id: b.user_id,
+      name: users.get(b.user_id)?.name ?? b.user_id,
+      contact: users.get(b.user_id)?.contact ?? null,
+      buyer_kind: b.buyer_kind,
+      approved_at: b.created_at,
+      credit_limit_centavos: limit,
+      outstanding_centavos: agg.outstanding,
+      available_centavos: Math.max(0, limit - agg.outstanding),
+      loan_count: agg.total,
+    };
+  });
+}
+
+export type ApprovedSeller = {
+  user_id: string;
+  name: string;
+  contact: string | null;
+  social_handle: string | null;
+  marketplace_url: string | null;
+  selling_since: string | null;
+  storefront_location: string | null;
+  trust_tier: string;
+  rolling_reserve_pct: number;
+  max_outstanding_centavos: number;
+  outstanding_centavos: number;
+  available_centavos: number;
+  approved_at: string;
+  loan_count: number;
+};
+
+export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
+  const admin = createAdminClient();
+  const [{ data }, users, { data: loans }] = await Promise.all([
+    admin
+      .from("seller_profiles")
+      .select(
+        "user_id, created_at, social_handle, marketplace_url, selling_since, storefront_location, trust_tier, rolling_reserve_pct, max_outstanding_centavos",
+      )
+      .eq("kyc_status", "verified")
+      .order("created_at", { ascending: false }),
+    usersMap(),
+    admin.from("loans").select("seller_user_id, ticket_centavos, status"),
+  ]);
+
+  const exposure = rollupExposure((loans ?? []) as LoanLite[], "seller_user_id");
+
+  return (data ?? []).map((s) => {
+    const agg = exposure.get(s.user_id) ?? { outstanding: 0, total: 0 };
+    const cap = s.max_outstanding_centavos ?? 0;
+    return {
+      user_id: s.user_id,
+      name: users.get(s.user_id)?.name ?? s.user_id,
+      contact: users.get(s.user_id)?.contact ?? null,
+      social_handle: s.social_handle,
+      marketplace_url: s.marketplace_url,
+      selling_since: s.selling_since,
+      storefront_location: s.storefront_location,
+      trust_tier: s.trust_tier,
+      rolling_reserve_pct: Number(s.rolling_reserve_pct ?? 0),
+      max_outstanding_centavos: cap,
+      outstanding_centavos: agg.outstanding,
+      available_centavos: Math.max(0, cap - agg.outstanding),
+      approved_at: s.created_at,
+      loan_count: agg.total,
+    };
+  });
 }
