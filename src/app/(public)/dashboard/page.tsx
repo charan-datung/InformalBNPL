@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
 import DashboardModes from "@/app/(public)/dashboard/DashboardModes";
 import BuyerPanel from "@/app/(public)/dashboard/BuyerPanel";
 import SellerPanel from "@/app/(public)/dashboard/SellerPanel";
+import { CardSkeleton } from "@/components/brand/Skeleton";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -37,9 +39,18 @@ export default async function DashboardPage({
   const sellerVerified = caps.seller === "verified";
   const bothVerified = buyerVerified && sellerVerified;
 
-  const buyerNode = buyerVerified ? <BuyerPanel userId={caps.userId} /> : null;
+  // Wrapped in Suspense so the dashboard shell (header, capabilities) streams
+  // immediately while each panel's data loads behind a skeleton — the page
+  // never blocks on the slowest query before showing anything.
+  const buyerNode = buyerVerified ? (
+    <Suspense fallback={<CardSkeleton />}>
+      <BuyerPanel userId={caps.userId} />
+    </Suspense>
+  ) : null;
   const sellerNode = sellerVerified ? (
-    <SellerPanel userId={caps.userId} />
+    <Suspense fallback={<CardSkeleton />}>
+      <SellerPanel userId={caps.userId} />
+    </Suspense>
   ) : null;
 
   return (
