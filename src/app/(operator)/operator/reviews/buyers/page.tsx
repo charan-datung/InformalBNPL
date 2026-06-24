@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { listPendingBuyers } from "@/lib/operator/queries";
 import { reviewBuyerAction } from "@/app/(operator)/operator/actions";
 import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
@@ -8,6 +9,7 @@ import {
 import type { BuyerApplication } from "@/lib/profiles/buyer-application";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso, formatDateTime } from "@/lib/format";
+import { CardSkeleton } from "@/components/brand/Skeleton";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -100,7 +102,24 @@ function ApplicationDetails({ app }: { app: Record<string, unknown> | null }) {
   );
 }
 
-export default async function BuyerReviewsPage({
+export default function BuyerReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  // Shell paints immediately; the queue (data + per-row signed URLs) streams in
+  // behind a skeleton instead of blocking the whole page on storage calls.
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">Pending buyer applications</h1>
+      <Suspense fallback={<CardSkeleton rows={4} />}>
+        <BuyerQueue searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function BuyerQueue({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
@@ -113,9 +132,9 @@ export default async function BuyerReviewsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">
-        Pending buyer applications ({buyers.length})
-      </h1>
+      <p className="text-sm font-medium text-black/70 dark:text-white/70">
+        {buyers.length} pending
+      </p>
 
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { listPendingSellers, type PendingSeller } from "@/lib/operator/queries";
 import { reviewSellerAction } from "@/app/(operator)/operator/actions";
 import {
@@ -7,6 +8,7 @@ import {
 import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
 import { getConfig } from "@/lib/config/system-config";
 import { formatDateTime } from "@/lib/format";
+import { CardSkeleton } from "@/components/brand/Skeleton";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -46,7 +48,28 @@ function Signal({ label, url }: { label: string; url: string | null }) {
   );
 }
 
-export default async function SellerReviewsPage({
+export default function SellerReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  // Shell renders immediately; the queue (data + per-row signed URLs) streams in
+  // behind a skeleton so this page never blocks on the slowest storage call.
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">Pending seller verifications</h1>
+      <p className="text-sm text-black/55 dark:text-white/55">
+        No business documents — verify a real person and a real selling presence
+        from the ID, storefront, and social proof below.
+      </p>
+      <Suspense fallback={<CardSkeleton rows={4} />}>
+        <SellerQueue searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SellerQueue({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
@@ -59,12 +82,8 @@ export default async function SellerReviewsPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">
-        Pending seller verifications ({sellers.length})
-      </h1>
-      <p className="text-sm text-black/55 dark:text-white/55">
-        No business documents — verify a real person and a real selling presence
-        from the ID, storefront, and social proof below.
+      <p className="text-sm font-medium text-black/70 dark:text-white/70">
+        {sellers.length} pending
       </p>
 
       {error ? (
