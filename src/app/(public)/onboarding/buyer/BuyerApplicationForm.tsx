@@ -14,7 +14,7 @@ import {
 } from "@/lib/profiles/buyer-application";
 import PhLocation from "@/app/(public)/onboarding/PhLocation";
 import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
-import { compressFormImages } from "@/lib/images/compress";
+import { compressInputFiles } from "@/lib/images/compress";
 import { idHint, validateIdNumber } from "@/lib/profiles/id-validation";
 
 const input =
@@ -53,16 +53,12 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
     idInputRef.current?.setCustomValidity(idError ?? "");
   }, [idError]);
 
-  // Shrink photos in the browser before the server action runs — the upload is
-  // the slow part, and useFormStatus keeps the button in its pending state for
-  // the whole compress + upload + save cycle.
-  async function submit(formData: FormData) {
-    await compressFormImages(formData);
-    await applyAsBuyer(formData);
-  }
-
   return (
-    <form action={submit} encType="multipart/form-data" className="space-y-5">
+    <form
+      action={applyAsBuyer}
+      encType="multipart/form-data"
+      className="space-y-5"
+    >
       {next === "seller" ? <input type="hidden" name="next" value="seller" /> : null}
 
       {/* Purpose toggle drives the adaptive branch */}
@@ -178,6 +174,7 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             accept="image/*"
             capture="environment"
             required
+            onChange={(e) => void compressInputFiles(e.currentTarget)}
             className="block text-sm"
           />
           <span className={hint}>
@@ -193,6 +190,7 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             name="proof_of_billing"
             accept="image/*"
             capture="environment"
+            onChange={(e) => void compressInputFiles(e.currentTarget)}
             className="block text-sm"
           />
           <span className={hint}>

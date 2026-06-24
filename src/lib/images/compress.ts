@@ -43,13 +43,22 @@ async function compressImage(
   }
 }
 
-/** Shrink every image File in a FormData in place, before it's sent. */
-export async function compressFormImages(formData: FormData): Promise<void> {
-  for (const key of [...formData.keys()]) {
-    const value = formData.get(key);
-    if (value instanceof File && value.size > 0 && value.type.startsWith("image/")) {
-      const compressed = await compressImage(value);
-      if (compressed !== value) formData.set(key, compressed, compressed.name);
+/**
+ * Compress the image(s) a user just picked, in place on the <input>, so the form
+ * still submits via the normal server action (works even before hydration — no
+ * client-action wrapper needed). Best-effort; leaves files untouched on failure.
+ */
+export async function compressInputFiles(input: HTMLInputElement): Promise<void> {
+  try {
+    if (!input.files || input.files.length === 0) return;
+    const dt = new DataTransfer();
+    for (const file of Array.from(input.files)) {
+      dt.items.add(
+        file.type.startsWith("image/") ? await compressImage(file) : file,
+      );
     }
+    input.files = dt.files;
+  } catch {
+    // Keep the original selection if anything about DataTransfer/canvas fails.
   }
 }

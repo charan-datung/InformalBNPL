@@ -4,7 +4,7 @@ import { applyAsSeller } from "@/app/(public)/onboarding/actions";
 import PinLocation from "@/app/(public)/onboarding/seller/PinLocation";
 import PhLocation from "@/app/(public)/onboarding/PhLocation";
 import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
-import { compressFormImages } from "@/lib/images/compress";
+import { compressInputFiles } from "@/lib/images/compress";
 
 const INPUT =
   "w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent";
@@ -35,14 +35,8 @@ export default function SellerApplicationForm({
 }: {
   prefill?: SellerPrefill | null;
 }) {
-  // Compress the ID/storefront/item photos in the browser before uploading.
-  async function submit(formData: FormData) {
-    await compressFormImages(formData);
-    await applyAsSeller(formData);
-  }
-
   return (
-    <form action={submit} encType="multipart/form-data" className="space-y-5">
+    <form action={applyAsSeller} encType="multipart/form-data" className="space-y-5">
       {/* Who you are */}
       <fieldset className="space-y-3">
         <legend className="text-xs font-semibold uppercase tracking-wide text-black/45 dark:text-white/45">
@@ -100,6 +94,7 @@ export default function SellerApplicationForm({
             accept="image/*"
             capture="environment"
             required={!prefill?.hasBuyerId}
+            onChange={(e) => void compressInputFiles(e.currentTarget)}
             className={FILE}
           />
           <span className="block text-xs text-black/40 dark:text-white/40">
@@ -154,6 +149,7 @@ export default function SellerApplicationForm({
             accept="image/*"
             capture="environment"
             required
+            onChange={(e) => void compressInputFiles(e.currentTarget)}
             className={FILE}
           />
           <span className="block text-xs text-black/40 dark:text-white/40">
@@ -194,6 +190,7 @@ export default function SellerApplicationForm({
             accept="image/*"
             capture="environment"
             required
+            onChange={(e) => void compressInputFiles(e.currentTarget)}
             className={FILE}
           />
           <span className="block text-xs text-black/40 dark:text-white/40">
