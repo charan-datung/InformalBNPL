@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,7 +14,7 @@ export type StaffRole = "operator" | "admin";
 export type Staff = { id: string; name: string; staff_role: StaffRole };
 
 /** The current logged-in staff member, or null if not logged in / not staff. */
-export async function getCurrentStaff(): Promise<Staff | null> {
+export const getCurrentStaff = cache(async function getCurrentStaff(): Promise<Staff | null> {
   // Before Supabase is configured, treat as not-logged-in so gated layouts
   // redirect to /login instead of crashing.
   if (
@@ -43,7 +44,7 @@ export async function getCurrentStaff(): Promise<Staff | null> {
     console.error("getCurrentStaff failed:", e);
     return null;
   }
-}
+});
 
 /** Require any staff member (operator or admin); throws otherwise. */
 export async function requireStaff(): Promise<Staff> {

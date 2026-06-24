@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -25,7 +26,7 @@ export type Capabilities = {
  * Read the current user's capabilities, or null if not logged in. RLS lets a
  * user read their own profile rows, so the cookie-based server client is enough.
  */
-export async function getCapabilities(): Promise<Capabilities | null> {
+export const getCapabilities = cache(async function getCapabilities(): Promise<Capabilities | null> {
   // Before Supabase is configured (e.g. a fresh clone), treat everyone as
   // logged out so public pages still render instead of crashing.
   if (
@@ -73,7 +74,7 @@ export async function getCapabilities(): Promise<Capabilities | null> {
     console.error("getCapabilities failed:", e);
     return null;
   }
-}
+});
 
 /** True if the user has applied for neither capability (Stage 2 territory). */
 export function hasNoCapability(c: Capabilities): boolean {
