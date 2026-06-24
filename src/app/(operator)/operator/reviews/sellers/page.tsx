@@ -1,5 +1,9 @@
 import { listPendingSellers, type PendingSeller } from "@/lib/operator/queries";
 import { reviewSellerAction } from "@/app/(operator)/operator/actions";
+import {
+  runSellerIdOcr,
+  runSellerStorefrontOcr,
+} from "@/app/(operator)/operator/reviews/sellers/ocr-actions";
 import { getConfig } from "@/lib/config/system-config";
 import { formatDateTime } from "@/lib/format";
 
@@ -88,6 +92,37 @@ export default async function SellerReviewsPage({
                   <Signal label="Government ID" url={s.idUrl} />
                   <Signal label="Storefront / stall" url={s.storefrontUrl} />
                   <Signal label="Live item" url={s.photoUrl} />
+                </div>
+
+                {/* OCR (Tesseract) — runs server-side on demand */}
+                <div className="mt-3 space-y-2 rounded border border-black/10 p-3 dark:border-white/10">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="submit"
+                      formAction={runSellerIdOcr}
+                      className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
+                    >
+                      Run ID OCR
+                    </button>
+                    <button
+                      type="submit"
+                      formAction={runSellerStorefrontOcr}
+                      className="rounded border border-black/15 px-2 py-1 text-xs hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
+                    >
+                      Run storefront OCR
+                    </button>
+                  </div>
+                  {s.ocrIdText ? (
+                    <p className="text-[11px] text-black/55 dark:text-white/55">
+                      <span className="font-semibold">ID text:</span> “{s.ocrIdText}”
+                    </p>
+                  ) : null}
+                  {s.ocrStorefrontText ? (
+                    <p className="text-[11px] text-black/55 dark:text-white/55">
+                      <span className="font-semibold">Storefront text:</span> “
+                      {s.ocrStorefrontText}”
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="mt-3 space-y-1">

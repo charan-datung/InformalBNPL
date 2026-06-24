@@ -210,6 +210,9 @@ export type PendingSeller = {
   idUrl: string | null;
   /** Storefront / stall photo. */
   storefrontUrl: string | null;
+  /** OCR text extracted from the ID / storefront photo (operator-triggered). */
+  ocrIdText: string | null;
+  ocrStorefrontText: string | null;
 };
 
 export async function listPendingSellers(): Promise<PendingSeller[]> {
@@ -218,7 +221,7 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, created_at",
+        "user_id, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, ocr_id_text, ocr_storefront_text, created_at",
       )
       .eq("kyc_status", "pending")
       .order("created_at", { ascending: true }),
@@ -257,6 +260,8 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
         photoUrl,
         idUrl,
         storefrontUrl,
+        ocrIdText: s.ocr_id_text ?? null,
+        ocrStorefrontText: s.ocr_storefront_text ?? null,
       };
     }),
   );
