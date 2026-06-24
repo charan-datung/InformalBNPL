@@ -33,6 +33,9 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  // Set when the buyer arrived via a seller's invite link/QR (?ref=<sellerId>),
+  // so we can attribute the buyer to the seller who referred them.
+  const ref = String(formData.get("ref") ?? "").trim();
 
   if (!email || !password) {
     redirect(
@@ -47,7 +50,10 @@ export async function signUpAction(formData: FormData) {
       email,
       password,
       options: {
-        data: { contact: phone || email },
+        data: {
+          contact: phone || email,
+          ...(ref ? { referred_by_seller: ref } : {}),
+        },
         emailRedirectTo: `${await getOrigin()}/auth/confirm?next=/onboarding`,
       },
     });

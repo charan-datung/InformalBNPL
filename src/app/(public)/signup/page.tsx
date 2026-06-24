@@ -7,12 +7,12 @@ import { LogoMark } from "@/components/brand/Logo";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; check_email?: string }>;
+  searchParams: Promise<{ error?: string; check_email?: string; ref?: string }>;
 }) {
   // Already logged in? Skip straight into the app.
   if (await getCapabilities()) redirect("/dashboard");
 
-  const { error, check_email } = await searchParams;
+  const { error, check_email, ref } = await searchParams;
 
   if (check_email) {
     return (
@@ -46,7 +46,16 @@ export default async function SignupPage({
         </p>
       ) : null}
 
+      {ref ? (
+        <p className="rounded-md bg-brand-50 px-3 py-2 text-xs text-brand-800 dark:bg-brand-950/40 dark:text-brand-100">
+          You were invited by a Datung seller — finish signing up to shop with
+          credit.
+        </p>
+      ) : null}
+
       <form action={signUpAction} className="space-y-4">
+        {/* Carries the referring seller through sign-up (from their invite link/QR). */}
+        {ref ? <input type="hidden" name="ref" value={ref} /> : null}
         <label className="block space-y-1">
           <span className="text-sm font-medium">Email</span>
           <input

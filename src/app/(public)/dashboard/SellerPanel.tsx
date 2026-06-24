@@ -1,4 +1,5 @@
 import { listSellerLoans } from "@/lib/loans/views";
+import InviteBuyers from "@/app/(public)/dashboard/InviteBuyers";
 import { getConfig } from "@/lib/config/system-config";
 import { markShippedAction } from "@/app/(public)/dashboard/actions";
 import { createChargeAction } from "@/app/(public)/charge/actions";
@@ -83,6 +84,7 @@ export default async function SellerPanel({ userId }: { userId: string }) {
   return (
     <section className="space-y-4">
       <NewSale />
+      <InviteBuyers sellerUserId={userId} />
 
       <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
         Your orders ({loans.length})
