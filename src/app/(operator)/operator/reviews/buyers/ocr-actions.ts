@@ -40,20 +40,32 @@ export async function runBuyerIdOcr(formData: FormData) {
 
   const app = (profile.application as Record<string, unknown>) ?? {};
   const buf = await download(profile.id_document_path);
-  const text = buf ? await ocrImage(buf) : null;
+  const result = buf ? await ocrImage(buf) : null;
 
+  const ranAt = new Date().toISOString();
   const ocr_id_check =
-    text == null
+    result == null
       ? {
           idNumberFound: false,
           typeKeywordFound: false,
-          textPreview: "OCR unavailable — review the ID photo manually.",
-          ranAt: new Date().toISOString(),
+          textPreview: "Could not load the ID photo for OCR.",
+          ranAt,
         }
-      : {
-          ...crossCheckId(String(app.id_type ?? ""), String(app.id_number ?? ""), text),
-          ranAt: new Date().toISOString(),
-        };
+      : result.ok
+        ? {
+            ...crossCheckId(
+              String(app.id_type ?? ""),
+              String(app.id_number ?? ""),
+              result.text,
+            ),
+            ranAt,
+          }
+        : {
+            idNumberFound: false,
+            typeKeywordFound: false,
+            textPreview: `OCR failed: ${result.error}`.slice(0, 280),
+            ranAt,
+          };
 
   await admin
     .from("buyer_profiles")
@@ -80,11 +92,14 @@ export async function runBuyerBillingOcr(formData: FormData) {
   }
 
   const buf = await download(path);
-  const text = buf ? await ocrImage(buf) : null;
+  const result = buf ? await ocrImage(buf) : null;
   const ocr_billing_preview =
-    text == null
-      ? "OCR unavailable — review the document manually."
-      : text.replace(/\s+/g, " ").trim().slice(0, 400);
+    result == null
+      ? "Could not load the document for OCR."
+      : result.ok
+        ? result.text.replace(/\s+/g, " ").trim().slice(0, 400) ||
+          "OCR ran but found no readable text in this document."
+        : `OCR failed: ${result.error}`.slice(0, 400);
 
   await admin
     .from("buyer_profiles")

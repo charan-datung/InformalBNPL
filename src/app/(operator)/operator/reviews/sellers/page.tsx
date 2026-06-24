@@ -8,6 +8,9 @@ import { getConfig } from "@/lib/config/system-config";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+// OCR (model download on cold start + recognition) can take well over the
+// default serverless limit; give the operator actions on this segment headroom.
+export const maxDuration = 60;
 
 const ID_TYPE_LABELS: Record<string, string> = {
   philsys: "PhilSys / National ID",

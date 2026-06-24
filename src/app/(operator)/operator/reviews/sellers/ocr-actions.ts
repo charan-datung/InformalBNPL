@@ -37,11 +37,17 @@ async function ocrColumn(
   }
 
   const { data: file, error } = await admin.storage.from(BUCKET).download(path);
-  const text = file && !error ? await ocrImage(Buffer.from(await file.arrayBuffer())) : null;
+  const result =
+    file && !error
+      ? await ocrImage(Buffer.from(await file.arrayBuffer()))
+      : null;
   const value =
-    text == null
-      ? "OCR unavailable — review the photo manually."
-      : text.replace(/\s+/g, " ").trim().slice(0, 400);
+    result == null
+      ? "Could not load the uploaded file for OCR."
+      : result.ok
+        ? result.text.replace(/\s+/g, " ").trim().slice(0, 400) ||
+          "OCR ran but found no readable text in this photo."
+        : `OCR failed: ${result.error}`.slice(0, 400);
 
   await admin
     .from("seller_profiles")

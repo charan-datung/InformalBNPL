@@ -9,6 +9,9 @@ import { getConfig } from "@/lib/config/system-config";
 import { formatPeso, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+// OCR (model download on cold start + recognition) can take well over the
+// default serverless limit; give the operator actions on this segment headroom.
+export const maxDuration = 60;
 
 /** Pretty-print the application JSONB as labeled rows (money in centavos -> ₱). */
 function ApplicationDetails({ app }: { app: Record<string, unknown> | null }) {
