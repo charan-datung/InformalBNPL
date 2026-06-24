@@ -20,6 +20,17 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Anonymous traffic (home, login, signup, marketing) carries no Supabase auth
+  // cookie, so there's no session to refresh — skip the auth.getUser() network
+  // round-trip entirely. Logged-in requests (which have the cookie) still
+  // refresh as before.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+  if (!hasAuthCookie) {
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
