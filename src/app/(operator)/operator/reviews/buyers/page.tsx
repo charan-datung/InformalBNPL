@@ -189,6 +189,10 @@ async function BuyerQueue({
                   <img
                     src={b.idPhotoUrl}
                     alt="Government ID"
+                    width={144}
+                    height={96}
+                    loading="lazy"
+                    decoding="async"
                     className="h-24 w-36 rounded-md border border-black/10 object-cover dark:border-white/10"
                   />
                 ) : (
@@ -235,6 +239,10 @@ async function BuyerQueue({
                       <img
                         src={b.proofUrl}
                         alt="Proof of billing"
+                        width={64}
+                        height={48}
+                        loading="lazy"
+                        decoding="async"
                         className="h-12 w-16 rounded border border-black/10 object-cover dark:border-white/10"
                       />
                     </a>

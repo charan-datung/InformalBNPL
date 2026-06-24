@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,7 +77,7 @@ export async function getConfigValue<K extends ConfigKey>(
  * Unknown keys in the table are ignored. Server-only. Pass a `client` to reuse
  * an existing Supabase client; omit it to use the cookie-based server client.
  */
-export async function getConfig(client?: SupabaseClient): Promise<SystemConfig> {
+async function loadConfig(client?: SupabaseClient): Promise<SystemConfig> {
   const merged: SystemConfig = { ...CONFIG_DEFAULTS };
 
   const supabase = client ?? (await createClient());
@@ -95,4 +96,13 @@ export async function getConfig(client?: SupabaseClient): Promise<SystemConfig> 
     }
   }
   return merged;
+}
+
+// Per-request memo for the common (no explicit client) path: config is global
+// and several panels/pages read it in one render, so this collapses those into a
+// single DB read. Calls that pass their own client (inside mutations) bypass it.
+const loadConfigMemo = cache(() => loadConfig());
+
+export async function getConfig(client?: SupabaseClient): Promise<SystemConfig> {
+  return client ? loadConfig(client) : loadConfigMemo();
 }

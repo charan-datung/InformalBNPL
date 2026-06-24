@@ -36,6 +36,10 @@ function Signal({ label, url }: { label: string; url: string | null }) {
           <img
             src={url}
             alt={label}
+            width={112}
+            height={112}
+            loading="lazy"
+            decoding="async"
             className="h-28 w-28 rounded-md border border-black/10 object-cover dark:border-white/10"
           />
         </a>

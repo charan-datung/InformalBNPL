@@ -46,6 +46,10 @@ export default async function DisputesPage({
                     <img
                       src={d.evidenceUrl}
                       alt="Dispute evidence"
+                      width={128}
+                      height={128}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-32 rounded-md border border-black/10 object-cover dark:border-white/10"
                     />
                   ) : (
