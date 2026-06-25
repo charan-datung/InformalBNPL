@@ -44,10 +44,21 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
-  if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
-    return fail(error.message);
+  if (token_hash) {
+    // Verify with the link's declared type, falling back across the email OTP
+    // types a sign-up confirmation can carry. A non-matching type errors without
+    // consuming the token, so trying a few is safe and makes the callback robust
+    // to whichever `type` the email template uses (signup vs email).
+    const candidates = [type, "signup", "email"].filter(
+      (t, i, a): t is EmailOtpType => Boolean(t) && a.indexOf(t) === i,
+    );
+    let lastError = "Confirmation link is invalid or has expired.";
+    for (const t of candidates) {
+      const { error } = await supabase.auth.verifyOtp({ type: t, token_hash });
+      if (!error) return NextResponse.redirect(new URL(next, request.url));
+      lastError = error.message;
+    }
+    return fail(lastError);
   }
 
   if (code) {

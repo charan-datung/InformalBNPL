@@ -60,6 +60,9 @@ export async function signUpAction(formData: FormData) {
           contact: phone || email,
           ...(ref ? { referred_by_seller: ref } : {}),
           ...(sref ? { seller_referrer_id: sref } : {}),
+          // Persist seller intent so onboarding can route there even when email
+          // confirmation is on (the static email template can't carry `next`).
+          ...(intent === "seller" ? { signup_intent: "seller" } : {}),
         },
         emailRedirectTo: `${await getOrigin()}/auth/confirm?next=${encodeURIComponent(
           onboardingNext,

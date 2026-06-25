@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getCapabilities } from "@/lib/profiles/capabilities";
+import { createClient } from "@/lib/supabase/server";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -26,6 +27,17 @@ export default async function OnboardingPage() {
 
   // If they already applied for something, the dashboard is the right place.
   if (caps.buyer !== "none" || caps.seller !== "none") redirect("/dashboard");
+
+  // Arrived via a seller-acquisition link: skip the neutral choice and go
+  // straight to seller verification. Works regardless of how they got here
+  // (instant sign-up or after email confirmation), since the intent rides on
+  // the auth user's metadata.
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser();
+  if (user?.user_metadata?.signup_intent === "seller") {
+    redirect("/onboarding/seller");
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6">
