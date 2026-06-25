@@ -53,6 +53,24 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL(next, request.url));
+
+    // A PKCE link only works in the browser that started sign-up: the
+    // code_verifier lives in a cookie there. When it's missing (link opened on
+    // another device, or storage cleared) the exchange fails — but Supabase's
+    // verify endpoint already CONFIRMED the email before redirecting here, so
+    // the account is usable. Turn the cryptic "code verifier not found" into a
+    // smooth path: tell them they're confirmed and to log in.
+    if (/code.?verifier/i.test(error.message)) {
+      return NextResponse.redirect(
+        new URL(
+          "/login?error=" +
+            encodeURIComponent(
+              "Your email is confirmed — please log in to continue.",
+            ),
+          request.url,
+        ),
+      );
+    }
     return fail(error.message);
   }
 
