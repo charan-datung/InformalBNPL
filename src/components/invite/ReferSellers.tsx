@@ -37,7 +37,7 @@ export default async function ReferSellers({
       </h2>
       <p className="mt-0.5 flex items-center gap-1.5 text-xs text-black/55">
         <Gift className="size-3.5 text-accent-600" />
-        Earn {formatPeso(reward)} when a seller you refer books their first
+        Earn {formatPeso(reward)} when a seller you refer completes their first
         order.
       </p>
 

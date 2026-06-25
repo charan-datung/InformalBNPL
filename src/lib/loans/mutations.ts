@@ -165,14 +165,6 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
     .single<Loan>();
 
   if (error) throw new LoanMutationError("db", error.message);
-
-  // First booked order qualifies a seller-to-seller referral bounty (no-op when
-  // the seller wasn't referred or it already qualified). Never block a booking
-  // on referral bookkeeping.
-  await maybeQualifySellerReferral(supabase, input.sellerUserId).catch((e) => {
-    console.error("maybeQualifySellerReferral failed:", e);
-  });
-
   return data;
 }
 
@@ -203,7 +195,7 @@ export async function releaseEscrow(
 
   const { data: current, error: readErr } = await supabase
     .from("loans")
-    .select("status")
+    .select("status, seller_user_id")
     .eq("id", input.loanId)
     .maybeSingle();
   if (readErr) throw new LoanMutationError("db", readErr.message);
@@ -235,6 +227,13 @@ export async function releaseEscrow(
     }
     throw new LoanMutationError("db", error.message);
   }
+
+  // A seller's first COMPLETED order (escrow released to them) qualifies a
+  // seller-to-seller referral bounty. No-op when the seller wasn't referred or
+  // it already qualified. Never block the release on referral bookkeeping.
+  await maybeQualifySellerReferral(supabase, current.seller_user_id).catch(
+    (e) => console.error("maybeQualifySellerReferral failed:", e),
+  );
 
   const r = data as {
     gross_centavos: number;

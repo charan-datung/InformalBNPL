@@ -6,10 +6,11 @@ import { getConfigValue } from "@/lib/config/system-config";
 /**
  * Seller-to-seller referral rewards.
  *
- * Lifecycle: a referred seller applies -> `pending`; their first order is booked
- * -> `qualified` (bounty snapshotted); the operator settles off-platform ->
- * `paid`. All writes use the service-role admin client (the table is RLS-locked
- * with no policies), so these run server-side only.
+ * Lifecycle: a referred seller applies -> `pending`; their first order is
+ * COMPLETED (escrow released to them) -> `qualified` (bounty snapshotted); the
+ * operator settles off-platform -> `paid`. All writes use the service-role admin
+ * client (the table is RLS-locked with no policies), so these run server-side
+ * only.
  */
 
 export type ReferralStatus = "pending" | "qualified" | "paid" | "void";
@@ -45,10 +46,10 @@ export async function recordSellerReferral(
 }
 
 /**
- * Qualify a referred seller's pending referral when their first order is booked.
- * Called from the booking path for every loan; cheap no-op when the seller
- * wasn't referred or the referral already qualified. Snapshots the current
- * bounty so later config changes don't alter what's owed.
+ * Qualify a referred seller's pending referral when their first order completes
+ * (escrow released to them). Called from the escrow-release path for every loan;
+ * cheap no-op when the seller wasn't referred or the referral already qualified.
+ * Snapshots the current bounty so later config changes don't alter what's owed.
  */
 export async function maybeQualifySellerReferral(
   admin: SupabaseClient,

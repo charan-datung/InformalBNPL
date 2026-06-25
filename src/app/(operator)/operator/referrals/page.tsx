@@ -11,7 +11,7 @@ import { formatPeso, formatDateTime } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 const STATUS_BADGE: Record<ReferralStatus, { label: string; cls: string }> = {
-  pending: { label: "Pending first order", cls: "bg-slate-200 text-slate-800" },
+  pending: { label: "Awaiting first sale", cls: "bg-slate-200 text-slate-800" },
   qualified: { label: "Bounty owed", cls: "bg-amber-200 text-amber-900" },
   paid: { label: "Paid", cls: "bg-green-200 text-green-900" },
   void: { label: "Void", cls: "bg-gray-200 text-gray-700" },
@@ -92,8 +92,8 @@ export default async function ReferralsPage({
 
       {rows.length === 0 ? (
         <p className="text-sm text-black/55">
-          No seller referrals yet. When a seller refers another seller who books
-          their first order, the bounty appears here to settle.
+          No seller referrals yet. When a seller refers another seller who
+          completes their first order, the bounty appears here to settle.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-black/10">

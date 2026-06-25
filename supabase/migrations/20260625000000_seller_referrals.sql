@@ -3,11 +3,11 @@
 --
 -- An approved seller can refer OTHER sellers via a tagged sign-up link
 -- (/signup?intent=seller&sref=<referrer>). When the referred person applies as
--- a seller we record a `pending` referral; when their FIRST order is booked
--- (a buyer commits and escrow is held) it becomes `qualified` and a fixed cash
--- bounty (system_config.seller_referral_reward_centavos) is owed to the
--- referrer. The operator settles the bounty off-platform and marks it `paid` —
--- consistent with the platform recording state only and never moving money.
+-- a seller we record a `pending` referral; when their FIRST order COMPLETES
+-- (escrow is released to them) it becomes `qualified` and a fixed cash bounty
+-- (system_config.seller_referral_reward_centavos) is owed to the referrer. The
+-- operator settles the bounty off-platform and marks it `paid` — consistent with
+-- the platform recording state only and never moving money.
 --
 -- All access is server-side via the service role; deny everyone else.
 -- =============================================================================
