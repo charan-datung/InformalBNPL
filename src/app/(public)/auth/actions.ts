@@ -36,6 +36,12 @@ export async function signUpAction(formData: FormData) {
   // Set when the buyer arrived via a seller's invite link/QR (?ref=<sellerId>),
   // so we can attribute the buyer to the seller who referred them.
   const ref = String(formData.get("ref") ?? "").trim();
+  // A seller-acquisition link routes straight into seller onboarding, and may
+  // carry the referring seller (?intent=seller&sref=<sellerId>) so a qualifying
+  // first order later pays that referrer a bounty.
+  const intent = String(formData.get("intent") ?? "").trim();
+  const sref = String(formData.get("sref") ?? "").trim();
+  const onboardingNext = intent === "seller" ? "/onboarding/seller" : "/onboarding";
 
   if (!email || !password) {
     redirect(
@@ -53,8 +59,11 @@ export async function signUpAction(formData: FormData) {
         data: {
           contact: phone || email,
           ...(ref ? { referred_by_seller: ref } : {}),
+          ...(sref ? { seller_referrer_id: sref } : {}),
         },
-        emailRedirectTo: `${await getOrigin()}/auth/confirm?next=/onboarding`,
+        emailRedirectTo: `${await getOrigin()}/auth/confirm?next=${encodeURIComponent(
+          onboardingNext,
+        )}`,
       },
     });
 
@@ -62,7 +71,7 @@ export async function signUpAction(formData: FormData) {
       target = "/signup?error=" + encodeURIComponent(error.message);
     } else if (data.session) {
       // Email confirmation disabled -> logged in immediately.
-      target = "/onboarding";
+      target = onboardingNext;
     } else {
       target = "/signup?check_email=1";
     }

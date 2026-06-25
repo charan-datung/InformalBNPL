@@ -11,12 +11,21 @@ import { Field, TextInput } from "@/components/ui/Field";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; check_email?: string; ref?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    check_email?: string;
+    ref?: string;
+    intent?: string;
+    sref?: string;
+  }>;
 }) {
   // Already logged in? Skip straight into the app.
   if (await getCapabilities()) redirect("/dashboard");
 
-  const { error, check_email, ref } = await searchParams;
+  const { error, check_email, ref, intent, sref } = await searchParams;
+  // A seller-acquisition link frames sign-up for sellers and (via sref) carries
+  // the referring seller through to the bounty.
+  const sellerIntent = intent === "seller";
 
   if (check_email) {
     return (
@@ -49,18 +58,24 @@ export default async function SignupPage({
         <LogoMark className="mx-auto h-11 w-auto" />
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Create your account
+            {sellerIntent ? "Sell on Datung" : "Create your account"}
           </h1>
           <p className="text-sm text-black/55">
-            Just your sign-in details for now — you&apos;ll pick what you want
-            to do next.
+            {sellerIntent
+              ? "Create your account — next you'll verify your shop and start accepting buy-now-pay-later."
+              : "Just your sign-in details for now — you'll pick what you want to do next."}
           </p>
         </div>
       </div>
 
       {error ? <Callout tone="error">{error}</Callout> : null}
 
-      {ref ? (
+      {sellerIntent ? (
+        <Callout tone="info">
+          You&apos;re joining Datung as a seller. After sign-up we&apos;ll take
+          you straight to seller verification.
+        </Callout>
+      ) : ref ? (
         <Callout tone="info">
           You were invited by a Datung seller — finish signing up to shop with
           credit.
@@ -71,6 +86,12 @@ export default async function SignupPage({
         <form action={signUpAction} className="space-y-4">
           {/* Carries the referring seller through sign-up (from their invite link/QR). */}
           {ref ? <input type="hidden" name="ref" value={ref} /> : null}
+          {/* Seller-acquisition link: route into seller onboarding, and carry
+              the referring seller for the bounty. */}
+          {sellerIntent ? (
+            <input type="hidden" name="intent" value="seller" />
+          ) : null}
+          {sref ? <input type="hidden" name="sref" value={sref} /> : null}
           <Field label="Email">
             <TextInput
               name="email"

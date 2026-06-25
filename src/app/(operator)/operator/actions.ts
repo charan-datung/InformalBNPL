@@ -16,6 +16,7 @@ import {
   approvePayout,
   rejectPayout,
 } from "@/lib/payouts/payouts";
+import { markReferralPaid } from "@/lib/referrals/seller-referrals";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -200,6 +201,20 @@ export async function resolveDisputeAction(formData: FormData) {
       note,
       actorUserId: staff.id,
     });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+/** Settle a qualified seller-referral bounty (operator pays out off-platform). */
+export async function markReferralPaidAction(formData: FormData) {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const back = "/operator/referrals";
+  if (!id) redirect(`${back}?error=${encodeURIComponent("Missing referral id.")}`);
+  try {
+    await markReferralPaid(id);
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }

@@ -1,5 +1,6 @@
 import { listSellerLoans } from "@/lib/loans/views";
-import InviteBuyers from "@/app/(public)/dashboard/InviteBuyers";
+import MarketingKit from "@/components/invite/MarketingKit";
+import ReferSellers from "@/components/invite/ReferSellers";
 import { getConfig } from "@/lib/config/system-config";
 import { markShippedAction } from "@/app/(public)/dashboard/actions";
 import { createChargeAction } from "@/app/(public)/charge/actions";
@@ -93,7 +94,8 @@ export default async function SellerPanel({ userId }: { userId: string }) {
   return (
     <section className="space-y-5">
       <NewSale />
-      <InviteBuyers sellerUserId={userId} />
+      <MarketingKit sellerUserId={userId} />
+      <ReferSellers sellerUserId={userId} />
 
       <h2 className="text-sm font-semibold text-black/50">
         Your orders ({loans.length})

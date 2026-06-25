@@ -42,6 +42,9 @@ export const CONFIG_DEFAULTS = {
   seller_reserve_trusted_pct: 5,
   /** Clean (settled) fulfilments before a `new` seller auto-graduates. */
   seller_graduation_threshold: 10,
+  /** Cash bounty (centavos) owed to a seller when a seller they referred books
+   *  their first order. Settled off-platform by the operator (₱200 default). */
+  seller_referral_reward_centavos: 20_000,
 } as const;
 
 export type SystemConfig = typeof CONFIG_DEFAULTS;

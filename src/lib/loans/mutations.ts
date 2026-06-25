@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfigValue } from "@/lib/config/system-config";
+import { maybeQualifySellerReferral } from "@/lib/referrals/seller-referrals";
 import {
   assertTransition,
   isLoanStatus,
@@ -164,6 +165,14 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
     .single<Loan>();
 
   if (error) throw new LoanMutationError("db", error.message);
+
+  // First booked order qualifies a seller-to-seller referral bounty (no-op when
+  // the seller wasn't referred or it already qualified). Never block a booking
+  // on referral bookkeeping.
+  await maybeQualifySellerReferral(supabase, input.sellerUserId).catch((e) => {
+    console.error("maybeQualifySellerReferral failed:", e);
+  });
+
   return data;
 }
 

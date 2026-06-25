@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfig } from "@/lib/config/system-config";
 import { validateIdNumber } from "@/lib/profiles/id-validation";
+import { recordSellerReferral } from "@/lib/referrals/seller-referrals";
 
 /**
  * Stage 3 onboarding: a logged-in user applies for buyer and/or seller
@@ -318,6 +319,19 @@ export async function applyAsSeller(formData: FormData) {
 
   if (error) {
     redirect("/onboarding/seller?error=" + encodeURIComponent(error.message));
+  }
+
+  // If this applicant arrived via another seller's referral link, record a
+  // pending referral now (the referrer id was captured in auth metadata at
+  // sign-up). Best-effort — never block the application on it.
+  try {
+    const { data: u } = await admin.auth.admin.getUserById(userId);
+    const referrer = String(
+      u?.user?.user_metadata?.seller_referrer_id ?? "",
+    ).trim();
+    if (referrer) await recordSellerReferral(admin, userId, referrer);
+  } catch (e) {
+    console.error("recordSellerReferral failed:", e);
   }
 
   redirect("/dashboard");
