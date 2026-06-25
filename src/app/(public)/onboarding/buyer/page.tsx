@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import BuyerApplicationForm from "@/app/(public)/onboarding/buyer/BuyerApplicationForm";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -24,28 +26,25 @@ export default async function BuyerOnboardingPage({
   const isBoth = next === "seller";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="space-y-1">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="space-y-1.5">
         {isBoth ? (
-          <p className="text-xs font-medium uppercase tracking-wide text-black/40 dark:text-white/40">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
             Step 1 of 2 · Buyer
           </p>
         ) : null}
-        <h1 className="text-2xl font-semibold">Buyer application</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          We review every application by hand — there&apos;s no instant decision.
-          No business papers needed; tell us how you sell and source so we can
+        <h1 className="text-3xl font-bold tracking-tight">Buyer application</h1>
+        <p className="text-sm text-black/55">
+          No business papers needed — tell us how you sell and source so we can
           underwrite you fairly.
         </p>
       </div>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Callout tone="error">{error}</Callout> : null}
 
-      <BuyerApplicationForm next={next} />
+      <Card className="p-5 sm:p-6">
+        <BuyerApplicationForm next={next} />
+      </Card>
     </div>
   );
 }

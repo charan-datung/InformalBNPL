@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import {
+  Store,
+  ShoppingBag,
+  Smartphone,
+  Landmark,
+  ShieldCheck,
+} from "lucide-react";
 import { applyAsBuyer } from "@/app/(public)/onboarding/actions";
 import {
   ID_TYPES,
@@ -13,28 +20,20 @@ import {
   type BuyerKind,
 } from "@/lib/profiles/buyer-application";
 import PhLocation from "@/app/(public)/onboarding/PhLocation";
-import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
-import { compressInputFiles } from "@/lib/images/compress";
 import { idHint, validateIdNumber } from "@/lib/profiles/id-validation";
+import { Field, TextInput, Select, controlClasses } from "@/components/ui/Field";
+import ChoiceCards from "@/components/ui/ChoiceCards";
+import CheckboxGroup from "@/components/ui/CheckboxGroup";
+import FileUpload from "@/components/ui/FileUpload";
+import Callout from "@/components/ui/Callout";
+import Wizard, { type WizardStep } from "@/components/ui/Wizard";
 
-const input =
-  "w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent";
-const label = "block space-y-1";
-const labelText = "text-sm font-medium";
-const hint = "text-xs text-black/40 dark:text-white/40";
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function StepIntro({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <fieldset className="space-y-3 rounded-lg border border-black/10 p-4 dark:border-white/10">
-      <legend className="px-1 text-sm font-semibold">{title}</legend>
-      {children}
-    </fieldset>
+    <div className="space-y-1">
+      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+      {subtitle ? <p className="text-sm text-black/55">{subtitle}</p> : null}
+    </div>
   );
 }
 
@@ -44,284 +43,394 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
   const [idNumber, setIdNumber] = useState("");
   const [payout, setPayout] = useState<"ewallet" | "bank">("ewallet");
 
-  // Validate the ID number inline (client-side) so a typo shows under the field
-  // and blocks submit via native form validation — instead of a server redirect
-  // that would wipe everything the applicant has typed.
+  // Required ID photo is enforced in JS (a hidden required file input isn't
+  // focusable for native validation) — the identity step's validate() uses this.
+  const [idPhotoFilled, setIdPhotoFilled] = useState(false);
+  const [idPhotoError, setIdPhotoError] = useState<string | null>(null);
+
+  // Inline ID-number validation: a typo shows under the field and blocks the
+  // step via native validity, instead of a round-trip that wipes the form.
   const idInputRef = useRef<HTMLInputElement>(null);
   const idError = idType && idNumber ? validateIdNumber(idType, idNumber) : null;
   useEffect(() => {
     idInputRef.current?.setCustomValidity(idError ?? "");
   }, [idError]);
 
+  const steps: WizardStep[] = [
+    {
+      id: "purpose",
+      title: "Purpose",
+      render: (
+        <>
+          <StepIntro
+            title="What are you applying for?"
+            subtitle="This tailors the rest of the questions to you."
+          />
+          <ChoiceCards
+            name="buyer_kind"
+            value={kind}
+            onChange={(v) => setKind(v as BuyerKind)}
+            options={[
+              {
+                value: "business",
+                label: "Buying stock to resell",
+                description: "You run a small business and restock inventory.",
+                icon: Store,
+              },
+              {
+                value: "personal",
+                label: "Personal purchases",
+                description: "Buy now, pay later for your own needs.",
+                icon: ShoppingBag,
+              },
+            ]}
+          />
+        </>
+      ),
+    },
+    {
+      id: "you",
+      title: "About you",
+      render: (
+        <>
+          <StepIntro title="About you" subtitle="Your basic details." />
+          <Field label="Full name">
+            <TextInput name="name" required autoComplete="name" />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Mobile number">
+              <TextInput
+                name="contact"
+                required
+                inputMode="tel"
+                defaultValue="+639"
+                placeholder="+639XX XXX XXXX"
+              />
+            </Field>
+            <Field label="Email" optional>
+              <TextInput name="email" type="email" autoComplete="email" />
+            </Field>
+            <Field label="Date of birth">
+              <TextInput name="date_of_birth" type="date" required />
+            </Field>
+            <div />
+          </div>
+          <PhLocation inputClassName={controlClasses} required />
+        </>
+      ),
+    },
+    {
+      id: "identity",
+      title: "Identity",
+      validate: () => {
+        if (!idPhotoFilled) {
+          setIdPhotoError("Please add a photo of your ID to continue.");
+          return false;
+        }
+        setIdPhotoError(null);
+        return true;
+      },
+      render: (
+        <>
+          <StepIntro
+            title="Verify your identity"
+            subtitle="One valid government ID. Stored privately, used only for review."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="ID type">
+              <Select
+                name="id_type"
+                required
+                defaultValue=""
+                onChange={(e) => setIdType(e.target.value)}
+              >
+                <option value="" disabled>
+                  Choose…
+                </option>
+                {ID_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field
+              label="ID number"
+              error={idError}
+              hint={idHint(idType) ? `Format: ${idHint(idType)}` : undefined}
+            >
+              <TextInput
+                name="id_number"
+                ref={idInputRef}
+                required
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                aria-invalid={idError ? true : undefined}
+              />
+            </Field>
+          </div>
+          <FileUpload
+            name="id_photo"
+            label="Photo of your ID"
+            hint="On a phone this opens the camera. Stored privately for review."
+            error={idPhotoError}
+            onFilledChange={(f) => {
+              setIdPhotoFilled(f);
+              if (f) setIdPhotoError(null);
+            }}
+          />
+          <FileUpload
+            name="proof_of_billing"
+            label="Proof of billing (optional)"
+            hint="A recent utility bill in your name helps verify your address."
+          />
+        </>
+      ),
+    },
+    ...(kind === "business" ? businessSteps() : personalSteps()),
+    {
+      id: "payout",
+      title: "Payout",
+      render: (
+        <>
+          <StepIntro
+            title="Where you'd receive or send money"
+            subtitle="So the operator can reconcile transfers. The app never moves money itself."
+          />
+          <ChoiceCards
+            name="payout_method"
+            value={payout}
+            onChange={(v) => setPayout(v as "ewallet" | "bank")}
+            columns={2}
+            options={[
+              { value: "ewallet", label: "E-wallet", icon: Smartphone },
+              { value: "bank", label: "Bank account", icon: Landmark },
+            ]}
+          />
+          {payout === "ewallet" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="E-wallet">
+                <Select name="ewallet_provider" defaultValue="" required>
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {EWALLETS.map((w) => (
+                    <option key={w} value={w}>
+                      {w}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="E-wallet mobile number">
+                <TextInput
+                  name="ewallet_number"
+                  inputMode="tel"
+                  defaultValue="+639"
+                />
+              </Field>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Bank">
+                <Select name="bank_name" defaultValue="" required>
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {BANKS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Account number">
+                <TextInput name="bank_account_number" inputMode="numeric" />
+              </Field>
+              <Field label="Account name" className="sm:col-span-2">
+                <TextInput name="bank_account_name" />
+              </Field>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      id: "confirm",
+      title: "Confirm",
+      render: (
+        <>
+          <StepIntro
+            title="Confirm & consent"
+            subtitle="Almost done — review and submit."
+          />
+          <Callout tone="success" title="Pre-approved on approval">
+            No need to request an amount. Approved buyers start with a standard
+            BNPL limit that grows with good repayment.
+          </Callout>
+          <Callout tone="info">
+            We review every application by hand — there&apos;s no instant
+            decision. We&apos;ll text you once it&apos;s reviewed.
+          </Callout>
+          <label className="flex items-start gap-3 rounded-xl border border-black/10 bg-white p-4 text-sm">
+            <input
+              type="checkbox"
+              name="consent"
+              value="yes"
+              required
+              className="mt-0.5 size-5 accent-brand-600"
+            />
+            <span className="text-foreground">
+              I confirm the information is true, and consent to verification of
+              my details and references.
+            </span>
+          </label>
+        </>
+      ),
+    },
+  ];
+
   return (
     <form
       action={applyAsBuyer}
       encType="multipart/form-data"
-      className="space-y-5"
+      className="space-y-6"
     >
-      {next === "seller" ? <input type="hidden" name="next" value="seller" /> : null}
+      {next === "seller" ? (
+        <input type="hidden" name="next" value="seller" />
+      ) : null}
+      <div className="flex items-center gap-2 text-xs font-medium text-brand-700">
+        <ShieldCheck className="size-4" /> Your information is encrypted and
+        reviewed privately.
+      </div>
+      <Wizard
+        steps={steps}
+        submitLabel={
+          next === "seller"
+            ? "Submit & continue to seller"
+            : "Submit application"
+        }
+        pendingLabel="Submitting your application…"
+      />
+    </form>
+  );
+}
 
-      {/* Purpose toggle drives the adaptive branch */}
-      <Section title="What are you applying for?">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["business", "Buying stock to resell (business)"],
-              ["personal", "Personal purchases"],
-            ] as [BuyerKind, string][]
-          ).map(([value, text]) => (
-            <label
-              key={value}
-              className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
-                kind === value
-                  ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                  : "border-black/15 dark:border-white/15"
-              }`}
-            >
-              <input
-                type="radio"
-                name="buyer_kind"
-                value={value}
-                checked={kind === value}
-                onChange={() => setKind(value)}
-                className="sr-only"
-              />
-              {text}
-            </label>
-          ))}
-        </div>
-      </Section>
+/* ---- Branch steps ---------------------------------------------------------- */
 
-      {/* You */}
-      <Section title="You">
-        <label className={label}>
-          <span className={labelText}>Full name</span>
-          <input name="name" required className={input} />
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>
-            <span className={labelText}>Mobile number</span>
-            <input
-              name="contact"
-              required
-              inputMode="tel"
-              defaultValue="+639"
-              placeholder="+639XX XXX XXXX"
-              className={input}
-            />
-          </label>
-          <label className={label}>
-            <span className={labelText}>
-              Email <span className={hint}>(optional)</span>
-            </span>
-            <input name="email" type="email" className={input} />
-          </label>
-          <label className={label}>
-            <span className={labelText}>Date of birth</span>
-            <input name="date_of_birth" type="date" required className={input} />
-          </label>
-          <PhLocation inputClassName={input} />
-        </div>
-      </Section>
-
-      {/* Identity */}
-      <Section title="Identity (one valid government ID)">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>
-            <span className={labelText}>ID type</span>
-            <select
-              name="id_type"
-              required
-              defaultValue=""
-              onChange={(e) => setIdType(e.target.value)}
-              className={input}
-            >
-              <option value="" disabled>
-                Choose…
-              </option>
-              {ID_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={label}>
-            <span className={labelText}>ID number</span>
-            <input
-              name="id_number"
-              ref={idInputRef}
-              required
-              value={idNumber}
-              onChange={(e) => setIdNumber(e.target.value)}
-              aria-invalid={idError ? true : undefined}
-              className={input}
-            />
-            {idError ? (
-              <span className="text-xs text-red-600 dark:text-red-400">
-                {idError}
-              </span>
-            ) : idHint(idType) ? (
-              <span className={hint}>Format: {idHint(idType)}</span>
-            ) : null}
-          </label>
-        </div>
-        <label className={label}>
-          <span className={labelText}>Photo of your ID</span>
-          <input
-            type="file"
-            name="id_photo"
-            accept="image/*"
-            capture="environment"
-            required
-            onChange={(e) => void compressInputFiles(e.currentTarget)}
-            className="block text-sm"
-          />
-          <span className={hint}>
-            On a phone this opens the camera. Stored privately for review.
-          </span>
-        </label>
-        <label className={label}>
-          <span className={labelText}>
-            Proof of billing <span className={hint}>(optional — utility bill, address)</span>
-          </span>
-          <input
-            type="file"
-            name="proof_of_billing"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => void compressInputFiles(e.currentTarget)}
-            className="block text-sm"
-          />
-          <span className={hint}>
-            A recent bill in your name helps verify your address.
-          </span>
-        </label>
-      </Section>
-
-      {/* Business branch */}
-      {kind === "business" ? (
+function businessSteps(): WizardStep[] {
+  return [
+    {
+      id: "selling",
+      title: "Your business",
+      render: (
         <>
-          <Section title="What you sell">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className={label}>
-                <span className={labelText}>What do you sell?</span>
-                <input
-                  name="product_category"
-                  required
-                  placeholder="e.g. ukay clothes, snacks, phone accessories"
-                  className={input}
-                />
-              </label>
-              <label className={label}>
-                <span className={labelText}>
-                  Months selling <span className={hint}>(optional)</span>
-                </span>
-                <input
-                  name="months_selling"
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  className={input}
-                />
-              </label>
-            </div>
-            <div className="space-y-1">
-              <span className={labelText}>Where do you sell?</span>
-              <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
-                {SELL_CHANNELS.map((c) => (
-                  <label key={c} className="flex items-center gap-1.5 text-sm">
-                    <input type="checkbox" name="sell_channels" value={c} />
-                    {c}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <label className={label}>
-              <span className={labelText}>
-                Page / shop links or handles{" "}
-                <span className={hint}>(optional)</span>
-              </span>
-              <input
-                name="social_handles"
-                placeholder="fb.com/yourshop, @yourshop"
-                className={input}
+          <StepIntro
+            title="What & where you sell"
+            subtitle="Helps us understand your business."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="What do you sell?">
+              <TextInput
+                name="product_category"
+                required
+                placeholder="e.g. ukay clothes, snacks, phone accessories"
               />
-            </label>
-            <label className={label}>
-              <span className={labelText}>Estimated monthly sales (PHP)</span>
-              <input
-                name="monthly_sales"
+            </Field>
+            <Field label="Months selling" optional>
+              <TextInput
+                name="months_selling"
                 type="number"
                 min={0}
                 inputMode="numeric"
-                required
-                className={input}
               />
-            </label>
-          </Section>
-
-          <Section title="Where you buy your stock">
-            <div className="space-y-1">
-              <span className={labelText}>Where do you source?</span>
-              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                {SOURCING.map((s) => (
-                  <label key={s} className="flex items-center gap-1.5 text-sm">
-                    <input type="checkbox" name="sourcing" value={s} />
-                    {s}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className={label}>
-                <span className={labelText}>How often do you restock?</span>
-                <select
-                  name="restock_frequency"
-                  defaultValue=""
-                  className={input}
-                >
-                  <option value="">Choose…</option>
-                  {RESTOCK_FREQUENCY.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={label}>
-                <span className={labelText}>Typical restock amount (PHP)</span>
-                <input
-                  name="typical_restock"
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  className={input}
-                />
-              </label>
-            </div>
-          </Section>
-
-          <Section title="Character references (optional)">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input name="ref1_name" placeholder="Reference 1 — name" className={input} />
-              <input name="ref1_contact" placeholder="Reference 1 — mobile" className={input} />
-              <input name="ref2_name" placeholder="Reference 2 — name" className={input} />
-              <input name="ref2_contact" placeholder="Reference 2 — mobile" className={input} />
-            </div>
-          </Section>
+            </Field>
+          </div>
+          <Field label="Where do you sell?">
+            <CheckboxGroup
+              name="sell_channels"
+              options={SELL_CHANNELS}
+              columns={4}
+            />
+          </Field>
+          <Field label="Page / shop links or handles" optional>
+            <TextInput
+              name="social_handles"
+              placeholder="fb.com/yourshop, @yourshop"
+            />
+          </Field>
+          <Field label="Estimated monthly sales (PHP)">
+            <TextInput
+              name="monthly_sales"
+              type="number"
+              min={0}
+              inputMode="numeric"
+              required
+            />
+          </Field>
         </>
-      ) : (
-        <Section title="Your livelihood">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={label}>
-              <span className={labelText}>Employment status</span>
-              <select
-                name="employment_status"
-                required
-                defaultValue=""
-                className={input}
-              >
+      ),
+    },
+    {
+      id: "sourcing",
+      title: "Sourcing",
+      render: (
+        <>
+          <StepIntro
+            title="Where you buy your stock"
+            subtitle="And a couple of cash-flow questions."
+          />
+          <Field label="Where do you source?">
+            <CheckboxGroup name="sourcing" options={SOURCING} columns={2} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="How often do you restock?">
+              <Select name="restock_frequency" defaultValue="">
+                <option value="">Choose…</option>
+                {RESTOCK_FREQUENCY.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Typical restock amount (PHP)" optional>
+              <TextInput
+                name="typical_restock"
+                type="number"
+                min={0}
+                inputMode="numeric"
+              />
+            </Field>
+          </div>
+          <CashFlowFields />
+          <Field label="Character references" optional>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextInput name="ref1_name" placeholder="Reference 1 — name" />
+              <TextInput name="ref1_contact" placeholder="Reference 1 — mobile" />
+              <TextInput name="ref2_name" placeholder="Reference 2 — name" />
+              <TextInput name="ref2_contact" placeholder="Reference 2 — mobile" />
+            </div>
+          </Field>
+        </>
+      ),
+    },
+  ];
+}
+
+function personalSteps(): WizardStep[] {
+  return [
+    {
+      id: "livelihood",
+      title: "Livelihood",
+      render: (
+        <>
+          <StepIntro
+            title="Your livelihood"
+            subtitle="How you earn, so we can underwrite you fairly."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Employment status">
+              <Select name="employment_status" required defaultValue="">
                 <option value="" disabled>
                   Choose…
                 </option>
@@ -330,168 +439,47 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
                     {e}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className={label}>
-              <span className={labelText}>
-                Occupation / employer <span className={hint}>(optional)</span>
-              </span>
-              <input name="occupation" className={input} />
-            </label>
+              </Select>
+            </Field>
+            <Field label="Occupation / employer" optional>
+              <TextInput name="occupation" />
+            </Field>
           </div>
-          <label className={label}>
-            <span className={labelText}>Estimated monthly income (PHP)</span>
-            <input
+          <Field label="Estimated monthly income (PHP)">
+            <TextInput
               name="monthly_income"
               type="number"
               min={0}
               inputMode="numeric"
               required
-              className={input}
             />
-          </label>
-        </Section>
-      )}
+          </Field>
+          <CashFlowFields />
+        </>
+      ),
+    },
+  ];
+}
 
-      {/* Cash flow */}
-      <Section title="Cash flow">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className={label}>
-            <span className={labelText}>
-              Other monthly income (PHP) <span className={hint}>(optional)</span>
-            </span>
-            <input
-              name="other_income"
-              type="number"
-              min={0}
-              inputMode="numeric"
-              className={input}
-            />
-          </label>
-          <label className={label}>
-            <span className={labelText}>
-              Existing loan payments / month (PHP){" "}
-              <span className={hint}>(optional)</span>
-            </span>
-            <input
-              name="existing_loan_monthly"
-              type="number"
-              min={0}
-              inputMode="numeric"
-              className={input}
-            />
-          </label>
-        </div>
-      </Section>
-
-      {/* Disbursement */}
-      <Section title="Where you'd receive / send money">
-        <p className={hint}>
-          For the operator to reconcile transfers. The app itself never moves
-          money.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["ewallet", "E-wallet"],
-              ["bank", "Bank account"],
-            ] as ["ewallet" | "bank", string][]
-          ).map(([value, text]) => (
-            <label
-              key={value}
-              className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
-                payout === value
-                  ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                  : "border-black/15 dark:border-white/15"
-              }`}
-            >
-              <input
-                type="radio"
-                name="payout_method"
-                value={value}
-                checked={payout === value}
-                onChange={() => setPayout(value)}
-                className="sr-only"
-              />
-              {text}
-            </label>
-          ))}
-        </div>
-
-        {payout === "ewallet" ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={label}>
-              <span className={labelText}>E-wallet</span>
-              <select name="ewallet_provider" defaultValue="" required className={input}>
-                <option value="" disabled>
-                  Choose…
-                </option>
-                {EWALLETS.map((w) => (
-                  <option key={w} value={w}>
-                    {w}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={label}>
-              <span className={labelText}>E-wallet mobile number</span>
-              <input
-                name="ewallet_number"
-                inputMode="tel"
-                defaultValue="+639"
-                className={input}
-              />
-            </label>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={label}>
-              <span className={labelText}>Bank</span>
-              <select name="bank_name" defaultValue="" required className={input}>
-                <option value="" disabled>
-                  Choose…
-                </option>
-                {BANKS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={label}>
-              <span className={labelText}>Account number</span>
-              <input name="bank_account_number" inputMode="numeric" className={input} />
-            </label>
-            <label className={`${label} sm:col-span-2`}>
-              <span className={labelText}>Account name</span>
-              <input name="bank_account_name" className={input} />
-            </label>
-          </div>
-        )}
-      </Section>
-
-      {/* Consent (no credit amount — BNPL buyers are pre-approved to a
-          standard starting limit after we verify identity) */}
-      <Section title="Confirm & consent">
-        <p className={hint}>
-          No need to request an amount — approved buyers start with a standard
-          pre-approved BNPL limit that grows with good repayment.
-        </p>
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="consent" value="yes" required className="mt-1" />
-          <span>
-            I confirm the information is true, and consent to verification of my
-            details and references.
-          </span>
-        </label>
-      </Section>
-
-      <SubmitButton
-        pendingText="Submitting your application…"
-        className="w-full rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-      >
-        {next === "seller" ? "Submit & continue to seller" : "Submit application"}
-      </SubmitButton>
-    </form>
+function CashFlowFields() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Other monthly income (PHP)" optional>
+        <TextInput
+          name="other_income"
+          type="number"
+          min={0}
+          inputMode="numeric"
+        />
+      </Field>
+      <Field label="Existing loan payments / month (PHP)" optional>
+        <TextInput
+          name="existing_loan_monthly"
+          type="number"
+          min={0}
+          inputMode="numeric"
+        />
+      </Field>
+    </div>
   );
 }

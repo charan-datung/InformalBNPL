@@ -42,8 +42,10 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #122a26;
+  /* Soft brand-tinted canvas so white cards lift off the page. Light-only:
+     the consumer app is a single, impeccably tuned light theme. */
+  --background: #f4f8f7;
+  --foreground: #0d2723;
   --brand: #0e4d45;
   --accent: #22c55e;
 }
@@ -53,13 +55,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #07201c;
-    --foreground: #e7f2ee;
-  }
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
 }
 
 body {
@@ -67,6 +64,14 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Consistent, accessible focus ring across all custom controls. */
+:where(input, select, textarea, button, a, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 55%, transparent);
+  outline-offset: 2px;
 }
 
 /* Brand-tinted text selection. */
