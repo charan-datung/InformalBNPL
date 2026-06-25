@@ -31,6 +31,20 @@ schema exists — the private storage buckets (`seller-verification`, `buyer-id`
 Verify: the SQL Editor should report success with no errors, and
 **Storage** should list the four buckets.
 
+### Applying updates (new migrations) to an existing database
+
+`full_schema.sql` is for a **fresh** project. Once production exists, don't
+re-run it (re-adding constraints/policies will error). Instead, when new files
+appear under `supabase/migrations/`, paste **only those new files**, in
+timestamp order, into the SQL Editor and run them. Each migration uses
+`create … if not exists`, so it's safe to apply once.
+
+Newest migration(s) to apply:
+- `20260625000000_seller_referrals.sql` — the `seller_referrals` table powering
+  seller-to-seller referral bounties (Operator → Referrals, and the seller
+  dashboard's "Refer other sellers"). Until this is applied, those pages error
+  with *relation "seller_referrals" does not exist*.
+
 ## 3. Deploy to Vercel
 
 1. Import the Git repo into Vercel (framework auto-detected as Next.js).
