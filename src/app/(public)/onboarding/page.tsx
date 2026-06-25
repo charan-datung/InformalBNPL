@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  ShoppingBag,
+  Store,
+  Sparkles,
+  ChevronRight,
+  type LucideIcon,
+} from "lucide-react";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 
 // Session-dependent: must run per request, never statically cached.
@@ -22,45 +29,65 @@ export default async function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold">What would you like to do?</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
+      <div className="space-y-1.5 text-center">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          What would you like to do?
+        </h1>
+        <p className="text-sm text-black/55">
           You can change or add to this later — it&apos;s not a one-time choice.
         </p>
       </div>
 
       <div className="grid gap-3">
-        <Link
+        <RoleCard
           href="/onboarding/buyer"
-          className="rounded-lg border border-black/15 p-4 hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
-        >
-          <div className="font-medium">Buy</div>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Apply to buy now and pay later. Starts a buyer application.
-          </p>
-        </Link>
-
-        <Link
+          icon={ShoppingBag}
+          title="Buy"
+          description="Apply to buy now and pay later. Starts a buyer application."
+        />
+        <RoleCard
           href="/onboarding/seller"
-          className="rounded-lg border border-black/15 p-4 hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
-        >
-          <div className="font-medium">Sell</div>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Offer items to BNPL buyers. Starts seller verification.
-          </p>
-        </Link>
-
-        <Link
+          icon={Store}
+          title="Sell"
+          description="Offer items to BNPL buyers. Starts seller verification."
+        />
+        <RoleCard
           href="/onboarding/buyer?next=seller"
-          className="rounded-lg border border-black/15 p-4 hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
-        >
-          <div className="font-medium">Both</div>
-          <p className="text-sm text-black/60 dark:text-white/60">
-            Do both. We&apos;ll take you through the buyer application, then
-            seller verification.
-          </p>
-        </Link>
+          icon={Sparkles}
+          title="Both"
+          description="We'll take you through the buyer application, then seller verification."
+        />
       </div>
     </div>
+  );
+}
+
+function RoleCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3.5 rounded-xl border border-black/10 bg-white p-4 shadow-sm shadow-brand-950/[0.03] transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+    >
+      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm leading-relaxed text-black/55">
+          {description}
+        </p>
+      </div>
+      <ChevronRight className="size-5 shrink-0 text-black/25 transition-colors group-hover:text-brand-600" />
+    </Link>
   );
 }

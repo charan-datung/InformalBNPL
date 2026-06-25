@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ShoppingBag, Store } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 /**
  * Buy/Sell mode toggle for an identity with BOTH capabilities approved. The two
@@ -19,36 +21,34 @@ export default function DashboardModes({
   const [mode, setMode] = useState<Mode>("buy");
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div
         role="tablist"
         aria-label="Dashboard mode"
-        className="inline-flex rounded-lg border border-black/15 p-1 text-sm dark:border-white/15"
+        className="grid grid-cols-2 gap-1 rounded-2xl border border-black/[0.07] bg-white p-1 shadow-sm"
       >
-        <button
-          role="tab"
-          aria-selected={mode === "buy"}
-          onClick={() => setMode("buy")}
-          className={`rounded-md px-4 py-1.5 font-medium ${
-            mode === "buy"
-              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-              : "text-black/60 dark:text-white/60"
-          }`}
-        >
-          Buy
-        </button>
-        <button
-          role="tab"
-          aria-selected={mode === "sell"}
-          onClick={() => setMode("sell")}
-          className={`rounded-md px-4 py-1.5 font-medium ${
-            mode === "sell"
-              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-              : "text-black/60 dark:text-white/60"
-          }`}
-        >
-          Sell
-        </button>
+        {(
+          [
+            ["buy", "Buy", ShoppingBag],
+            ["sell", "Sell", Store],
+          ] as [Mode, string, typeof ShoppingBag][]
+        ).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            role="tab"
+            aria-selected={mode === value}
+            onClick={() => setMode(value)}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
+              mode === value
+                ? "bg-brand-700 text-white shadow-sm"
+                : "text-black/55 hover:bg-black/[0.03]",
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {mode === "buy" ? buyer : seller}

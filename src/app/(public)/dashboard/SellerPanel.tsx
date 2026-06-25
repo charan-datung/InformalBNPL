@@ -4,57 +4,66 @@ import { getConfig } from "@/lib/config/system-config";
 import { markShippedAction } from "@/app/(public)/dashboard/actions";
 import { createChargeAction } from "@/app/(public)/charge/actions";
 import PayoutTracker from "@/app/(public)/dashboard/PayoutTracker";
+import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import { formatPeso } from "@/lib/format";
+import Card from "@/components/ui/Card";
+import { Field, TextInput } from "@/components/ui/Field";
+import { buttonClasses } from "@/components/ui/Button";
+import { QrCode } from "lucide-react";
 
 /** Datung Pay: mint a Payment Request (QR + exclusive link) for a sale. */
 function NewSale() {
   return (
-    <div className="rounded-xl border border-brand-100 bg-brand-50 p-4 dark:border-white/10 dark:bg-brand-950/40">
-      <h2 className="font-semibold text-brand-800 dark:text-brand-100">New sale</h2>
-      <p className="mt-0.5 text-xs text-black/55 dark:text-white/55">
-        Enter the amount — we&apos;ll make a QR and an exclusive link for the buyer
-        to pay with their Datung credit.
+    <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
+      <h2 className="flex items-center gap-2 font-semibold text-brand-800">
+        <QrCode className="size-4.5" /> New sale
+      </h2>
+      <p className="mt-0.5 text-xs text-black/55">
+        Enter the amount — we&apos;ll make a QR and an exclusive link for the
+        buyer to pay with their Datung credit.
       </p>
-      <form action={createChargeAction} className="mt-3 space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1">
-            <span className="text-xs font-medium">Amount (PHP)</span>
-            <input
+      <form action={createChargeAction} className="mt-4 space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Amount (PHP)">
+            <TextInput
               type="number"
               name="amount_pesos"
               min={1}
               step="1"
               required
               inputMode="numeric"
-              className="w-full rounded-md border border-black/15 bg-white px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
             />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium">
-              What for? <span className="text-black/40 dark:text-white/40">(optional)</span>
-            </span>
-            <input
-              type="text"
-              name="memo"
-              placeholder="e.g. 2 ukay bundles"
-              className="w-full rounded-md border border-black/15 bg-white px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
-            />
-          </label>
+          </Field>
+          <Field label="What for?" optional>
+            <TextInput type="text" name="memo" placeholder="e.g. 2 ukay bundles" />
+          </Field>
         </div>
-        <fieldset className="flex flex-wrap gap-3 text-sm">
-          <label className="flex items-center gap-1.5">
-            <input type="radio" name="fulfillment" value="in_person" defaultChecked />
-            In-person (hand over now)
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input type="radio" name="fulfillment" value="ship" />
-            Ship (escrow until delivered)
-          </label>
+        <fieldset className="grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              ["in_person", "In-person", "Hand over now", true],
+              ["ship", "Ship", "Escrow until delivered", false],
+            ] as [string, string, string, boolean][]
+          ).map(([value, label, desc, checked]) => (
+            <label
+              key={value}
+              className="group flex cursor-pointer items-start gap-2 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50"
+            >
+              <input
+                type="radio"
+                name="fulfillment"
+                value={value}
+                defaultChecked={checked}
+                className="mt-0.5 accent-brand-600"
+              />
+              <span>
+                <span className="block font-medium text-foreground">{label}</span>
+                <span className="block text-xs text-black/50">{desc}</span>
+              </span>
+            </label>
+          ))}
         </fieldset>
-        <button
-          type="submit"
-          className="rounded-md bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-        >
+        <button type="submit" className={buttonClasses({ className: "w-full sm:w-auto" })}>
           Generate QR / link
         </button>
       </form>
@@ -82,16 +91,16 @@ export default async function SellerPanel({ userId }: { userId: string }) {
   ]);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <NewSale />
       <InviteBuyers sellerUserId={userId} />
 
-      <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
+      <h2 className="text-sm font-semibold text-black/50">
         Your orders ({loans.length})
       </h2>
 
       {loans.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60">
+        <p className="text-sm text-black/55">
           No orders yet. Buyers who purchase from you will appear here.
         </p>
       ) : (
@@ -112,14 +121,11 @@ export default async function SellerPanel({ userId }: { userId: string }) {
           }
 
           return (
-            <div
-              key={l.id}
-              className="space-y-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
-            >
+            <Card key={l.id} className="space-y-4">
               <div className="flex flex-wrap justify-between gap-2 text-sm">
-                <span className="text-black/60 dark:text-white/60">
-                  Order from <strong>{l.buyerName}</strong> ·{" "}
-                  {formatPeso(l.ticket_centavos)} · {l.tenor_months}mo
+                <span className="text-black/55">
+                  Order from <strong className="text-foreground">{l.buyerName}</strong>{" "}
+                  · {formatPeso(l.ticket_centavos)} · {l.tenor_months}mo
                 </span>
               </div>
 
@@ -133,34 +139,19 @@ export default async function SellerPanel({ userId }: { userId: string }) {
               />
 
               {l.status === "escrow_held" ? (
-                <form
-                  action={markShippedAction}
-                  encType="multipart/form-data"
-                  className="space-y-2 border-t border-black/5 pt-3 dark:border-white/5"
-                >
-                  <input type="hidden" name="loanId" value={l.id} />
-                  <label className="block space-y-1">
-                    <span className="text-xs font-medium">
-                      Proof of shipment (required)
-                    </span>
-                    <input
-                      type="file"
-                      name="proof"
-                      accept="image/*"
-                      capture="environment"
-                      required
-                      className="block text-xs"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-                  >
-                    Mark as shipped
-                  </button>
-                </form>
+                <div className="border-t border-black/5 pt-3">
+                  <PhotoActionForm
+                    action={markShippedAction}
+                    loanId={l.id}
+                    fileName="proof"
+                    fileLabel="Proof of shipment (required)"
+                    fileHint="A photo of the parcel or hand-off. On a phone this opens the camera."
+                    submitLabel="Mark as shipped"
+                    pendingLabel="Submitting…"
+                  />
+                </div>
               ) : null}
-            </div>
+            </Card>
           );
         })
       )}

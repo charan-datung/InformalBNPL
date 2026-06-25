@@ -10,6 +10,8 @@ import DashboardModes from "@/app/(public)/dashboard/DashboardModes";
 import BuyerPanel from "@/app/(public)/dashboard/BuyerPanel";
 import SellerPanel from "@/app/(public)/dashboard/SellerPanel";
 import { CardSkeleton } from "@/components/brand/Skeleton";
+import Callout from "@/components/ui/Callout";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -56,15 +58,11 @@ export default async function DashboardPage({
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">Your dashboard</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">{caps.email}</p>
+        <h1 className="text-3xl font-bold tracking-tight">Your dashboard</h1>
+        <p className="text-sm text-black/55">{caps.email}</p>
       </header>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Callout tone="error">{error}</Callout> : null}
 
       {/* Active area: a mode toggle when both are approved, else the one panel. */}
       {bothVerified ? (
@@ -78,7 +76,7 @@ export default async function DashboardPage({
 
       {/* Capability status: pending / rejected notices and "add capability". */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
+        <h2 className="text-sm font-semibold text-black/50">
           Your capabilities
         </h2>
         <CapabilityRow
@@ -107,54 +105,45 @@ function CapabilityRow({
 }) {
   if (status === "verified") {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-black/10 px-4 py-3 text-sm dark:border-white/10">
-        <span className="font-medium">{label}</span>
-        <span className="text-green-600">Active</span>
+      <div className="flex items-center justify-between rounded-xl border border-black/[0.07] bg-white px-4 py-3 text-sm shadow-sm">
+        <span className="font-semibold">{label}</span>
+        <span className="inline-flex items-center gap-1.5 font-medium text-accent-700">
+          <CheckCircle2 className="size-4" /> Active
+        </span>
       </div>
     );
   }
 
   if (status === "pending") {
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{label}</span>
-          <span className="text-amber-700 dark:text-amber-400">Under review</span>
-        </div>
-        <p className="mt-1 text-black/60 dark:text-white/60">
-          Your {label.toLowerCase()} application is being reviewed by hand.
-          We&apos;ll update this once a decision is made.
-        </p>
-      </div>
+      <Callout tone="warning" title={`${label} · under review`}>
+        Your {label.toLowerCase()} application is being reviewed by hand. We&apos;ll
+        update this once a decision is made.
+      </Callout>
     );
   }
 
   if (status === "rejected") {
     return (
-      <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-900 dark:bg-red-950/40">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{label}</span>
-          <span className="text-red-700 dark:text-red-400">Not approved</span>
-        </div>
-        <Link
-          href={applyHref}
-          className="mt-1 inline-block underline underline-offset-4"
-        >
+      <Callout tone="error" title={`${label} · not approved`}>
+        <Link href={applyHref} className="font-medium underline underline-offset-4">
           Re-apply
         </Link>
-      </div>
+      </Callout>
     );
   }
 
   // status === "none": the "add the other capability" path.
   return (
-    <div className="flex items-center justify-between rounded-lg border border-dashed border-black/20 px-4 py-3 text-sm dark:border-white/20">
-      <span className="text-black/60 dark:text-white/60">
-        Add {label.toLowerCase()} capability
-      </span>
-      <Link href={applyHref} className="font-medium underline underline-offset-4">
+    <Link
+      href={applyHref}
+      className="flex items-center justify-between rounded-xl border border-dashed border-black/20 bg-white/40 px-4 py-3 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50/40"
+    >
+      <span className="text-black/55">Add {label.toLowerCase()} capability</span>
+      <span className="inline-flex items-center gap-1.5 font-semibold text-brand-700">
         {label === "Buyer" ? "Start buying" : "Become a seller"}
-      </Link>
-    </div>
+        <ArrowRight className="size-4" />
+      </span>
+    </Link>
   );
 }

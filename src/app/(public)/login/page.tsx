@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { signInAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { LogoMark } from "@/components/brand/Logo";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
+import { Field, TextInput } from "@/components/ui/Field";
 
 export default async function LoginPage({
   searchParams,
@@ -15,49 +19,52 @@ export default async function LoginPage({
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <div className="space-y-3">
-        <LogoMark className="h-10 w-auto" />
-        <h1 className="text-2xl font-semibold">Log in to Datung</h1>
+      <div className="space-y-3 text-center">
+        <LogoMark className="mx-auto h-11 w-auto" />
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Welcome back
+          </h1>
+          <p className="text-sm text-black/55">
+            Log in to your Datung account.
+          </p>
+        </div>
       </div>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Callout tone="error">{error}</Callout> : null}
 
-      <form action={signInAction} className="space-y-4">
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Email</span>
-          <input
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Password</span>
-          <input
-            type="password"
-            name="password"
-            required
-            autoComplete="current-password"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-        >
-          Log in
-        </button>
-      </form>
+      <Card className="p-5 sm:p-6">
+        <form action={signInAction} className="space-y-4">
+          <Field label="Email">
+            <TextInput
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+          </Field>
+          <Field label="Password">
+            <TextInput
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+          </Field>
+          <Button type="submit" size="lg" className="w-full">
+            Log in
+          </Button>
+        </form>
+      </Card>
 
-      <p className="text-sm text-black/60 dark:text-white/60">
+      <p className="text-center text-sm text-black/55">
         New here?{" "}
-        <Link className="underline underline-offset-4" href="/signup">
+        <Link
+          className="font-semibold text-brand-700 underline-offset-4 hover:underline"
+          href="/signup"
+        >
           Create an account
         </Link>
       </p>

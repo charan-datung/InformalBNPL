@@ -6,6 +6,10 @@ import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
 import { checkoutAction } from "@/app/(public)/dashboard/actions";
 import type { VerifiedSeller } from "@/lib/loans/views";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
+import { Field, TextInput, Select } from "@/components/ui/Field";
+import { buttonClasses } from "@/components/ui/Button";
 
 /**
  * Buyer checkout. Pick a seller, enter amount + tenor (tenor defaults from
@@ -41,33 +45,33 @@ export default function Checkout({
 
   if (sellers.length === 0) {
     return (
-      <section className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+      <Card>
         <h2 className="font-semibold">New purchase</h2>
-        <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+        <p className="mt-1 text-sm text-black/55">
           No verified sellers are available yet.
         </p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-      <h2 className="font-semibold">New purchase</h2>
-      <p className="text-xs text-black/50 dark:text-white/50">
-        Credit available: {formatPeso(creditLimitCentavos)}. Interest{" "}
-        {(monthlyRate * 100).toFixed(2)}%/mo, applied from system settings.
-      </p>
+    <Card className="space-y-3">
+      <div>
+        <h2 className="font-semibold">New purchase</h2>
+        <p className="text-xs text-black/50">
+          Credit available: {formatPeso(creditLimitCentavos)}. Interest{" "}
+          {(monthlyRate * 100).toFixed(2)}%/mo, applied from system settings.
+        </p>
+      </div>
 
-      <form action={checkoutAction} className="mt-3 space-y-3">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <label className="block space-y-1 sm:col-span-2">
-            <span className="text-xs font-medium">Seller</span>
-            <select
+      <form action={checkoutAction} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Field label="Seller" className="sm:col-span-2">
+            <Select
               name="seller_user_id"
               value={seller}
               onChange={(e) => setSeller(e.target.value)}
               required
-              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
             >
               {sellers.map((s) => (
                 <option key={s.userId} value={s.userId}>
@@ -75,11 +79,10 @@ export default function Checkout({
                   {s.socialHandle ? ` (${s.socialHandle})` : ""}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium">Amount (PHP)</span>
-            <input
+            </Select>
+          </Field>
+          <Field label="Amount (PHP)">
+            <TextInput
               type="number"
               name="amount_pesos"
               min={1}
@@ -87,12 +90,10 @@ export default function Checkout({
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
             />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-medium">Tenor (months)</span>
-            <input
+          </Field>
+          <Field label="Tenor (months)">
+            <TextInput
               type="number"
               name="tenor_months"
               min={1}
@@ -101,19 +102,18 @@ export default function Checkout({
               required
               value={tenor}
               onChange={(e) => setTenor(Number(e.target.value))}
-              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
             />
-          </label>
+          </Field>
         </div>
 
         {/* Live schedule preview */}
         {ticketCentavos > 0 && tenor > 0 ? (
-          <div className="rounded-md border border-black/10 p-3 dark:border-white/10">
+          <div className="rounded-xl border border-black/10 bg-black/[0.015] p-3">
             <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
               <span className="font-medium">Your repayment schedule</span>
-              <span className="text-black/60 dark:text-white/60">
+              <span className="text-black/55">
                 Total to repay{" "}
-                <span className="font-semibold text-black dark:text-white">
+                <span className="font-semibold text-foreground">
                   {formatPeso(schedule.totalCentavos)}
                 </span>{" "}
                 ({formatPeso(schedule.interestCentavos)} interest)
@@ -122,7 +122,7 @@ export default function Checkout({
             {/* Dates shown here are estimates from today; finalised when
                 repayment begins. */}
             <ScheduleTable installments={schedule.installments} />
-            <p className="mt-1 text-[11px] text-black/40 dark:text-white/40">
+            <p className="mt-1 text-[11px] text-black/40">
               Due dates are estimated from today and finalise when repayment
               begins.
             </p>
@@ -130,23 +130,26 @@ export default function Checkout({
         ) : null}
 
         {overLimit ? (
-          <p className="text-sm text-red-600">
+          <Callout tone="error">
             Amount exceeds your credit limit of {formatPeso(creditLimitCentavos)}.
-          </p>
+          </Callout>
         ) : null}
 
         <button
           type="submit"
           disabled={!canConfirm}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 dark:bg-white dark:text-slate-900"
+          className={buttonClasses({
+            size: "lg",
+            className: "w-full sm:w-auto",
+          })}
         >
           Confirm purchase
         </button>
-        <p className="text-[11px] text-black/40 dark:text-white/40">
+        <p className="text-[11px] text-black/40">
           Confirming holds the item in escrow. The app records state only — no
           money moves here.
         </p>
       </form>
-    </section>
+    </Card>
   );
 }

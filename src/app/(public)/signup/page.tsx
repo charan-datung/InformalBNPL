@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { signUpAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { LogoMark } from "@/components/brand/Logo";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
+import { Field, TextInput } from "@/components/ui/Field";
 
 export default async function SignupPage({
   searchParams,
@@ -16,90 +20,96 @@ export default async function SignupPage({
 
   if (check_email) {
     return (
-      <div className="mx-auto max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Check your email</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          We sent you a confirmation link. Open it to finish creating your
-          account, then you&apos;ll choose what you want to do.
+      <div className="mx-auto max-w-sm space-y-6 text-center">
+        <LogoMark className="mx-auto h-11 w-auto" />
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Check your email
+          </h1>
+          <p className="text-sm text-black/55">
+            We sent you a confirmation link. Open it to finish creating your
+            account, then you&apos;ll choose what you want to do.
+          </p>
+        </div>
+        <p className="text-sm text-black/55">
+          <Link
+            className="font-semibold text-brand-700 underline-offset-4 hover:underline"
+            href="/login"
+          >
+            Back to log in
+          </Link>
         </p>
-        <Link className="text-sm underline underline-offset-4" href="/login">
-          Back to log in
-        </Link>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-sm space-y-6">
-      <div className="space-y-2">
-        <LogoMark className="h-10 w-auto" />
-        <h1 className="text-2xl font-semibold">Create your Datung account</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
-          Just your sign-in details for now — you&apos;ll pick what you want to
-          do next.
-        </p>
+      <div className="space-y-3 text-center">
+        <LogoMark className="mx-auto h-11 w-auto" />
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Create your account
+          </h1>
+          <p className="text-sm text-black/55">
+            Just your sign-in details for now — you&apos;ll pick what you want
+            to do next.
+          </p>
+        </div>
       </div>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Callout tone="error">{error}</Callout> : null}
 
       {ref ? (
-        <p className="rounded-md bg-brand-50 px-3 py-2 text-xs text-brand-800 dark:bg-brand-950/40 dark:text-brand-100">
+        <Callout tone="info">
           You were invited by a Datung seller — finish signing up to shop with
           credit.
-        </p>
+        </Callout>
       ) : null}
 
-      <form action={signUpAction} className="space-y-4">
-        {/* Carries the referring seller through sign-up (from their invite link/QR). */}
-        {ref ? <input type="hidden" name="ref" value={ref} /> : null}
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Email</span>
-          <input
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">
-            Phone <span className="text-black/40 dark:text-white/40">(optional)</span>
-          </span>
-          <input
-            type="tel"
-            name="phone"
-            autoComplete="tel"
-            placeholder="+63 9XX XXX XXXX"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-sm font-medium">Password</span>
-          <input
-            type="password"
-            name="password"
-            required
-            minLength={6}
-            autoComplete="new-password"
-            className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/15 dark:bg-transparent"
-          />
-        </label>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-        >
-          Create account
-        </button>
-      </form>
+      <Card className="p-5 sm:p-6">
+        <form action={signUpAction} className="space-y-4">
+          {/* Carries the referring seller through sign-up (from their invite link/QR). */}
+          {ref ? <input type="hidden" name="ref" value={ref} /> : null}
+          <Field label="Email">
+            <TextInput
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+          </Field>
+          <Field label="Phone" optional>
+            <TextInput
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+63 9XX XXX XXXX"
+            />
+          </Field>
+          <Field label="Password" hint="At least 6 characters.">
+            <TextInput
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              placeholder="••••••••"
+            />
+          </Field>
+          <Button type="submit" size="lg" className="w-full">
+            Create account
+          </Button>
+        </form>
+      </Card>
 
-      <p className="text-sm text-black/60 dark:text-white/60">
+      <p className="text-center text-sm text-black/55">
         Already have an account?{" "}
-        <Link className="underline underline-offset-4" href="/login">
+        <Link
+          className="font-semibold text-brand-700 underline-offset-4 hover:underline"
+          href="/login"
+        >
           Log in
         </Link>
       </p>

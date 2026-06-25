@@ -6,8 +6,12 @@ import {
   reportProblemAction,
 } from "@/app/(public)/dashboard/actions";
 import Checkout from "@/app/(public)/dashboard/Checkout";
+import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDateTime } from "@/lib/format";
+import Card from "@/components/ui/Card";
+import { buttonClasses } from "@/components/ui/Button";
+import { QrCode, CheckCircle2 } from "lucide-react";
 
 /**
  * Buyer dashboard: checkout (with a live repayment-schedule preview), an
@@ -47,23 +51,28 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       {/* Revolving credit line — the heart of repeat instant checkout */}
-      <div className="rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4 dark:border-white/10 dark:from-brand-950 dark:to-brand-900">
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-sm shadow-brand-950/20">
         <div className="flex items-baseline justify-between">
-          <span className="text-xs uppercase tracking-wide text-black/45 dark:text-white/45">
+          <span className="text-xs font-medium uppercase tracking-wide text-white/60">
             Available credit
           </span>
-          <span className="text-xs text-black/45 dark:text-white/45">
+          <span className="text-xs text-white/60">
             of {formatPeso(credit.limitCentavos)}
           </span>
         </div>
-        <div className="text-3xl font-bold tabular-nums text-brand-800 dark:text-white">
+        <div className="mt-1 text-4xl font-bold tabular-nums">
           {formatPeso(credit.availableCentavos)}
         </div>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10">
-          <div className="h-full rounded-full bg-brand-500" style={{ width: `${usedPct}%` }} />
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
+          <div
+            className="h-full rounded-full bg-accent-400"
+            style={{ width: `${usedPct}%` }}
+          />
         </div>
-        <p className="mt-1 text-[11px] text-black/45 dark:text-white/45">
-          Scan a seller&apos;s Datung Pay QR to buy instantly. {formatPeso(credit.outstandingCentavos)} in use.
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-white/70">
+          <QrCode className="size-3.5" />
+          Scan a seller&apos;s Datung Pay QR to buy instantly ·{" "}
+          {formatPeso(credit.outstandingCentavos)} in use.
         </p>
       </div>
 
@@ -76,15 +85,15 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
 
       {/* Amounts due — impossible to miss */}
       {totalDue > 0 ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
-          <div className="text-xs uppercase tracking-wide text-amber-800 dark:text-amber-300">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="text-xs font-medium uppercase tracking-wide text-amber-700">
             You owe
           </div>
-          <div className="text-3xl font-bold tabular-nums text-amber-900 dark:text-amber-200">
+          <div className="text-3xl font-bold tabular-nums text-amber-900">
             {formatPeso(totalDue)}
           </div>
           {nextOverall ? (
-            <div className="text-sm text-amber-800 dark:text-amber-300">
+            <div className="text-sm text-amber-800">
               Next payment {formatPeso(nextOverall.amount_centavos)} due{" "}
               {nextOverall.due_date}
             </div>
@@ -94,13 +103,11 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
 
       {/* Active loans */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
+        <h2 className="text-sm font-semibold text-black/50">
           Your purchases ({loans.length})
         </h2>
         {loans.length === 0 ? (
-          <p className="text-sm text-black/60 dark:text-white/60">
-            No purchases yet.
-          </p>
+          <p className="text-sm text-black/55">No purchases yet.</p>
         ) : (
           loans.map((l) => {
             const reportDeadline = l.shippedAt
@@ -111,27 +118,24 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
               : false;
 
             return (
-              <div
-                key={l.id}
-                className="space-y-3 rounded-lg border border-black/10 p-4 text-sm dark:border-white/10"
-              >
+              <Card key={l.id} className="space-y-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={l.status} />
-                  <span className="font-medium">
+                  <span className="font-semibold">
                     {formatPeso(l.ticket_centavos)}
                   </span>
-                  <span className="text-black/60 dark:text-white/60">
+                  <span className="text-black/55">
                     · {l.tenor_months}mo · from {l.sellerName}
                   </span>
-                  <span className="ml-auto text-xs text-black/40 dark:text-white/40">
+                  <span className="ml-auto text-xs text-black/40">
                     {formatDateTime(l.created_at)}
                   </span>
                 </div>
 
                 {/* Shipped: confirm receipt (positive) or report a problem */}
                 {l.status === "shipped" ? (
-                  <div className="space-y-3 border-t border-black/5 pt-3 dark:border-white/5">
-                    <p className="text-black/70 dark:text-white/70">
+                  <div className="space-y-3 border-t border-black/5 pt-3">
+                    <p className="text-black/65">
                       Your item is on the way. Once it arrives and everything
                       looks good, confirm receipt.
                     </p>
@@ -139,14 +143,18 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                       <input type="hidden" name="loanId" value={l.id} />
                       <button
                         type="submit"
-                        className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800"
+                        className={buttonClasses({
+                          className:
+                            "w-full bg-accent-600 hover:bg-accent-700 sm:w-auto",
+                        })}
                       >
-                        Confirm receipt — all good
+                        <CheckCircle2 className="size-4" /> Confirm receipt — all
+                        good
                       </button>
                     </form>
 
-                    <details>
-                      <summary className="cursor-pointer text-xs text-black/50 dark:text-white/50">
+                    <details className="group">
+                      <summary className="cursor-pointer text-xs text-black/50 hover:text-black/70">
                         Something wrong? Report a problem
                         {reportDeadline
                           ? ` (within ${config.dispute_window_days} days, until ${reportDeadline
@@ -154,53 +162,34 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                               .slice(0, 10)})`
                           : ""}
                       </summary>
-                      {reportOpen ? (
-                        <form
-                          action={reportProblemAction}
-                          encType="multipart/form-data"
-                          className="mt-2 space-y-2"
-                        >
-                          <input type="hidden" name="loanId" value={l.id} />
-                          <textarea
-                            name="reason"
-                            required
-                            rows={2}
-                            placeholder="Describe the problem"
-                            className="w-full rounded-md border border-black/15 px-3 py-1.5 text-xs dark:border-white/15 dark:bg-transparent"
+                      <div className="mt-3">
+                        {reportOpen ? (
+                          <PhotoActionForm
+                            action={reportProblemAction}
+                            loanId={l.id}
+                            withReason
+                            reasonPlaceholder="Describe the problem"
+                            fileName="evidence"
+                            fileLabel="Photo (required)"
+                            fileHint="A clear photo of the problem helps us resolve it fast."
+                            submitLabel="Submit report"
+                            pendingLabel="Submitting…"
+                            variant="danger"
                           />
-                          <label className="block space-y-1">
-                            <span className="text-xs font-medium">
-                              Photo (required)
-                            </span>
-                            <input
-                              type="file"
-                              name="evidence"
-                              accept="image/*"
-                              capture="environment"
-                              required
-                              className="block text-xs"
-                            />
-                          </label>
-                          <button
-                            type="submit"
-                            className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
-                          >
-                            Submit report
-                          </button>
-                        </form>
-                      ) : (
-                        <p className="mt-2 text-xs text-black/50 dark:text-white/50">
-                          The reporting window has closed for this order.
-                        </p>
-                      )}
+                        ) : (
+                          <p className="text-xs text-black/50">
+                            The reporting window has closed for this order.
+                          </p>
+                        )}
+                      </div>
                     </details>
                   </div>
                 ) : null}
 
                 {/* Repayment schedule + amounts due */}
                 {l.repayments.length > 0 ? (
-                  <div className="border-t border-black/5 pt-3 dark:border-white/5">
-                    <div className="mb-1 text-xs font-medium text-black/50 dark:text-white/50">
+                  <div className="border-t border-black/5 pt-3">
+                    <div className="mb-1 text-xs font-semibold text-black/50">
                       Repayment schedule
                     </div>
                     <table className="w-full">
@@ -212,11 +201,9 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                           return (
                             <tr
                               key={r.id}
-                              className="border-b border-black/5 last:border-0 dark:border-white/5"
+                              className="border-b border-black/5 last:border-0"
                             >
-                              <td className="py-1 pr-3 text-black/40 dark:text-white/40">
-                                {i + 1}
-                              </td>
+                              <td className="py-1 pr-3 text-black/40">{i + 1}</td>
                               <td className="py-1 pr-3 tabular-nums">
                                 {r.due_date}
                               </td>
@@ -225,15 +212,15 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                               </td>
                               <td className="py-1 text-right">
                                 {r.status === "paid" ? (
-                                  <span className="text-green-600">paid</span>
+                                  <span className="font-medium text-accent-700">
+                                    paid
+                                  </span>
                                 ) : overdue ? (
                                   <span className="font-medium text-red-600">
                                     overdue
                                   </span>
                                 ) : (
-                                  <span className="text-black/50 dark:text-white/50">
-                                    due
-                                  </span>
+                                  <span className="text-black/50">due</span>
                                 )}
                               </td>
                             </tr>
@@ -241,12 +228,12 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                         })}
                       </tbody>
                     </table>
-                    <p className="mt-1 text-[11px] text-black/40 dark:text-white/40">
+                    <p className="mt-1 text-[11px] text-black/40">
                       Payments are recorded by the operator when received.
                     </p>
                   </div>
                 ) : null}
-              </div>
+              </Card>
             );
           })
         )}

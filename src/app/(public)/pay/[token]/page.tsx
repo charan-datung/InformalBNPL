@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { getChargeByToken, isExpired } from "@/lib/payments/charges";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso } from "@/lib/format";
 import { LogoMark } from "@/components/brand/Logo";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
+import { buttonClasses } from "@/components/ui/Button";
 import PayConfirm from "@/app/(public)/pay/[token]/PayConfirm";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +31,7 @@ export default async function PayPage({
     <div className="mx-auto max-w-md space-y-5">
       <div className="flex items-center gap-2">
         <LogoMark className="h-7 w-auto" />
-        <span className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-200">
+        <span className="text-lg font-semibold tracking-tight text-brand-700">
           Datung Pay
         </span>
       </div>
@@ -37,9 +41,12 @@ export default async function PayPage({
 
   if (!charge) {
     return shell(
-      <p className="rounded-lg border border-black/10 p-6 text-sm text-black/60 dark:border-white/10 dark:text-white/60">
-        This payment request was not found. Ask the seller for a fresh QR or link.
-      </p>,
+      <Card className="p-6 text-center">
+        <p className="text-sm text-black/55">
+          This payment request was not found. Ask the seller for a fresh QR or
+          link.
+        </p>
+      </Card>,
     );
   }
 
@@ -47,17 +54,17 @@ export default async function PayPage({
   const status = expired && charge.status === "pending" ? "expired" : charge.status;
 
   const amountCard = (
-    <div className="rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-6 text-center dark:border-white/10 dark:from-brand-950 dark:to-brand-900">
-      <div className="text-xs uppercase tracking-wide text-black/45 dark:text-white/45">
+    <Card className="p-6 text-center">
+      <div className="text-xs font-medium uppercase tracking-wide text-black/45">
         Pay {charge.sellerName}
       </div>
-      <div className="text-4xl font-bold tabular-nums text-brand-800 dark:text-white">
+      <div className="mt-1 text-4xl font-bold tabular-nums text-brand-800">
         {formatPeso(charge.amount_centavos)}
       </div>
       {charge.memo ? (
-        <div className="mt-1 text-sm text-black/55 dark:text-white/55">{charge.memo}</div>
+        <div className="mt-1.5 text-sm text-black/55">{charge.memo}</div>
       ) : null}
-    </div>
+    </Card>
   );
 
   // Success (this buyer just paid).
@@ -65,18 +72,19 @@ export default async function PayPage({
     return shell(
       <>
         {amountCard}
-        <div className="space-y-2 rounded-2xl border border-accent-200 bg-accent-50 p-6 text-center dark:border-accent-900 dark:bg-accent-900/20">
-          <div className="text-5xl">✓</div>
-          <div className="text-xl font-semibold text-accent-800 dark:text-accent-200">
-            Authorized
-          </div>
-          <p className="text-sm text-black/60 dark:text-white/70">
+        <Card className="space-y-2 p-6 text-center">
+          <CheckCircle2 className="mx-auto size-12 text-accent-500" />
+          <div className="text-xl font-semibold text-accent-800">Authorized</div>
+          <p className="text-sm text-black/55">
             Your plan is set. Track repayments on your dashboard.
           </p>
-          <Link href="/dashboard" className="inline-block text-sm font-medium text-brand-700 underline underline-offset-4 dark:text-brand-200">
+          <Link
+            href="/dashboard"
+            className={buttonClasses({ variant: "primary", size: "md", className: "mt-2 w-full" })}
+          >
             Go to dashboard
           </Link>
-        </div>
+        </Card>
       </>,
     );
   }
@@ -85,9 +93,11 @@ export default async function PayPage({
     return shell(
       <>
         {amountCard}
-        <p className="rounded-lg border border-black/10 p-6 text-center text-sm text-black/60 dark:border-white/10 dark:text-white/60">
-          This request has already been paid.
-        </p>
+        <Card className="p-6 text-center">
+          <p className="text-sm text-black/55">
+            This request has already been paid.
+          </p>
+        </Card>
       </>,
     );
   }
@@ -96,10 +106,12 @@ export default async function PayPage({
     return shell(
       <>
         {amountCard}
-        <p className="rounded-lg border border-black/10 p-6 text-center text-sm text-black/60 dark:border-white/10 dark:text-white/60">
-          This request {charge.status === "cancelled" ? "was cancelled" : "has expired"}.
-          Ask the seller for a fresh one.
-        </p>
+        <Card className="p-6 text-center">
+          <p className="text-sm text-black/55">
+            This request {charge.status === "cancelled" ? "was cancelled" : "has expired"}.
+            Ask the seller for a fresh one.
+          </p>
+        </Card>
       </>,
     );
   }
@@ -107,28 +119,30 @@ export default async function PayPage({
   // Pending — gate on buyer eligibility (apply-fallback for everyone else).
   const caps = await getCapabilities();
 
-  const errorBox = error ? (
-    <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-      {error}
-    </p>
-  ) : null;
+  const errorBox = error ? <Callout tone="error">{error}</Callout> : null;
 
   if (!caps) {
     return shell(
       <>
         {amountCard}
         {errorBox}
-        <div className="space-y-2 rounded-lg border border-black/10 p-4 text-sm dark:border-white/10">
-          <p className="text-black/70 dark:text-white/70">Log in to pay with Datung.</p>
+        <Card className="space-y-3 p-5 sm:p-6">
+          <p className="text-sm text-black/70">Log in to pay with Datung.</p>
           <div className="flex gap-2">
-            <Link href={`/login?next=${encodeURIComponent(`/pay/${token}`)}`} className="rounded-md bg-brand-700 px-4 py-2 font-medium text-white hover:bg-brand-600">
+            <Link
+              href={`/login?next=${encodeURIComponent(`/pay/${token}`)}`}
+              className={buttonClasses({ variant: "primary", size: "md", className: "flex-1" })}
+            >
               Log in
             </Link>
-            <Link href="/signup" className="rounded-md border border-brand-200 px-4 py-2 font-medium text-brand-800 hover:bg-brand-50 dark:border-white/15 dark:text-white">
+            <Link
+              href="/signup"
+              className={buttonClasses({ variant: "secondary", size: "md", className: "flex-1" })}
+            >
               Create account
             </Link>
           </div>
-        </div>
+        </Card>
       </>,
     );
   }
@@ -139,18 +153,26 @@ export default async function PayPage({
       <>
         {amountCard}
         {errorBox}
-        <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-          <p className="text-amber-900 dark:text-amber-200">
-            {applying
-              ? "Your buyer application is still under review. Once approved, you can pay instantly."
-              : "You need an approved Datung credit line to pay. It takes a quick application."}
-          </p>
-          {!applying ? (
-            <Link href="/onboarding/buyer" className="inline-block rounded-md bg-brand-700 px-4 py-2 font-medium text-white hover:bg-brand-600">
-              Apply for a credit line
-            </Link>
-          ) : null}
-        </div>
+        <Callout
+          tone={applying ? "info" : "warning"}
+          title={applying ? "Application under review" : "Credit line needed"}
+        >
+          <div className="space-y-3">
+            <p>
+              {applying
+                ? "Your buyer application is still under review. Once approved, you can pay instantly."
+                : "You need an approved Datung credit line to pay. It takes a quick application."}
+            </p>
+            {!applying ? (
+              <Link
+                href="/onboarding/buyer"
+                className={buttonClasses({ variant: "primary", size: "sm" })}
+              >
+                Apply for a credit line
+              </Link>
+            ) : null}
+          </div>
+        </Callout>
       </>,
     );
   }
@@ -161,18 +183,27 @@ export default async function PayPage({
     <>
       {amountCard}
       {errorBox}
-      <p className="text-center text-xs text-black/50 dark:text-white/50">
-        Available credit: <span className="font-medium">{formatPeso(credit.availableCentavos)}</span>{" "}
+      <p className="text-center text-xs text-black/50">
+        Available credit:{" "}
+        <span className="font-semibold text-black/70">
+          {formatPeso(credit.availableCentavos)}
+        </span>{" "}
         of {formatPeso(credit.limitCentavos)}
       </p>
-      <PayConfirm
-        token={token}
-        amountCentavos={charge.amount_centavos}
-        monthlyRate={config.default_interest_rate_monthly}
-        defaultTenor={config.default_tenor_months}
-        maxTenor={MAX_TENOR}
-        availableCentavos={credit.availableCentavos}
-      />
+      <Card className="p-5 sm:p-6">
+        <PayConfirm
+          token={token}
+          amountCentavos={charge.amount_centavos}
+          monthlyRate={config.default_interest_rate_monthly}
+          defaultTenor={config.default_tenor_months}
+          maxTenor={MAX_TENOR}
+          availableCentavos={credit.availableCentavos}
+        />
+      </Card>
+      <div className="flex items-center justify-center gap-1.5 text-xs text-black/45">
+        <ShieldCheck className="size-4 text-brand-600" />
+        Records your plan only — no money moves in this pilot.
+      </div>
     </>,
   );
 }

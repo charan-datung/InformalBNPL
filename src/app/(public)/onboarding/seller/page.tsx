@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import SellerApplicationForm, {
   type SellerPrefill,
 } from "@/app/(public)/onboarding/seller/SellerApplicationForm";
+import Card from "@/components/ui/Card";
+import Callout from "@/components/ui/Callout";
 
 // Session-dependent: must run per request, never statically cached.
 export const dynamic = "force-dynamic";
@@ -72,29 +74,26 @@ export default async function SellerOnboardingPage({
   const prefill = caps.buyer !== "none" ? await buyerPrefill() : null;
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Seller verification</h1>
-        <p className="text-sm text-black/60 dark:text-white/60">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="space-y-1.5">
+        <h1 className="text-3xl font-bold tracking-tight">Seller verification</h1>
+        <p className="text-sm text-black/55">
           No business permits needed. We verify real sellers by hand — just show
           us who you are and where you sell.
         </p>
       </div>
 
       {prefill ? (
-        <p className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-800 dark:bg-brand-950 dark:text-brand-100">
-          We carried over your details from your buyer application — just review
-          them and add where you sell.
-        </p>
+        <Callout tone="success" title="We carried over your buyer details">
+          Just review them and add where you sell.
+        </Callout>
       ) : null}
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Callout tone="error">{error}</Callout> : null}
 
-      <SellerApplicationForm prefill={prefill} />
+      <Card className="p-5 sm:p-6">
+        <SellerApplicationForm prefill={prefill} />
+      </Card>
     </div>
   );
 }

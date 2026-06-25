@@ -36,17 +36,17 @@ function banner(status: LoanStatus): { text: string; cls: string } | null {
     case "dispute_raised":
       return {
         text: "Problem reported by buyer — payout on hold until resolved.",
-        cls: "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+        cls: "bg-amber-50 text-amber-800",
       };
     case "refunded":
       return {
         text: "Refunded to buyer — no payout for this order.",
-        cls: "bg-orange-50 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300",
+        cls: "bg-orange-50 text-orange-800",
       };
     case "frozen_fraud_review":
       return {
         text: "On hold — under review.",
-        cls: "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300",
+        cls: "bg-rose-50 text-rose-800",
       };
     default:
       return null;
@@ -77,25 +77,25 @@ export default function PayoutTracker({
       {/* Money: where the seller's money is */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-wide text-black/40 dark:text-white/40">
+          <div className="text-xs uppercase tracking-wide text-black/40">
             Net payout
           </div>
-          <div className="text-2xl font-semibold tabular-nums">
+          <div className="text-2xl font-bold tabular-nums">
             {formatPeso(netCentavos)}
           </div>
-          <div className="text-xs text-black/50 dark:text-white/50">
+          <div className="text-xs text-black/50">
             after {merchantFeePct}% fee ({formatPeso(feeCentavos)})
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs uppercase tracking-wide text-black/40 dark:text-white/40">
+          <div className="text-xs uppercase tracking-wide text-black/40">
             {settled
               ? "Paid out"
               : payoutIsEstimate
                 ? "Estimated payout"
                 : "Committed payout"}
           </div>
-          <div className="text-lg font-medium">
+          <div className="text-lg font-semibold">
             {payoutDate ? formatDateTime(payoutDate) : "After delivery"}
           </div>
         </div>
@@ -112,19 +112,17 @@ export default function PayoutTracker({
                 <span
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
                     done
-                      ? "bg-green-600 text-white"
+                      ? "bg-accent-600 text-white"
                       : active
-                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                        : "bg-black/10 text-black/40 dark:bg-white/10 dark:text-white/40"
+                        ? "bg-brand-700 text-white"
+                        : "bg-black/10 text-black/40"
                   }`}
                 >
                   {done ? "✓" : i + 1}
                 </span>
                 <span
                   className={`mt-1 whitespace-nowrap text-[11px] ${
-                    done || active
-                      ? "font-medium"
-                      : "text-black/40 dark:text-white/40"
+                    done || active ? "font-medium" : "text-black/40"
                   }`}
                 >
                   {label}
@@ -133,9 +131,7 @@ export default function PayoutTracker({
               {i < STEPS.length - 1 ? (
                 <span
                   className={`mx-1 h-0.5 flex-1 ${
-                    i < current || settled
-                      ? "bg-green-600"
-                      : "bg-black/10 dark:bg-white/10"
+                    i < current || settled ? "bg-accent-600" : "bg-black/10"
                   }`}
                 />
               ) : null}

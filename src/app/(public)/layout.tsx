@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { signOutAction } from "@/app/(public)/auth/actions";
 import { Wordmark } from "@/components/brand/Logo";
+import Button, { buttonClasses } from "@/components/ui/Button";
 
 /**
  * Layout for the public PWA — buyer and seller surfaces.
@@ -18,7 +19,7 @@ export default async function PublicLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-black/10 bg-white/70 backdrop-blur dark:border-white/10 dark:bg-brand-950/40">
+      <header className="sticky top-0 z-10 border-b border-black/[0.07] bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Wordmark href="/" markClassName="h-7 w-auto" />
 
@@ -26,28 +27,25 @@ export default async function PublicLayout({
             <div className="flex items-center gap-3 text-sm">
               <Link
                 href="/dashboard"
-                className="text-black/60 underline-offset-4 hover:underline dark:text-white/60"
+                className="font-medium text-black/60 underline-offset-4 hover:text-foreground hover:underline"
               >
                 {caps.email ?? "Dashboard"}
               </Link>
               <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="rounded-md border border-black/15 px-3 py-1 font-medium hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.04]"
-                >
+                <Button type="submit" variant="secondary" size="sm">
                   Log out
-                </button>
+                </Button>
               </form>
             </div>
           ) : (
-            <div className="flex items-center gap-3 text-sm">
-              <Link href="/login" className="hover:underline">
+            <div className="flex items-center gap-2 text-sm">
+              <Link
+                href="/login"
+                className="font-medium text-brand-800 underline-offset-4 hover:underline"
+              >
                 Log in
               </Link>
-              <Link
-                href="/signup"
-                className="rounded-md bg-slate-900 px-3 py-1 font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
-              >
+              <Link href="/signup" className={buttonClasses({ size: "sm" })}>
                 Sign up
               </Link>
             </div>
