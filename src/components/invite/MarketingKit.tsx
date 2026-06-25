@@ -27,8 +27,8 @@ export default async function MarketingKit({
       <div className="space-y-0.5">
         <h2 className="font-semibold text-brand-800">Marketing kit</h2>
         <p className="text-xs text-black/55">
-          Invite your customers to shop now, pay later — every sign-up is
-          credited to you.
+          Invite your customers to shop now and pay in small amounts — every
+          sign-up is credited to you.
         </p>
       </div>
 

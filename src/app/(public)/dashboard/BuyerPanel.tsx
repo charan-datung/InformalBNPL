@@ -50,11 +50,11 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Revolving credit line — the heart of repeat instant checkout */}
+      {/* Spending limit — the heart of repeat instant checkout */}
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-sm shadow-brand-950/20">
         <div className="flex items-baseline justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-white/60">
-            Available credit
+            Available to spend
           </span>
           <span className="text-xs text-white/60">
             of {formatPeso(credit.limitCentavos)}
@@ -72,7 +72,7 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-white/70">
           <QrCode className="size-3.5" />
           Scan a seller&apos;s Datung Pay QR to buy instantly ·{" "}
-          {formatPeso(credit.outstandingCentavos)} in use.
+          {formatPeso(credit.outstandingCentavos)} still to pay.
         </p>
       </div>
 
@@ -120,12 +120,12 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
             return (
               <Card key={l.id} className="space-y-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={l.status} />
+                  <StatusBadge status={l.status} audience="customer" />
                   <span className="font-semibold">
                     {formatPeso(l.ticket_centavos)}
                   </span>
                   <span className="text-black/55">
-                    · {l.tenor_months}mo · from {l.sellerName}
+                    · {l.tenor_months} months · from {l.sellerName}
                   </span>
                   <span className="ml-auto text-xs text-black/40">
                     {formatDateTime(l.created_at)}
@@ -190,7 +190,7 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                 {l.repayments.length > 0 ? (
                   <div className="border-t border-black/5 pt-3">
                     <div className="mb-1 text-xs font-semibold text-black/50">
-                      Repayment schedule
+                      Your payment plan
                     </div>
                     <table className="w-full">
                       <tbody>
@@ -217,7 +217,7 @@ export default async function BuyerPanel({ userId }: { userId: string }) {
                                   </span>
                                 ) : overdue ? (
                                   <span className="font-medium text-red-600">
-                                    overdue
+                                    late
                                   </span>
                                 ) : (
                                   <span className="text-black/50">due</span>

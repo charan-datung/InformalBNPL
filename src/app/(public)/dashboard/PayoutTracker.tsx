@@ -8,7 +8,7 @@ import { formatPeso, formatDateTime } from "@/lib/format";
  * date front and centre.
  */
 
-const STEPS = ["Held", "Shipped", "Delivered", "Paying out"] as const;
+const STEPS = ["Kept safe", "Shipped", "Delivered", "Paying you"] as const;
 
 function stepIndex(status: LoanStatus): number {
   switch (status) {
@@ -84,7 +84,7 @@ export default function PayoutTracker({
             {formatPeso(netCentavos)}
           </div>
           <div className="text-xs text-black/50">
-            after {merchantFeePct}% fee ({formatPeso(feeCentavos)})
+            after Datung&apos;s {merchantFeePct}% fee ({formatPeso(feeCentavos)})
           </div>
         </div>
         <div className="text-right">

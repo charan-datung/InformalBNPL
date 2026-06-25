@@ -80,7 +80,7 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
               {
                 value: "personal",
                 label: "Personal purchases",
-                description: "Buy now, pay later for your own needs.",
+                description: "Shop now and pay in small amounts, for your own needs.",
                 icon: ShoppingBag,
               },
             ]}
@@ -263,9 +263,9 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             title="Confirm & consent"
             subtitle="Almost done — review and submit."
           />
-          <Callout tone="success" title="Pre-approved on approval">
-            No need to request an amount. Approved buyers start with a standard
-            BNPL limit that grows with good repayment.
+          <Callout tone="success" title="No need to ask for an amount">
+            Once you&apos;re approved, you get a spending limit to start. Pay on
+            time and it grows over time.
           </Callout>
           <Callout tone="info">
             We review every application by hand — there&apos;s no instant
@@ -426,7 +426,7 @@ function personalSteps(): WizardStep[] {
         <>
           <StepIntro
             title="Your livelihood"
-            subtitle="How you earn, so we can underwrite you fairly."
+            subtitle="How you earn, so we can review you fairly."
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Employment status">

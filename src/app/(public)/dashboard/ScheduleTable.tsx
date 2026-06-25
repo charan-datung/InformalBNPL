@@ -21,9 +21,9 @@ export default function ScheduleTable({
         <tr className="border-b border-black/10 text-left text-xs text-black/50 dark:border-white/10 dark:text-white/50">
           <th className="py-1.5 pr-3 font-medium">#</th>
           {showDates ? <th className="py-1.5 pr-3 font-medium">Due</th> : null}
-          <th className="py-1.5 pr-3 text-right font-medium">Principal</th>
-          <th className="py-1.5 pr-3 text-right font-medium">Interest</th>
-          <th className="py-1.5 text-right font-medium">Amount due</th>
+          <th className="py-1.5 pr-3 text-right font-medium">Price</th>
+          <th className="py-1.5 pr-3 text-right font-medium">Fee</th>
+          <th className="py-1.5 text-right font-medium">To pay</th>
         </tr>
       </thead>
       <tbody>

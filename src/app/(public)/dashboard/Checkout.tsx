@@ -59,8 +59,8 @@ export default function Checkout({
       <div>
         <h2 className="font-semibold">New purchase</h2>
         <p className="text-xs text-black/50">
-          Credit available: {formatPeso(creditLimitCentavos)}. Interest{" "}
-          {(monthlyRate * 100).toFixed(2)}%/mo, applied from system settings.
+          Available to spend: {formatPeso(creditLimitCentavos)}. Small fee of{" "}
+          {(monthlyRate * 100).toFixed(2)}% per month, added to each payment.
         </p>
       </div>
 
@@ -92,7 +92,7 @@ export default function Checkout({
               onChange={(e) => setAmount(e.target.value)}
             />
           </Field>
-          <Field label="Tenor (months)">
+          <Field label="Pay over (months)">
             <TextInput
               type="number"
               name="tenor_months"
@@ -110,28 +110,30 @@ export default function Checkout({
         {ticketCentavos > 0 && tenor > 0 ? (
           <div className="rounded-xl border border-black/10 bg-black/[0.015] p-3">
             <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
-              <span className="font-medium">Your repayment schedule</span>
+              <span className="font-medium">Your payment plan</span>
               <span className="text-black/55">
-                Total to repay{" "}
+                Total{" "}
                 <span className="font-semibold text-foreground">
                   {formatPeso(schedule.totalCentavos)}
                 </span>{" "}
-                ({formatPeso(schedule.interestCentavos)} interest)
+                ({formatPeso(schedule.interestCentavos)} fee)
               </span>
             </div>
             {/* Dates shown here are estimates from today; finalised when
                 repayment begins. */}
             <ScheduleTable installments={schedule.installments} />
             <p className="mt-1 text-[11px] text-black/40">
-              Due dates are estimated from today and finalise when repayment
-              begins.
+              Payment dates are estimated from today and are finalised once your
+              order is confirmed.
             </p>
           </div>
         ) : null}
 
         {overLimit ? (
           <Callout tone="error">
-            Amount exceeds your credit limit of {formatPeso(creditLimitCentavos)}.
+            That&apos;s more than you can spend right now (
+            {formatPeso(creditLimitCentavos)}). Try a smaller amount or pay down
+            what you owe first.
           </Callout>
         ) : null}
 
@@ -146,8 +148,8 @@ export default function Checkout({
           Confirm purchase
         </button>
         <p className="text-[11px] text-black/40">
-          Confirming holds the item in escrow. The app records state only — no
-          money moves here.
+          When you confirm, your payment is kept safe until your order arrives.
+          This is a pilot — no real money moves yet.
         </p>
       </form>
     </Card>

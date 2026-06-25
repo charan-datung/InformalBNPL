@@ -15,16 +15,45 @@ export const STATUS_STYLES: Record<LoanStatus, { label: string; cls: string }> =
   frozen_fraud_review: { label: "Frozen (fraud)", cls: "bg-rose-300 text-rose-950" },
 };
 
-export function StatusBadge({ status }: { status: LoanStatus }) {
-  const s = STATUS_STYLES[status] ?? {
+export function StatusBadge({
+  status,
+  audience = "operator",
+}: {
+  status: LoanStatus;
+  /** "customer" swaps in warm, plain-English labels for buyer/seller screens;
+   *  operators/admins keep the precise STATUS_STYLES labels. */
+  audience?: "operator" | "customer";
+}) {
+  const base = STATUS_STYLES[status] ?? {
     label: status,
     cls: "bg-gray-200 text-gray-800",
   };
+  const label =
+    audience === "customer" ? (CUSTOMER_LABELS[status] ?? base.label) : base.label;
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}
+      className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${base.cls}`}
     >
-      {s.label}
+      {label}
     </span>
   );
 }
+
+/**
+ * Plain-English, reassuring labels for buyers and sellers. Deliberately avoids
+ * "escrow", "loan", "fraud" and other cold/scary terms. Operators still see the
+ * precise STATUS_STYLES labels above.
+ */
+const CUSTOMER_LABELS: Partial<Record<LoanStatus, string>> = {
+  booked: "Order placed",
+  escrow_held: "Payment kept safe",
+  shipped: "On the way",
+  delivered_confirmed: "Delivered",
+  dispute_raised: "Problem reported",
+  auto_released: "Released to seller",
+  escrow_released: "Released to seller",
+  repaying: "Paying in installments",
+  settled: "Fully paid",
+  refunded: "Refunded",
+  frozen_fraud_review: "On hold",
+};

@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Datung — Buy now, pay later",
+  title: "Datung — Shop now, pay in small amounts",
   description:
-    "Datung is a BNPL platform for the Philippines, built for informal merchants. Records loan and escrow state only — no money movement.",
+    "Shop from trusted Filipino sellers and pay over time, in amounts that fit your budget. No credit card, no business papers. Your money stays safe until your order arrives.",
   applicationName: "Datung",
   manifest: "/manifest.webmanifest",
   icons: {

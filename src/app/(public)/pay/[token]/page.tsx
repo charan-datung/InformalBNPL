@@ -74,9 +74,9 @@ export default async function PayPage({
         {amountCard}
         <Card className="space-y-2 p-6 text-center">
           <CheckCircle2 className="mx-auto size-12 text-accent-500" />
-          <div className="text-xl font-semibold text-accent-800">Authorized</div>
+          <div className="text-xl font-semibold text-accent-800">All set!</div>
           <p className="text-sm text-black/55">
-            Your plan is set. Track repayments on your dashboard.
+            Your payment plan is ready. Track your payments on your dashboard.
           </p>
           <Link
             href="/dashboard"
@@ -155,20 +155,20 @@ export default async function PayPage({
         {errorBox}
         <Callout
           tone={applying ? "info" : "warning"}
-          title={applying ? "Application under review" : "Credit line needed"}
+          title={applying ? "We're reviewing your details" : "Sign up to pay this way"}
         >
           <div className="space-y-3">
             <p>
               {applying
-                ? "Your buyer application is still under review. Once approved, you can pay instantly."
-                : "You need an approved Datung credit line to pay. It takes a quick application."}
+                ? "We're still reviewing your details. Once you're approved, you can shop and pay anytime."
+                : "To pay in installments, you just need to sign up with Datung first. It only takes a few minutes."}
             </p>
             {!applying ? (
               <Link
                 href="/onboarding/buyer"
                 className={buttonClasses({ variant: "primary", size: "sm" })}
               >
-                Apply for a credit line
+                Get started
               </Link>
             ) : null}
           </div>
@@ -184,7 +184,7 @@ export default async function PayPage({
       {amountCard}
       {errorBox}
       <p className="text-center text-xs text-black/50">
-        Available credit:{" "}
+        Available to spend:{" "}
         <span className="font-semibold text-black/70">
           {formatPeso(credit.availableCentavos)}
         </span>{" "}

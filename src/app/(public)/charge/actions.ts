@@ -55,10 +55,10 @@ export async function authorizeChargeAction(formData: FormData) {
   const caps = await getCapabilities();
   if (!caps) redirect(`/login?next=${encodeURIComponent(`/pay/${token}`)}`);
   if (caps.buyer !== "verified") {
-    redirect(`/pay/${token}?error=` + encodeURIComponent("Your buyer line isn't active yet."));
+    redirect(`/pay/${token}?error=` + encodeURIComponent("Your account isn't approved yet."));
   }
   if (!Number.isInteger(tenorMonths) || tenorMonths <= 0) {
-    redirect(`/pay/${token}?error=` + encodeURIComponent("Choose a repayment plan."));
+    redirect(`/pay/${token}?error=` + encodeURIComponent("Choose how long to pay over."));
   }
 
   try {

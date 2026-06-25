@@ -71,7 +71,7 @@ export default async function ChargePage({
           <div className="mt-1.5 text-sm text-black/55">{charge.memo}</div>
         ) : null}
         <div className="mt-1 text-xs text-black/40">
-          {charge.fulfillment === "ship" ? "Ship — escrow until delivered" : "In-person — hand over now"}
+          {charge.fulfillment === "ship" ? "Ship — you get paid after delivery" : "In-person — hand over now"}
         </div>
       </Card>
 
@@ -112,9 +112,9 @@ export default async function ChargePage({
           <CheckCircle2 className="mx-auto size-12 text-accent-500" />
           <div className="text-xl font-semibold text-accent-800">Approved</div>
           <p className="text-sm text-black/55">
-            {formatPeso(charge.amount_centavos)} authorized.{" "}
+            {formatPeso(charge.amount_centavos)} approved.{" "}
             {charge.fulfillment === "ship"
-              ? "Held in escrow — ship the order and mark it shipped."
+              ? "Payment kept safe — ship the order and mark it shipped to get paid."
               : "You can hand over the goods now."}
           </p>
           <Link

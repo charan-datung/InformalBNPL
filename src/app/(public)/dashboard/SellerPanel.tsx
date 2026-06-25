@@ -43,7 +43,7 @@ function NewSale() {
           {(
             [
               ["in_person", "In-person", "Hand over now", true],
-              ["ship", "Ship", "Escrow until delivered", false],
+              ["ship", "Ship", "Get paid after it's delivered", false],
             ] as [string, string, string, boolean][]
           ).map(([value, label, desc, checked]) => (
             <label
@@ -127,7 +127,7 @@ export default async function SellerPanel({ userId }: { userId: string }) {
               <div className="flex flex-wrap justify-between gap-2 text-sm">
                 <span className="text-black/55">
                   Order from <strong className="text-foreground">{l.buyerName}</strong>{" "}
-                  · {formatPeso(l.ticket_centavos)} · {l.tenor_months}mo
+                  · {formatPeso(l.ticket_centavos)} · {l.tenor_months} months
                 </span>
               </div>
 

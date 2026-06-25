@@ -55,13 +55,13 @@ export default async function OnboardingPage() {
           href="/onboarding/buyer"
           icon={ShoppingBag}
           title="Buy"
-          description="Apply to buy now and pay later. Starts a buyer application."
+          description="Shop now and pay in small amounts. Starts a quick application."
         />
         <RoleCard
           href="/onboarding/seller"
           icon={Store}
           title="Sell"
-          description="Offer items to BNPL buyers. Starts seller verification."
+          description="Sell to buyers who pay in installments. Starts seller verification."
         />
         <RoleCard
           href="/onboarding/buyer?next=seller"

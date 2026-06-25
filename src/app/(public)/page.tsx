@@ -32,33 +32,36 @@ export default async function HomePage({
   const features = [
     {
       icon: Gauge,
-      title: "Alternative-data underwriting",
-      body: "We look at what and where you sell, your sourcing and cash flow — not just paperwork.",
+      title: "No papers, no hassle",
+      body: "We look at what and where you sell — not permits or paperwork. Real people, judged fairly.",
     },
     {
       icon: ShieldCheck,
-      title: "Escrow-backed",
-      body: "Funds are tracked through booking, escrow, shipping and release so buyers and sellers are protected.",
+      title: "Your money stays safe",
+      body: "We hold the payment safely until your order arrives. If something goes wrong, you're protected.",
     },
     {
       icon: MapPin,
-      title: "Built for the Philippines",
-      body: "Pesos, GCash/Maya and bank payouts, mobile-first — designed for how informal trade really works.",
+      title: "Made for Pinoys",
+      body: "Pesos, GCash and Maya, all on your phone — built for how Filipinos really buy and sell.",
     },
   ];
 
   return (
     <div className="space-y-12">
       <section className="flex flex-col items-center pt-6 text-center sm:pt-10">
-        <LogoMark className="mb-6 h-16 w-auto" />
+        <LogoMark className="mb-3 h-16 w-auto" />
+        <p className="mb-6 text-sm font-medium tracking-wide text-brand-600">
+          Shop now, pay paunti-unti
+        </p>
         <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Buy now, pay later — for informal merchants
+          Get it now, pay in small amounts
         </h1>
         <p className="mt-4 max-w-prose text-base text-black/60">
-          Datung gives Filipino micro-merchants credit to stock up and sell,
-          underwritten on how you actually trade — no business papers required.
-          One account lets you buy, sell, or both, each reviewed by a real
-          person.
+          Datung lets you shop from trusted Filipino sellers and pay over time —
+          hulugan, in amounts that fit your budget. No credit card, no business
+          papers. Sell with Datung too, and get paid safely. One account to buy,
+          sell, or both.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -99,7 +102,8 @@ export default async function HomePage({
       </section>
 
       <p className="text-center text-xs text-black/40">
-        This pilot records loan and escrow state only — it never moves money.
+        This is a pilot — it keeps track of your orders and payments only, and
+        never moves real money yet.
       </p>
     </div>
   );

@@ -32,8 +32,9 @@ export default function PayConfirm({
   if (overLimit) {
     return (
       <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-        This is more than your available credit ({formatPeso(availableCentavos)}).
-        Pay down a loan and try again.
+        This is more than you can spend right now (
+        {formatPeso(availableCentavos)}). Pay off some of what you owe and try
+        again.
       </p>
     );
   }
@@ -44,7 +45,7 @@ export default function PayConfirm({
       <input type="hidden" name="tenor_months" value={tenor} />
 
       <label className="block space-y-1">
-        <span className="text-sm font-medium">Repayment plan</span>
+        <span className="text-sm font-medium">Pay over</span>
         <select
           value={tenor}
           onChange={(e) => setTenor(Number(e.target.value))}
@@ -60,13 +61,13 @@ export default function PayConfirm({
 
       <div className="rounded-md border border-black/10 p-3 dark:border-white/10">
         <div className="mb-2 flex flex-wrap justify-between gap-2 text-sm">
-          <span className="font-medium">Your schedule</span>
+          <span className="font-medium">Your payment plan</span>
           <span className="text-black/60 dark:text-white/60">
             Total{" "}
             <span className="font-semibold text-black dark:text-white">
               {formatPeso(schedule.totalCentavos)}
             </span>{" "}
-            ({formatPeso(schedule.interestCentavos)} interest)
+            ({formatPeso(schedule.interestCentavos)} fee)
           </span>
         </div>
         <ScheduleTable installments={schedule.installments} />
@@ -76,10 +77,10 @@ export default function PayConfirm({
         type="submit"
         className="w-full rounded-md bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600"
       >
-        Authorize {formatPeso(amountCentavos)}
+        Confirm &amp; pay {formatPeso(amountCentavos)}
       </button>
       <p className="text-center text-[11px] text-black/40 dark:text-white/40">
-        Authorizing draws on your Datung credit line. No money moves in this pilot.
+        This uses your Datung spending limit. No real money moves in this pilot.
       </p>
     </form>
   );

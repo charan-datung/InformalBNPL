@@ -62,7 +62,7 @@ export default async function SignupPage({
           </h1>
           <p className="text-sm text-black/55">
             {sellerIntent
-              ? "Create your account — next you'll verify your shop and start accepting buy-now-pay-later."
+              ? "Create your account — next you'll verify your shop and start selling to buyers who pay in installments."
               : "Just your sign-in details for now — you'll pick what you want to do next."}
           </p>
         </div>
@@ -77,8 +77,8 @@ export default async function SignupPage({
         </Callout>
       ) : ref ? (
         <Callout tone="info">
-          You were invited by a Datung seller — finish signing up to shop with
-          credit.
+          You were invited by a Datung seller — finish signing up to shop now and
+          pay in small amounts.
         </Callout>
       ) : null}
 

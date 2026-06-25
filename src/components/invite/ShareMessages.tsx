@@ -31,19 +31,19 @@ export default function ShareMessages({
       channel: "messenger",
       label: "Messenger / Facebook",
       Icon: MessageCircle,
-      text: `Hi! Good news — pwede ka nang mag-shop now, pay later${withMe} on Datung! 🛍️ No credit card needed, libre mag-sign up. Approved buyers get a credit limit na pwede mong gamitin agad. Sign up here: ${inviteUrl}`,
+      text: `Hi! Good news — pwede ka nang mag-shop ngayon, bayad nang paunti-unti${withMe} on Datung! 🛍️ Walang credit card, libre mag-sign up. Once approved, may spending limit ka na pwedeng gamitin agad. Sign up here: ${inviteUrl}`,
     },
     {
       channel: "sms",
       label: "SMS",
       Icon: Smartphone,
-      text: `Shop now, pay later${withMe} on Datung! No credit card needed. Sign up: ${inviteUrl}`,
+      text: `Shop now, pay in small amounts${withMe} on Datung! No credit card needed. Sign up: ${inviteUrl}`,
     },
     {
       channel: "story",
       label: "Story caption",
       Icon: Sparkles,
-      text: `Buy now, pay later na tayo${who ? `${withMe}` : ""}! 🛍️✨ No credit card, libreng sign-up. Tap the link & get approved 👉 ${inviteUrl} #ShopNowPayLater #Datung #BNPL`,
+      text: `Shop ngayon, bayad paunti-unti${who ? `${withMe}` : ""}! 🛍️✨ Walang credit card, libreng sign-up. Tap the link 👉 ${inviteUrl} #ShopNowPayLater #Datung #Hulugan`,
     },
   ];
 

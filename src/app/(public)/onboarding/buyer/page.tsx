@@ -35,8 +35,8 @@ export default async function BuyerOnboardingPage({
         ) : null}
         <h1 className="text-3xl font-bold tracking-tight">Buyer application</h1>
         <p className="text-sm text-black/55">
-          No business papers needed — tell us how you sell and source so we can
-          underwrite you fairly.
+          No business papers needed — just tell us how you earn so we can review
+          you fairly.
         </p>
       </div>
 
