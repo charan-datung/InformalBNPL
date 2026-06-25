@@ -127,8 +127,10 @@ async function BuyerQueue({
   const { error } = await searchParams;
   const [buyers, config] = await Promise.all([listPendingBuyers(), getConfig()]);
 
-  // Default credit limit prefilled from system_config (pesos).
+  // Default credit limit prefilled from system_config (pesos); approvals are
+  // capped at the configured ceiling.
   const defaultLimitPesos = config.default_credit_limit_centavos / 100;
+  const maxLimitPesos = config.max_credit_limit_centavos / 100;
 
   return (
     <div className="space-y-4">
@@ -270,18 +272,23 @@ async function BuyerQueue({
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1">
                   <span className="text-xs font-medium">
-                    Credit limit (PHP)
+                    Credit limit (PHP){" "}
+                    <span className="font-normal text-black/45 dark:text-white/45">
+                      max {formatPeso(config.max_credit_limit_centavos)}
+                    </span>
                   </span>
                   <input
                     type="number"
                     name="credit_limit_pesos"
                     min={0}
+                    max={maxLimitPesos}
                     step="1"
-                    defaultValue={
+                    defaultValue={Math.min(
                       b.requested_amount_centavos != null
                         ? b.requested_amount_centavos / 100
-                        : defaultLimitPesos
-                    }
+                        : defaultLimitPesos,
+                      maxLimitPesos,
+                    )}
                     className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
                   />
                 </label>

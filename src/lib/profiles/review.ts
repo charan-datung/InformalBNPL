@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAudit } from "@/lib/audit/log";
-import { getConfig } from "@/lib/config/system-config";
+import { getConfig, getConfigValue } from "@/lib/config/system-config";
 
 /**
  * Operator review of pending buyer/seller applications. Approval is fully
@@ -22,11 +22,17 @@ export type BuyerReviewInput = {
 export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
   const admin = createAdminClient();
 
+  // Backstop: never persist a limit above the configured ceiling, regardless of
+  // caller. The operator action validates first with a clear message; this clamp
+  // guards any other path into this mutation.
+  const maxLimitCentavos = await getConfigValue("max_credit_limit_centavos", admin);
+  const creditLimitCentavos = Math.min(input.creditLimitCentavos, maxLimitCentavos);
+
   const patch =
     input.decision === "approve"
       ? {
           kyc_status: "verified" as const,
-          credit_limit_centavos: input.creditLimitCentavos,
+          credit_limit_centavos: creditLimitCentavos,
           underwriting_notes: input.notes ?? null,
           activated_at: new Date().toISOString(),
         }
@@ -49,7 +55,7 @@ export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
     entityId: input.userId,
     detail: {
       credit_limit_centavos:
-        input.decision === "approve" ? input.creditLimitCentavos : null,
+        input.decision === "approve" ? creditLimitCentavos : null,
       notes: input.notes ?? null,
     },
   });

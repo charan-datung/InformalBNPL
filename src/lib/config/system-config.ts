@@ -28,6 +28,9 @@ export const CONFIG_DEFAULTS = {
   default_reserve_pct: 10,
   /** Default buyer credit limit in centavos (500_000 = ₱5,000.00). */
   default_credit_limit_centavos: 500_000,
+  /** Hard ceiling (centavos) an operator may approve a buyer at (₱5,000). A
+   *  buyer cannot be onboarded above this; raise it here to lift the cap. */
+  max_credit_limit_centavos: 500_000,
   /** Default loan tenor (months) prefilled at checkout. */
   default_tenor_months: 3,
   /** Longest tenor (months) a buyer may choose at checkout. */

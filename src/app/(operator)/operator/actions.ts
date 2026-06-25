@@ -10,6 +10,8 @@ import {
 } from "@/lib/loans/mutations";
 import { isLoanStatus } from "@/lib/loans/state-machine";
 import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
+import { getConfigValue } from "@/lib/config/system-config";
+import { formatPeso } from "@/lib/format";
 import { resolveDispute } from "@/lib/disputes/mutations";
 import {
   proposePayout,
@@ -87,6 +89,20 @@ export async function reviewBuyerAction(formData: FormData) {
 
   if (decision !== "approve" && decision !== "reject") {
     redirect(`${back}?error=${encodeURIComponent("Invalid decision.")}`);
+  }
+
+  // Hard ceiling on what an operator can approve a buyer at. Validated here so
+  // the operator gets a clear message; reviewBuyer also clamps as a backstop.
+  const maxLimitCentavos = await getConfigValue("max_credit_limit_centavos");
+  if (
+    decision === "approve" &&
+    Math.round(creditLimitPesos * 100) > maxLimitCentavos
+  ) {
+    redirect(
+      `${back}?error=${encodeURIComponent(
+        `Credit limit cannot exceed ${formatPeso(maxLimitCentavos)}.`,
+      )}`,
+    );
   }
 
   try {
