@@ -102,8 +102,9 @@ export default async function HomePage({
       </section>
 
       <p className="text-center text-xs text-black/40">
-        This is a pilot — it keeps track of your orders and payments only, and
-        never moves real money yet.
+        Datung is operated by Dark Knight Lending Inc. — an SEC-registered
+        lending company (SEC Reg. No. 2024070157507-01, Certificate of Authority
+        No. 3506).
       </p>
     </div>
   );

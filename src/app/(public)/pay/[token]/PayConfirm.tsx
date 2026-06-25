@@ -95,7 +95,8 @@ export default function PayConfirm({
         Confirm &amp; pay {formatPeso(amountCentavos)}
       </button>
       <p className="text-center text-[11px] text-black/40 dark:text-white/40">
-        This uses your Datung spending limit. No real money moves in this pilot.
+        This uses your Datung spending limit. You&apos;ll repay in installments on
+        the schedule shown above.
       </p>
     </form>
   );

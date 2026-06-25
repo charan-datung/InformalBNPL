@@ -164,8 +164,9 @@ export default function Checkout({
           Confirm purchase
         </button>
         <p className="text-[11px] text-black/40">
-          When you confirm, your payment is kept safe until your order arrives.
-          This is a pilot — no real money moves yet.
+          When you confirm, we set up your installment plan and keep your order&apos;s
+          payment safe until it arrives. Datung is operated by Dark Knight Lending
+          Inc., an SEC-registered lending company.
         </p>
       </form>
     </Card>

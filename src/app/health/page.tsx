@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { missingServerEnv, serviceRoleKeyProblem } from "@/lib/env";
 
 // Always render fresh — this is a liveness/readiness check, not a cached page.
 export const dynamic = "force-dynamic";
 
 type Check = { label: string; ok: boolean; detail: string };
+
+// Tables the active dashboards read through the service-role client. A missing
+// migration here is exactly the kind of fault that white-screens /dashboard.
+const CORE_TABLES = [
+  "users",
+  "buyer_profiles",
+  "seller_profiles",
+  "loans",
+  "repayments",
+  "seller_referrals",
+  "system_config",
+] as const;
 
 async function runChecks(): Promise<Check[]> {
   const checks: Check[] = [];
@@ -41,6 +55,59 @@ async function runChecks(): Promise<Check[]> {
         ok: false,
         detail: e instanceof Error ? e.message : "Request failed",
       });
+    }
+  }
+
+  // Service-role key: present and the right *kind* of key. The logged-in
+  // dashboards read everything through this client, so a missing or wrong key
+  // here is the most common cause of a post-login crash even when login works.
+  const missing = missingServerEnv();
+  const keyMissing = missing.includes("SUPABASE_SERVICE_ROLE_KEY");
+  const keyProblem = serviceRoleKeyProblem();
+  checks.push({
+    label: "Service-role key configured",
+    ok: !keyMissing && !keyProblem,
+    detail: keyMissing
+      ? "SUPABASE_SERVICE_ROLE_KEY is not set — the dashboard reads will throw after login"
+      : keyProblem
+        ? keyProblem
+        : "SUPABASE_SERVICE_ROLE_KEY is set and looks like a valid service key",
+  });
+
+  // Exercise the admin client against every table the dashboards read. This
+  // mirrors the logged-in render path, so any fault (bad key, missing table,
+  // unreachable DB) shows up here with the exact error instead of a digest.
+  if (!keyMissing) {
+    let admin: ReturnType<typeof createAdminClient> | null = null;
+    try {
+      admin = createAdminClient();
+    } catch (e) {
+      checks.push({
+        label: "Service-role client",
+        ok: false,
+        detail: e instanceof Error ? e.message : "Failed to construct admin client",
+      });
+    }
+
+    if (admin) {
+      for (const table of CORE_TABLES) {
+        try {
+          const { error } = await admin
+            .from(table)
+            .select("*", { count: "exact", head: true });
+          checks.push({
+            label: `Table “${table}” readable`,
+            ok: !error,
+            detail: error ? error.message : "ok",
+          });
+        } catch (e) {
+          checks.push({
+            label: `Table “${table}” readable`,
+            ok: false,
+            detail: e instanceof Error ? e.message : "Query failed",
+          });
+        }
+      }
     }
   }
 

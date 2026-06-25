@@ -200,7 +200,7 @@ export default async function PayPage({
       </Card>
       <div className="flex items-center justify-center gap-1.5 text-xs text-black/45">
         <ShieldCheck className="size-4 text-brand-600" />
-        Records your plan only — no money moves in this pilot.
+        Sets up your installment plan against your Datung credit limit.
       </div>
     </>,
   );
