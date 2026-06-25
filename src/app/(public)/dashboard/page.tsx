@@ -6,6 +6,7 @@ import {
   hasNoCapability,
   type CapabilityStatus,
 } from "@/lib/profiles/capabilities";
+import { getAccountProfile } from "@/lib/profiles/account";
 import DashboardModes from "@/app/(public)/dashboard/DashboardModes";
 import BuyerPanel from "@/app/(public)/dashboard/BuyerPanel";
 import SellerPanel from "@/app/(public)/dashboard/SellerPanel";
@@ -46,19 +47,24 @@ export default async function DashboardPage({
   // never blocks on the slowest query before showing anything.
   const buyerNode = buyerVerified ? (
     <Suspense fallback={<CardSkeleton />}>
-      <BuyerPanel userId={caps.userId} />
+      <BuyerPanel userId={caps.userId} email={caps.email} />
     </Suspense>
   ) : null;
   const sellerNode = sellerVerified ? (
     <Suspense fallback={<CardSkeleton />}>
-      <SellerPanel userId={caps.userId} />
+      <SellerPanel userId={caps.userId} email={caps.email} />
     </Suspense>
   ) : null;
+
+  const account = await getAccountProfile(caps.userId, caps.email);
+  const firstName = account.name.trim().split(/\s+/)[0] || null;
 
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Your dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {firstName ? `Hi, ${firstName}` : "Your dashboard"}
+        </h1>
         <p className="text-sm text-black/55">{caps.email}</p>
       </header>
 

@@ -7,6 +7,16 @@ export function formatPeso(centavos: number | null | undefined): string {
   }).format(centavos / 100);
 }
 
+/** Format an ISO date/timestamp as a date only (no time) — e.g. "Jun 25, 2026". */
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** Format an ISO timestamp for the dense operator tables. */
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
