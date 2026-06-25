@@ -51,6 +51,10 @@ export async function createChargeAction(formData: FormData) {
 export async function authorizeChargeAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   const tenorMonths = Number(formData.get("tenor_months") ?? 0);
+  const paymentFrequency =
+    String(formData.get("payment_frequency") ?? "monthly") === "biweekly"
+      ? "biweekly"
+      : "monthly";
 
   const caps = await getCapabilities();
   if (!caps) redirect(`/login?next=${encodeURIComponent(`/pay/${token}`)}`);
@@ -62,7 +66,12 @@ export async function authorizeChargeAction(formData: FormData) {
   }
 
   try {
-    await authorizeCharge({ token, buyerUserId: caps.userId, tenorMonths });
+    await authorizeCharge({
+      token,
+      buyerUserId: caps.userId,
+      tenorMonths,
+      paymentFrequency,
+    });
   } catch (e) {
     const text = e instanceof ChargeError ? e.message : msg(e);
     redirect(`/pay/${token}?error=` + encodeURIComponent(text));

@@ -27,6 +27,7 @@ const FIELDS: { key: ConfigKey; label: string; hint: string }[] = [
     hint: "integer",
   },
   { key: "default_tenor_months", label: "Default tenor (months)", hint: "integer" },
+  { key: "max_tenor_months", label: "Max tenor (months)", hint: "integer, longest plan a buyer can pick" },
   {
     key: "seller_payout_days",
     label: "Seller payout window (days)",
@@ -35,7 +36,7 @@ const FIELDS: { key: ConfigKey; label: string; hint: string }[] = [
   {
     key: "default_credit_limit_centavos",
     label: "Default credit limit (centavos)",
-    hint: "centavos, e.g. 5000000 = ₱50,000",
+    hint: "centavos, e.g. 500000 = ₱5,000",
   },
 ];
 

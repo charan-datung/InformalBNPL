@@ -26,10 +26,12 @@ export const CONFIG_DEFAULTS = {
   default_merchant_fee_pct: 5,
   /** Default rolling-reserve percent withheld from new sellers (10 = 10%). */
   default_reserve_pct: 10,
-  /** Default buyer credit limit in centavos (5_000_000 = ₱50,000.00). */
-  default_credit_limit_centavos: 5_000_000,
+  /** Default buyer credit limit in centavos (500_000 = ₱5,000.00). */
+  default_credit_limit_centavos: 500_000,
   /** Default loan tenor (months) prefilled at checkout. */
   default_tenor_months: 3,
+  /** Longest tenor (months) a buyer may choose at checkout. */
+  max_tenor_months: 4,
   /** Days after escrow release before the seller's payout is committed. */
   seller_payout_days: 2,
   /** Exposure cap (centavos) for a `new`, ungraduated seller (₱5,000). */

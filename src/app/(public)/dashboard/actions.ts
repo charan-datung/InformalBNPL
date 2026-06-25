@@ -77,6 +77,10 @@ export async function checkoutAction(formData: FormData) {
   const sellerUserId = String(formData.get("seller_user_id") ?? "");
   const amountPesos = Number(formData.get("amount_pesos") ?? 0);
   const tenorMonths = Number(formData.get("tenor_months") ?? 0);
+  const paymentFrequency =
+    String(formData.get("payment_frequency") ?? "monthly") === "biweekly"
+      ? "biweekly"
+      : "monthly";
 
   try {
     const loan = await bookLoan({
@@ -84,6 +88,7 @@ export async function checkoutAction(formData: FormData) {
       sellerUserId,
       ticketCentavos: Math.round(amountPesos * 100),
       tenorMonths,
+      paymentFrequency,
       actorUserId: buyerUserId,
       note: "Buyer checkout",
     });

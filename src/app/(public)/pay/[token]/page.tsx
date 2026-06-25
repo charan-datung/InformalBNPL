@@ -13,8 +13,6 @@ import PayConfirm from "@/app/(public)/pay/[token]/PayConfirm";
 
 export const dynamic = "force-dynamic";
 
-const MAX_TENOR = 12;
-
 /** Buyer-facing checkout opened from a QR or exclusive link. */
 export default async function PayPage({
   params,
@@ -196,7 +194,7 @@ export default async function PayPage({
           amountCentavos={charge.amount_centavos}
           monthlyRate={config.default_interest_rate_monthly}
           defaultTenor={config.default_tenor_months}
-          maxTenor={MAX_TENOR}
+          maxTenor={config.max_tenor_months}
           availableCentavos={credit.availableCentavos}
         />
       </Card>

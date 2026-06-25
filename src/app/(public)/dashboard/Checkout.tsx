@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { computeSchedule } from "@/lib/loans/schedule";
+import { computeSchedule, type PaymentFrequency } from "@/lib/loans/schedule";
 import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
 import { checkoutAction } from "@/app/(public)/dashboard/actions";
@@ -23,25 +23,29 @@ export default function Checkout({
   sellers,
   monthlyRate,
   defaultTenor,
+  maxTenor,
   creditLimitCentavos,
 }: {
   sellers: VerifiedSeller[];
   monthlyRate: number;
   defaultTenor: number;
+  maxTenor: number;
   creditLimitCentavos: number;
 }) {
   const [seller, setSeller] = useState(sellers[0]?.userId ?? "");
   const [amount, setAmount] = useState<string>("");
-  const [tenor, setTenor] = useState<number>(defaultTenor);
+  const [tenor, setTenor] = useState<number>(Math.min(defaultTenor, maxTenor));
+  const [frequency, setFrequency] = useState<PaymentFrequency>("monthly");
 
   const amountPesos = Number(amount);
   const ticketCentavos =
     Number.isFinite(amountPesos) && amountPesos > 0
       ? Math.round(amountPesos * 100)
       : 0;
-  const schedule = computeSchedule(ticketCentavos, tenor, monthlyRate);
+  const schedule = computeSchedule(ticketCentavos, tenor, monthlyRate, frequency);
   const overLimit = ticketCentavos > creditLimitCentavos;
   const canConfirm = !!seller && ticketCentavos > 0 && tenor > 0 && !overLimit;
+  const tenorOptions = Array.from({ length: maxTenor }, (_, i) => i + 1);
 
   if (sellers.length === 0) {
     return (
@@ -65,8 +69,9 @@ export default function Checkout({
       </div>
 
       <form action={checkoutAction} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-4">
-          <Field label="Seller" className="sm:col-span-2">
+        <input type="hidden" name="payment_frequency" value={frequency} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Seller">
             <Select
               name="seller_user_id"
               value={seller}
@@ -92,17 +97,28 @@ export default function Checkout({
               onChange={(e) => setAmount(e.target.value)}
             />
           </Field>
-          <Field label="Pay over (months)">
-            <TextInput
-              type="number"
+          <Field label="Pay over">
+            <Select
               name="tenor_months"
-              min={1}
-              max={24}
-              step="1"
-              required
               value={tenor}
               onChange={(e) => setTenor(Number(e.target.value))}
-            />
+              required
+            >
+              {tenorOptions.map((m) => (
+                <option key={m} value={m}>
+                  {m} {m === 1 ? "month" : "months"}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="How often">
+            <Select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as PaymentFrequency)}
+            >
+              <option value="monthly">Monthly</option>
+              <option value="biweekly">Every 2 weeks</option>
+            </Select>
           </Field>
         </div>
 

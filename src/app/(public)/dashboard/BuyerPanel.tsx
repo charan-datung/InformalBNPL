@@ -14,6 +14,7 @@ import { updateAccountAction } from "@/app/(public)/dashboard/profile-actions";
 import Checkout from "@/app/(public)/dashboard/Checkout";
 import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
+import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
 import Card from "@/components/ui/Card";
@@ -165,13 +166,24 @@ export default async function BuyerPanel({
         sellers={sellers}
         monthlyRate={config.default_interest_rate_monthly}
         defaultTenor={config.default_tenor_months}
+        maxTenor={config.max_tenor_months}
         creditLimitCentavos={credit.availableCentavos}
       />
 
       {/* Unified upcoming payments across every order */}
       {stats.upcoming.length > 0 ? (
         <section className="space-y-3">
-          <SectionHeading icon={CalendarClock}>Upcoming payments</SectionHeading>
+          <div className="flex items-center justify-between gap-3">
+            <SectionHeading icon={CalendarClock}>
+              Upcoming payments
+            </SectionHeading>
+            {stats.nextPayment ? (
+              <PayInstructions
+                amountCentavos={stats.nextPayment.amountCentavos}
+                label="Pay next"
+              />
+            ) : null}
+          </div>
           <Card className="divide-y divide-black/5 p-0">
             {stats.upcoming.slice(0, 6).map((p, i) => (
               <div
@@ -197,6 +209,11 @@ export default async function BuyerPanel({
                       Due
                     </span>
                   )}
+                  <PayInstructions
+                    amountCentavos={p.amountCentavos}
+                    label="Pay"
+                    variant="secondary"
+                  />
                 </div>
               </div>
             ))}

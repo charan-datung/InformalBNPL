@@ -6,6 +6,7 @@ import {
   isLoanStatus,
   type LoanStatus,
 } from "@/lib/loans/state-machine";
+import type { PaymentFrequency } from "@/lib/loans/schedule";
 import {
   STATUS_EVENT_TYPE,
   type EscrowEventType,
@@ -30,6 +31,7 @@ export type Loan = {
   seller_user_id: string;
   ticket_centavos: number;
   tenor_months: number;
+  payment_frequency: PaymentFrequency;
   interest_rate_monthly: number;
   merchant_fee_pct: number;
   status: LoanStatus;
@@ -59,6 +61,8 @@ export type BookLoanInput = {
   sellerUserId: string;
   ticketCentavos: number;
   tenorMonths: number;
+  /** How often the buyer repays. Defaults to monthly. */
+  paymentFrequency?: PaymentFrequency;
   /** Defaults to system_config `default_interest_rate_monthly`. */
   interestRateMonthly?: number;
   /** Defaults to system_config `default_merchant_fee_pct`. */
@@ -150,6 +154,8 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
   const merchantFeePct =
     input.merchantFeePct ??
     (await getConfigValue("default_merchant_fee_pct", supabase));
+  const paymentFrequency: PaymentFrequency =
+    input.paymentFrequency === "biweekly" ? "biweekly" : "monthly";
 
   const { data, error } = await supabase
     .rpc("book_loan", {
@@ -161,6 +167,7 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
       p_merchant_fee_pct: merchantFeePct,
       p_actor: input.actorUserId ?? null,
       p_note: input.note ?? null,
+      p_payment_frequency: paymentFrequency,
     })
     .single<Loan>();
 

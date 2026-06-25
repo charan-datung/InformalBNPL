@@ -82,11 +82,11 @@ update public.users set staff_role = 'operator'
   where id = '22222222-2222-2222-2222-222222222222';
 
 -- ---- Capabilities -----------------------------------------------------------
--- Buyer-only user: a verified, activated buyer with a ₱50,000 limit.
+-- Buyer-only user: a verified, activated buyer with a ₱5,000 starting limit.
 insert into public.buyer_profiles
   (user_id, kyc_status, credit_limit_centavos, underwriting_notes, activated_at)
 values
-  ('33333333-3333-3333-3333-333333333333', 'verified', 5000000,
+  ('33333333-3333-3333-3333-333333333333', 'verified', 500000,
    'Pilot test buyer.', now());
 
 -- Seller-only user: a verified, trusted seller with a 10% rolling reserve.
@@ -101,7 +101,7 @@ values
 insert into public.buyer_profiles
   (user_id, kyc_status, credit_limit_centavos, underwriting_notes, activated_at)
 values
-  ('55555555-5555-5555-5555-555555555555', 'verified', 3000000,
+  ('55555555-5555-5555-5555-555555555555', 'verified', 500000,
    'Pilot test buyer+seller (buyer side).', now());
 
 insert into public.seller_profiles
@@ -121,8 +121,9 @@ insert into public.system_config (key, value, updated_by) values
   ('default_interest_rate_monthly', '0.035',   '11111111-1111-1111-1111-111111111111'),
   ('default_merchant_fee_pct',      '5',       '11111111-1111-1111-1111-111111111111'),
   ('default_reserve_pct',           '10',      '11111111-1111-1111-1111-111111111111'),
-  ('default_credit_limit_centavos', '5000000', '11111111-1111-1111-1111-111111111111'),
+  ('default_credit_limit_centavos', '500000',  '11111111-1111-1111-1111-111111111111'),
   ('default_tenor_months',          '3',       '11111111-1111-1111-1111-111111111111'),
+  ('max_tenor_months',              '4',       '11111111-1111-1111-1111-111111111111'),
   ('seller_payout_days',            '2',       '11111111-1111-1111-1111-111111111111'),
   ('seller_cap_new_centavos',       '500000',  '11111111-1111-1111-1111-111111111111'),
   ('seller_cap_trusted_centavos',   '5000000', '11111111-1111-1111-1111-111111111111'),

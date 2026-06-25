@@ -19,6 +19,15 @@ from information_schema.columns
 where table_schema = 'public' and table_name = 'seller_profiles'
   and column_name in ('ocr_id_text','ocr_storefront_text');
 
+-- 2b. Amortization frequency column (migration 20260625120000)
+select 'payment frequency column' as check,
+       case when count(*) = 1 then 'OK'
+            else 'MISSING — apply 20260625120000_amortization_frequency.sql' end as status,
+       string_agg(column_name, ', ') as found
+from information_schema.columns
+where table_schema = 'public' and table_name = 'loans'
+  and column_name = 'payment_frequency';
+
 -- 3. Underwriting columns the Members page reads
 select 'underwriting columns' as check,
        case when count(*) = 3 then 'OK' else 'MISSING' end as status,

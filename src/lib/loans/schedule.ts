@@ -1,16 +1,26 @@
 /**
- * Repayment schedule math — flat monthly interest on principal. This MUST stay
- * in lockstep with the `start_repayment` SQL function (migration 0007) so the
- * preview a buyer sees at checkout matches the schedule generated when the loan
- * later enters `repaying`.
+ * Repayment schedule math — flat interest on principal, fixed by the loan's
+ * tenor in MONTHS. The payment *frequency* only changes how many installments
+ * the same total is split into, and how far apart they fall — never the total
+ * cost. This MUST stay in lockstep with the `start_repayment` SQL function
+ * (migration 0007, amended for frequency) so the preview a buyer sees at
+ * checkout matches the schedule generated when the loan later enters `repaying`.
  *
  *   monthly_interest = round(ticket * monthlyRate)
- *   total            = ticket + monthly_interest * tenor
- *   base             = floor(total / tenor)            // each installment
- *   last             = total - base * (tenor - 1)      // absorbs remainder
+ *   total_interest   = monthly_interest * tenorMonths   // duration-based
+ *   total            = ticket + total_interest
+ *   periods          = monthly ? tenorMonths : tenorMonths * 2   // biweekly = 2/mo
+ *   base             = floor(total / periods)            // each installment
+ *   last             = total - base * (periods - 1)      // absorbs remainder
+ *
+ * Due dates step by one month (monthly) or 14 days (biweekly). A biweekly plan
+ * over the same tenor therefore costs exactly the same as monthly — it is just
+ * paid in twice as many, smaller, closer-together installments.
  *
  * All amounts are integer centavos.
  */
+
+export type PaymentFrequency = "monthly" | "biweekly";
 
 export type Installment = {
   index: number;
@@ -27,10 +37,19 @@ export type Schedule = {
   monthlyInterestCentavos: number;
 };
 
+/** Number of installments for a tenor + frequency. Biweekly = 2 per month. */
+export function periodCount(
+  tenorMonths: number,
+  frequency: PaymentFrequency,
+): number {
+  return frequency === "biweekly" ? tenorMonths * 2 : tenorMonths;
+}
+
 export function computeSchedule(
   ticketCentavos: number,
   tenorMonths: number,
   monthlyRate: number,
+  frequency: PaymentFrequency = "monthly",
   startDate: Date = new Date(),
 ): Schedule {
   if (
@@ -48,18 +67,34 @@ export function computeSchedule(
   }
 
   const monthlyInterest = Math.round(ticketCentavos * monthlyRate);
-  const total = ticketCentavos + monthlyInterest * tenorMonths;
-  const base = Math.floor(total / tenorMonths);
+  const totalInterest = monthlyInterest * tenorMonths;
+  const total = ticketCentavos + totalInterest;
+
+  const periods = periodCount(tenorMonths, frequency);
+  const baseAmount = Math.floor(total / periods);
+  const baseInterest = Math.floor(totalInterest / periods);
 
   const installments: Installment[] = [];
-  for (let i = 1; i <= tenorMonths; i++) {
-    const amount = i < tenorMonths ? base : total - base * (tenorMonths - 1);
+  for (let i = 1; i <= periods; i++) {
+    const isLast = i === periods;
+    // The last installment absorbs the rounding remainder so the parts sum
+    // exactly to the total (amount) and the ticket (principal).
+    const amount = isLast ? total - baseAmount * (periods - 1) : baseAmount;
+    const interest = isLast
+      ? totalInterest - baseInterest * (periods - 1)
+      : baseInterest;
+
     const due = new Date(startDate);
-    due.setMonth(due.getMonth() + i);
+    if (frequency === "biweekly") {
+      due.setDate(due.getDate() + i * 14);
+    } else {
+      due.setMonth(due.getMonth() + i);
+    }
+
     installments.push({
       index: i,
-      interestCentavos: monthlyInterest,
-      principalCentavos: amount - monthlyInterest,
+      interestCentavos: interest,
+      principalCentavos: amount - interest,
       amountCentavos: amount,
       dueDate: due.toISOString().slice(0, 10),
     });
@@ -68,7 +103,7 @@ export function computeSchedule(
   return {
     installments,
     totalCentavos: total,
-    interestCentavos: monthlyInterest * tenorMonths,
+    interestCentavos: totalInterest,
     monthlyInterestCentavos: monthlyInterest,
   };
 }

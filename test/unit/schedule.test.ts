@@ -35,4 +35,35 @@ describe("computeSchedule", () => {
     expect(computeSchedule(0, 3, 0.035).installments).toHaveLength(0);
     expect(computeSchedule(100_000, 0, 0.035).installments).toHaveLength(0);
   });
+
+  it("biweekly splits the same total into twice as many installments", () => {
+    const start = new Date("2026-06-01T00:00:00Z");
+    const monthly = computeSchedule(100_000, 2, 0.035, "monthly", start);
+    const biweekly = computeSchedule(100_000, 2, 0.035, "biweekly", start);
+
+    // Frequency must NOT change the cost.
+    expect(biweekly.totalCentavos).toBe(monthly.totalCentavos);
+    expect(biweekly.interestCentavos).toBe(monthly.interestCentavos);
+
+    // 2 months => 4 biweekly installments.
+    expect(monthly.installments).toHaveLength(2);
+    expect(biweekly.installments).toHaveLength(4);
+
+    // Parts still reconcile exactly.
+    const sum = biweekly.installments.reduce((a, i) => a + i.amountCentavos, 0);
+    expect(sum).toBe(biweekly.totalCentavos);
+    const principal = biweekly.installments.reduce(
+      (a, i) => a + i.principalCentavos,
+      0,
+    );
+    expect(principal).toBe(100_000);
+  });
+
+  it("steps biweekly due dates 14 days apart", () => {
+    const start = new Date("2026-06-01T00:00:00Z");
+    const s = computeSchedule(50_000, 1, 0.035, "biweekly", start);
+    expect(s.installments).toHaveLength(2);
+    expect(s.installments[0].dueDate).toBe("2026-06-15"); // +14d
+    expect(s.installments[1].dueDate).toBe("2026-06-29"); // +28d
+  });
 });

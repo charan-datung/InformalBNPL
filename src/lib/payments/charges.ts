@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
+import type { PaymentFrequency } from "@/lib/loans/schedule";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { postLoanDisbursement } from "@/lib/ledger/post";
 import { captureException } from "@/lib/observability/logger";
@@ -135,6 +136,7 @@ export async function authorizeCharge(input: {
   token: string;
   buyerUserId: string;
   tenorMonths: number;
+  paymentFrequency?: PaymentFrequency;
 }): Promise<{ loanId: string }> {
   const admin = createAdminClient();
 
@@ -184,6 +186,7 @@ export async function authorizeCharge(input: {
       sellerUserId: charge.seller_user_id,
       ticketCentavos: charge.amount_centavos,
       tenorMonths: input.tenorMonths,
+      paymentFrequency: input.paymentFrequency,
       actorUserId: input.buyerUserId,
       note: `Datung Pay (${charge.fulfillment})`,
     });
