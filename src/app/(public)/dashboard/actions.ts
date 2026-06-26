@@ -6,6 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
 import { markShipped } from "@/lib/loans/seller";
+import {
+  recordLoanDisclosureAcceptance,
+  clientIp,
+} from "@/lib/legal/acceptance";
 
 /**
  * Buyer- and seller-initiated actions from the active dashboards. Identity comes
@@ -81,6 +85,16 @@ export async function checkoutAction(formData: FormData) {
     String(formData.get("payment_frequency") ?? "monthly") === "biweekly"
       ? "biweekly"
       : "monthly";
+  const agreed = formData.get("agree") != null;
+  const signatureName = String(formData.get("signature") ?? "").trim();
+
+  if (!agreed || !signatureName) {
+    redirect(
+      `${BACK}?error=${encodeURIComponent(
+        "Please review and agree to the loan terms, and type your name to sign.",
+      )}`,
+    );
+  }
 
   try {
     const loan = await bookLoan({
@@ -91,6 +105,12 @@ export async function checkoutAction(formData: FormData) {
       paymentFrequency,
       actorUserId: buyerUserId,
       note: "Buyer checkout",
+    });
+    await recordLoanDisclosureAcceptance({
+      loan,
+      userId: buyerUserId,
+      signatureName,
+      ipAddress: await clientIp(),
     });
     await transitionLoan({
       loanId: loan.id,

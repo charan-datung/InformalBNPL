@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type PaymentFrequency } from "@/lib/loans/schedule";
 import { computeLoanTerms } from "@/lib/loans/finance";
+import DisclosureAcknowledgment from "@/components/legal/DisclosureAcknowledgment";
 import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
 import { checkoutAction } from "@/app/(public)/dashboard/actions";
@@ -24,6 +25,7 @@ export default function Checkout({
   sellers,
   monthlyRate,
   processingFeePct,
+  penaltyRateMonthly,
   defaultTenor,
   maxTenor,
   creditLimitCentavos,
@@ -31,6 +33,7 @@ export default function Checkout({
   sellers: VerifiedSeller[];
   monthlyRate: number;
   processingFeePct: number;
+  penaltyRateMonthly: number;
   defaultTenor: number;
   maxTenor: number;
   creditLimitCentavos: number;
@@ -51,6 +54,7 @@ export default function Checkout({
     interestRateMonthly: monthlyRate,
     frequency,
     processingFeePct,
+    penaltyRateMonthly,
   });
   const overLimit = ticketCentavos > creditLimitCentavos;
   const canConfirm = !!seller && ticketCentavos > 0 && tenor > 0 && !overLimit;
@@ -160,6 +164,10 @@ export default function Checkout({
             {formatPeso(creditLimitCentavos)}). Try a smaller amount or pay down
             what you owe first.
           </Callout>
+        ) : null}
+
+        {ticketCentavos > 0 && !overLimit ? (
+          <DisclosureAcknowledgment terms={terms} />
         ) : null}
 
         <button

@@ -5,6 +5,7 @@ import { type PaymentFrequency } from "@/lib/loans/schedule";
 import { computeLoanTerms } from "@/lib/loans/finance";
 import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
+import DisclosureAcknowledgment from "@/components/legal/DisclosureAcknowledgment";
 import { authorizeChargeAction } from "@/app/(public)/charge/actions";
 
 /**
@@ -16,6 +17,7 @@ export default function PayConfirm({
   amountCentavos,
   monthlyRate,
   processingFeePct,
+  penaltyRateMonthly,
   defaultTenor,
   maxTenor,
   availableCentavos,
@@ -24,6 +26,7 @@ export default function PayConfirm({
   amountCentavos: number;
   monthlyRate: number;
   processingFeePct: number;
+  penaltyRateMonthly: number;
   defaultTenor: number;
   maxTenor: number;
   availableCentavos: number;
@@ -36,6 +39,7 @@ export default function PayConfirm({
     interestRateMonthly: monthlyRate,
     frequency,
     processingFeePct,
+    penaltyRateMonthly,
   });
   const overLimit = amountCentavos > availableCentavos;
 
@@ -96,6 +100,8 @@ export default function PayConfirm({
         </div>
         <ScheduleTable installments={terms.installments} />
       </div>
+
+      <DisclosureAcknowledgment terms={terms} />
 
       <button
         type="submit"

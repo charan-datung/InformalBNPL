@@ -4,6 +4,7 @@ import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import type { PaymentFrequency } from "@/lib/loans/schedule";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { postLoanDisbursement } from "@/lib/ledger/post";
+import { recordLoanDisclosureAcceptance } from "@/lib/legal/acceptance";
 import { captureException } from "@/lib/observability/logger";
 
 /**
@@ -137,6 +138,9 @@ export async function authorizeCharge(input: {
   buyerUserId: string;
   tenorMonths: number;
   paymentFrequency?: PaymentFrequency;
+  /** Typed-name e-signature accepting the loan's disclosure documents. */
+  signatureName?: string | null;
+  ipAddress?: string | null;
 }): Promise<{ loanId: string }> {
   const admin = createAdminClient();
 
@@ -203,6 +207,16 @@ export async function authorizeCharge(input: {
       .from("payment_requests")
       .update({ loan_id: loan.id })
       .eq("id", charge.id);
+    // Record the borrower's acceptance of the loan's disclosure (with a terms
+    // snapshot) right after booking. Best-effort: never blocks the purchase.
+    if (input.signatureName) {
+      await recordLoanDisclosureAcceptance({
+        loan,
+        userId: input.buyerUserId,
+        signatureName: input.signatureName,
+        ipAddress: input.ipAddress ?? null,
+      });
+    }
     // Withhold the seller's rolling reserve as a separate ledger liability.
     const { data: sellerProfile } = await admin
       .from("seller_profiles")

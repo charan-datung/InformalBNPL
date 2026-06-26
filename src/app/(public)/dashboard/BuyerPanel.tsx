@@ -166,6 +166,7 @@ export default async function BuyerPanel({
         sellers={sellers}
         monthlyRate={config.default_interest_rate_monthly}
         processingFeePct={config.processing_fee_pct}
+        penaltyRateMonthly={config.penalty_rate_monthly}
         defaultTenor={config.default_tenor_months}
         maxTenor={config.max_tenor_months}
         creditLimitCentavos={credit.availableCentavos}

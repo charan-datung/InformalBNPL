@@ -8,6 +8,7 @@ import {
   ChargeError,
   type Fulfillment,
 } from "@/lib/payments/charges";
+import { clientIp } from "@/lib/legal/acceptance";
 
 function msg(e: unknown): string {
   return e instanceof Error ? e.message : "Unexpected error.";
@@ -55,6 +56,8 @@ export async function authorizeChargeAction(formData: FormData) {
     String(formData.get("payment_frequency") ?? "monthly") === "biweekly"
       ? "biweekly"
       : "monthly";
+  const agreed = formData.get("agree") != null;
+  const signatureName = String(formData.get("signature") ?? "").trim();
 
   const caps = await getCapabilities();
   if (!caps) redirect(`/login?next=${encodeURIComponent(`/pay/${token}`)}`);
@@ -64,6 +67,14 @@ export async function authorizeChargeAction(formData: FormData) {
   if (!Number.isInteger(tenorMonths) || tenorMonths <= 0) {
     redirect(`/pay/${token}?error=` + encodeURIComponent("Choose how long to pay over."));
   }
+  if (!agreed || !signatureName) {
+    redirect(
+      `/pay/${token}?error=` +
+        encodeURIComponent(
+          "Please review and agree to the loan terms, and type your name to sign.",
+        ),
+    );
+  }
 
   try {
     await authorizeCharge({
@@ -71,6 +82,8 @@ export async function authorizeChargeAction(formData: FormData) {
       buyerUserId: caps.userId,
       tenorMonths,
       paymentFrequency,
+      signatureName,
+      ipAddress: await clientIp(),
     });
   } catch (e) {
     const text = e instanceof ChargeError ? e.message : msg(e);

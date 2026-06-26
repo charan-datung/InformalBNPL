@@ -51,3 +51,10 @@ export const LENDER = {
 export function lenderHasPlaceholders(): boolean {
   return JSON.stringify(LENDER).includes("CONFIRM");
 }
+
+/**
+ * Version stamp for the legal document templates. Bump this whenever the wording
+ * of any document changes, so a borrower's recorded acceptance is tied to the
+ * exact version they agreed to.
+ */
+export const DOCUMENT_VERSION = "2026-06-26";
