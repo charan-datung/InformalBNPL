@@ -42,8 +42,16 @@ export default function DisclosureStatement({ data }: { data: LoanDocData }) {
         1. Amount of the credit
       </h2>
       <MoneyRow
-        label="Principal / Amount Financed (cash value received)"
-        value={formatPeso(t.principalCentavos)}
+        label="Amount Financed (cash value of purchase received)"
+        value={formatPeso(t.amountFinancedCentavos)}
+      />
+      <MoneyRow
+        label={`Add: processing / service fee (${pct(t.processingFeePct)} of purchase, capitalized)`}
+        value={formatPeso(t.processingFeeCentavos)}
+      />
+      <MoneyRow
+        label="Loan Amount (principal)"
+        value={formatPeso(t.loanAmountCentavos)}
         strong
       />
 
@@ -51,13 +59,13 @@ export default function DisclosureStatement({ data }: { data: LoanDocData }) {
         2. Finance charge
       </h2>
       <MoneyRow
-        label={`Interest (${pct(t.nominalRateMonthlyPct)}/month flat × ${t.tenorMonths} month${
+        label={`Interest (${pct(t.nominalRateMonthlyPct)}/month flat on loan amount × ${t.tenorMonths} month${
           t.tenorMonths === 1 ? "" : "s"
         })`}
         value={formatPeso(t.totalInterestCentavos)}
       />
       <MoneyRow
-        label={`Processing / service fee (${pct(t.processingFeePct)} of principal, one-time)`}
+        label={`Processing / service fee (${pct(t.processingFeePct)} of purchase, one-time)`}
         value={formatPeso(t.processingFeeCentavos)}
       />
       <MoneyRow
@@ -101,7 +109,7 @@ export default function DisclosureStatement({ data }: { data: LoanDocData }) {
             <th className="py-1 pr-3 font-semibold">#</th>
             <th className="py-1 pr-3 font-semibold">Due date</th>
             <th className="py-1 pr-3 text-right font-semibold">Principal</th>
-            <th className="py-1 pr-3 text-right font-semibold">Finance charge</th>
+            <th className="py-1 pr-3 text-right font-semibold">Interest</th>
             <th className="py-1 text-right font-semibold">Amount due</th>
           </tr>
         </thead>
@@ -114,7 +122,7 @@ export default function DisclosureStatement({ data }: { data: LoanDocData }) {
                 {formatPeso(r.principalCentavos)}
               </td>
               <td className="py-1 pr-3 text-right tabular-nums">
-                {formatPeso(r.financeChargeCentavos)}
+                {formatPeso(r.interestCentavos)}
               </td>
               <td className="py-1 text-right font-medium tabular-nums">
                 {formatPeso(r.amountCentavos)}

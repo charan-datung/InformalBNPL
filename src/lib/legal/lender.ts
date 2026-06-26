@@ -24,14 +24,16 @@ export const LENDER = {
   /** SEC Certificate of Authority to operate as a lending company. */
   certificateOfAuthorityNo: "3506",
 
-  /** Registered principal office. CONFIRM the exact registered address. */
-  registeredAddress: "CONFIRM — registered office address, City, Philippines",
-  /** Email used for official notices to/from borrowers. CONFIRM. */
-  noticesEmail: "CONFIRM — official email",
-  /** Phone/hotline for borrower support. CONFIRM. */
-  contactPhone: "CONFIRM — contact number",
-  /** City whose courts govern disputes (venue clause). CONFIRM. */
-  governingVenueCity: "CONFIRM — city",
+  /** Registered principal office. */
+  registeredAddress:
+    "Level 10-01 One Global Place, Bonifacio Global City, Taguig City, Philippines",
+  /** Email used for official notices to/from borrowers. */
+  noticesEmail: "sales@datung.io",
+  /** Phone/hotline for borrower support (optional — hidden if blank). */
+  contactPhone: "",
+  /** City whose courts govern disputes (venue clause). Defaults to the office
+   *  city; confirm with counsel if a different venue is intended. */
+  governingVenueCity: "Taguig City",
 
   /** Authorized signatory for the lender on agreements. CONFIRM name + title. */
   signatoryName: "CONFIRM — authorized signatory",

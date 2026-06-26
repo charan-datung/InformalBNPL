@@ -4,19 +4,21 @@ import { computeLoanTerms, effectiveAnnualRate } from "@/lib/loans/finance";
 const START = new Date("2026-06-01T00:00:00Z");
 
 describe("computeLoanTerms", () => {
-  it("breaks down interest, processing fee, finance charge and total", () => {
+  it("capitalizes the fee, then breaks down interest, finance charge and total", () => {
     const t = computeLoanTerms({
-      principalCentavos: 300_000, // ₱3,000
+      principalCentavos: 300_000, // ₱3,000 purchase
       tenorMonths: 3,
       interestRateMonthly: 0.035,
       processingFeePct: 3,
       startDate: START,
     });
-    expect(t.monthlyInterestCentavos).toBe(10_500); // round(300000 * 0.035)
-    expect(t.totalInterestCentavos).toBe(31_500); // 10500 * 3
+    expect(t.amountFinancedCentavos).toBe(300_000); // cash value received
     expect(t.processingFeeCentavos).toBe(9_000); // 3% of 300000
-    expect(t.financeChargeCentavos).toBe(40_500); // 31500 + 9000
-    expect(t.totalPayableCentavos).toBe(340_500); // 300000 + 40500
+    expect(t.loanAmountCentavos).toBe(309_000); // principal incl. fee
+    expect(t.monthlyInterestCentavos).toBe(10_815); // round(309000 * 0.035)
+    expect(t.totalInterestCentavos).toBe(32_445); // 10815 * 3
+    expect(t.financeChargeCentavos).toBe(41_445); // 9000 + 32445
+    expect(t.totalPayableCentavos).toBe(341_445); // 309000 + 32445
   });
 
   it("splits the total payable exactly across installments", () => {
@@ -30,18 +32,18 @@ describe("computeLoanTerms", () => {
     expect(t.installments).toHaveLength(3);
     const sumAmount = t.installments.reduce((a, i) => a + i.amountCentavos, 0);
     expect(sumAmount).toBe(t.totalPayableCentavos);
-    // Principal portions reconcile to the principal exactly.
+    // Principal portions reconcile to the loan amount (incl. capitalized fee).
     const sumPrincipal = t.installments.reduce(
       (a, i) => a + i.principalCentavos,
       0,
     );
-    expect(sumPrincipal).toBe(300_000);
-    // Finance-charge portions reconcile to the finance charge exactly.
-    const sumFinance = t.installments.reduce(
-      (a, i) => a + i.financeChargeCentavos,
+    expect(sumPrincipal).toBe(309_000);
+    // Interest portions reconcile to total interest exactly.
+    const sumInterest = t.installments.reduce(
+      (a, i) => a + i.interestCentavos,
       0,
     );
-    expect(sumFinance).toBe(t.financeChargeCentavos);
+    expect(sumInterest).toBe(t.totalInterestCentavos);
   });
 
   it("computes due dates in UTC (monthly steps, no timezone drift)", () => {

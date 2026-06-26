@@ -37,7 +37,8 @@ export default function LegalDoc({
             {LENDER.registeredAddress}
           </div>
           <div className="text-[11px] text-black/60">
-            {LENDER.noticesEmail} · {LENDER.contactPhone}
+            {LENDER.noticesEmail}
+            {LENDER.contactPhone ? ` · ${LENDER.contactPhone}` : ""}
           </div>
         </header>
         <div className="print:hidden">

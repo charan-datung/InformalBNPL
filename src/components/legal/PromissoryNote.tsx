@@ -24,9 +24,11 @@ export default function PromissoryNote({ data }: { data: LoanDocData }) {
         <strong>{LENDER.legalName}</strong> (the “Lender”), at its office at{" "}
         {LENDER.registeredAddress} or such other place as the Lender may
         designate, the sum of{" "}
-        <strong>{formatPeso(t.totalPayableCentavos)}</strong>, representing the
-        principal of {formatPeso(t.principalCentavos)} plus a finance charge of{" "}
-        {formatPeso(t.financeChargeCentavos)}, payable in {t.periods}{" "}
+        <strong>{formatPeso(t.totalPayableCentavos)}</strong>, being the loan
+        principal of {formatPeso(t.loanAmountCentavos)} (which includes a
+        capitalized processing/service fee of {formatPeso(t.processingFeeCentavos)}{" "}
+        added to the {formatPeso(t.amountFinancedCentavos)} purchase) plus interest
+        of {formatPeso(t.totalInterestCentavos)}, payable in {t.periods}{" "}
         {t.frequency === "biweekly" ? "bi-weekly" : "monthly"} installment
         {t.periods === 1 ? "" : "s"} in accordance with the schedule below.
       </p>

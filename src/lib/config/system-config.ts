@@ -29,8 +29,8 @@ export const CONFIG_DEFAULTS = {
   /** Penalty/default interest per month on overdue amounts (0.05 = 5%/mo) — the
    *  SEC MC 3-2022 ceiling for covered short-term loans. */
   penalty_rate_monthly: 0.05,
-  /** Default merchant fee percent charged to sellers (5 = 5%). */
-  default_merchant_fee_pct: 5,
+  /** Merchant discount rate (MDR) charged to sellers on each sale (7 = 7%). */
+  default_merchant_fee_pct: 7,
   /** Default rolling-reserve percent withheld from new sellers (10 = 10%). */
   default_reserve_pct: 10,
   /** Default buyer credit limit in centavos (500_000 = ₱5,000.00). */

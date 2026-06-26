@@ -5,12 +5,16 @@ import type { PaymentFrequency } from "@/lib/loans/schedule";
  * the Truth-in-Lending Disclosure Statement (RA 3765), the Promissory Note, and
  * the Loan Agreement. Pure and unit-tested; no I/O.
  *
- * Cost model (all integer centavos):
- *   monthly_interest = round(principal * interestRateMonthly)
- *   total_interest   = monthly_interest * tenorMonths        (flat, duration-based)
- *   processing_fee   = round(principal * processingFeePct/100)  (one-time)
- *   finance_charge   = total_interest + processing_fee
- *   total_payable    = principal + finance_charge
+ * Cost model (all integer centavos). The processing fee is CAPITALIZED — added
+ * on top of the purchase to form a higher loan principal, and interest accrues
+ * on that fee-inclusive principal:
+ *   amount_financed  = purchase price (cash value the borrower receives)
+ *   processing_fee   = round(amount_financed * processingFeePct/100)  (one-time)
+ *   loan_amount      = amount_financed + processing_fee        (the principal)
+ *   monthly_interest = round(loan_amount * interestRateMonthly)
+ *   total_interest   = monthly_interest * tenorMonths          (flat, duration-based)
+ *   finance_charge   = processing_fee + total_interest         (true cost of credit)
+ *   total_payable    = loan_amount + total_interest
  *   periods          = monthly ? tenor : tenor * 2
  *   each installment = floor(total_payable / periods); last absorbs remainder
  *
@@ -28,14 +32,17 @@ export type DisclosureInstallment = {
   /** Whole days from disbursement to this due date (used for the EIR/IRR). */
   dayOffset: number;
   amountCentavos: number;
-  /** Portion of this installment that repays principal. */
+  /** Portion of this installment that repays the loan principal. */
   principalCentavos: number;
-  /** Portion that is finance charge (interest + processing fee). */
-  financeChargeCentavos: number;
+  /** Portion that is interest. */
+  interestCentavos: number;
 };
 
 export type LoanTerms = {
-  principalCentavos: number;
+  /** Cash value of the purchase the borrower receives. */
+  amountFinancedCentavos: number;
+  /** Loan principal = amount financed + capitalized processing fee. */
+  loanAmountCentavos: number;
   tenorMonths: number;
   frequency: PaymentFrequency;
   periods: number;
@@ -47,6 +54,7 @@ export type LoanTerms = {
   monthlyInterestCentavos: number;
   totalInterestCentavos: number;
   processingFeeCentavos: number;
+  /** Total cost of credit = processing fee + total interest. */
   financeChargeCentavos: number;
   totalPayableCentavos: number;
 
@@ -63,6 +71,7 @@ export type LoanTerms = {
 };
 
 export type LoanTermsInput = {
+  /** Purchase price / cash value financed, BEFORE the capitalized processing fee. */
   principalCentavos: number;
   tenorMonths: number;
   interestRateMonthly: number;
@@ -136,29 +145,32 @@ export function computeLoanTerms(input: LoanTermsInput): LoanTerms {
     input.frequency === "biweekly" ? "biweekly" : "monthly";
   const processingFeePct = input.processingFeePct ?? 0;
   const penaltyRateMonthly = input.penaltyRateMonthly ?? 0;
-  const principal = Math.max(0, Math.round(input.principalCentavos));
+  const amountFinanced = Math.max(0, Math.round(input.principalCentavos));
   const tenorMonths = Math.max(0, Math.trunc(input.tenorMonths));
   const start = input.startDate ?? new Date();
 
-  const monthlyInterest = Math.round(principal * input.interestRateMonthly);
+  // Processing fee is capitalized into a higher loan principal; interest then
+  // accrues on that fee-inclusive principal.
+  const processingFee = Math.round((amountFinanced * processingFeePct) / 100);
+  const loanAmount = amountFinanced + processingFee;
+  const monthlyInterest = Math.round(loanAmount * input.interestRateMonthly);
   const totalInterest = monthlyInterest * tenorMonths;
-  const processingFee = Math.round((principal * processingFeePct) / 100);
-  const financeCharge = totalInterest + processingFee;
-  const totalPayable = principal + financeCharge;
+  const financeCharge = processingFee + totalInterest;
+  const totalPayable = loanAmount + totalInterest;
   const periods = frequency === "biweekly" ? tenorMonths * 2 : tenorMonths;
 
   const installments: DisclosureInstallment[] = [];
-  if (periods > 0 && principal > 0) {
+  if (periods > 0 && loanAmount > 0) {
     const baseAmount = Math.floor(totalPayable / periods);
-    const baseFinance = Math.floor(financeCharge / periods);
+    const baseInterest = Math.floor(totalInterest / periods);
     for (let i = 1; i <= periods; i++) {
       const isLast = i === periods;
       const amount = isLast
         ? totalPayable - baseAmount * (periods - 1)
         : baseAmount;
-      const financeShare = isLast
-        ? financeCharge - baseFinance * (periods - 1)
-        : baseFinance;
+      const interestShare = isLast
+        ? totalInterest - baseInterest * (periods - 1)
+        : baseInterest;
       const due =
         frequency === "biweekly"
           ? addDaysUTC(start, i * 14)
@@ -168,16 +180,19 @@ export function computeLoanTerms(input: LoanTermsInput): LoanTerms {
         dueDate: isoDate(due),
         dayOffset: daysBetweenUTC(start, due),
         amountCentavos: amount,
-        financeChargeCentavos: financeShare,
-        principalCentavos: amount - financeShare,
+        interestCentavos: interestShare,
+        principalCentavos: amount - interestShare,
       });
     }
   }
 
-  const eirAnnual = effectiveAnnualRate(principal, installments);
+  // EIR discounts the payments back to the CASH the borrower received (the
+  // amount financed) — the capitalized fee is a cost, so it raises the EIR.
+  const eirAnnual = effectiveAnnualRate(amountFinanced, installments);
 
   return {
-    principalCentavos: principal,
+    amountFinancedCentavos: amountFinanced,
+    loanAmountCentavos: loanAmount,
     tenorMonths,
     frequency,
     periods,

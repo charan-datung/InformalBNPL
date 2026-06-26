@@ -105,6 +105,73 @@ export async function signInAction(formData: FormData) {
   redirect(target);
 }
 
+/**
+ * Stage 1 password recovery — send a reset link. We always redirect to the same
+ * "check your email" state regardless of whether the address exists, so the form
+ * never reveals which emails are registered. The link lands on /auth/confirm,
+ * which establishes a short-lived recovery session and forwards to
+ * /reset-password.
+ */
+export async function requestPasswordResetAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) {
+    redirect(
+      "/forgot-password?error=" + encodeURIComponent("Enter your email."),
+    );
+  }
+  try {
+    const supabase = await createClient();
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${await getOrigin()}/auth/confirm?next=/reset-password`,
+    });
+  } catch (e) {
+    // Log but still show the neutral confirmation (don't leak existence/errors).
+    console.error("requestPasswordResetAction failed:", e);
+  }
+  redirect("/forgot-password?sent=1");
+}
+
+/** Set a new password using the recovery session from the email link. */
+export async function updatePasswordAction(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) {
+    redirect(
+      "/reset-password?error=" +
+        encodeURIComponent("Use at least 8 characters."),
+    );
+  }
+  if (password !== confirm) {
+    redirect(
+      "/reset-password?error=" + encodeURIComponent("Passwords do not match."),
+    );
+  }
+
+  let target: string;
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      target =
+        "/forgot-password?error=" +
+        encodeURIComponent("Your reset link has expired — request a new one.");
+    } else {
+      const { error } = await supabase.auth.updateUser({ password });
+      target = error
+        ? "/reset-password?error=" + encodeURIComponent(error.message)
+        : "/dashboard";
+    }
+  } catch (e) {
+    console.error("updatePasswordAction failed:", e);
+    target =
+      "/reset-password?error=" +
+      encodeURIComponent(e instanceof Error ? e.message : "Unexpected error.");
+  }
+  redirect(target);
+}
+
 export async function signOutAction() {
   try {
     const supabase = await createClient();
