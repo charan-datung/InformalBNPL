@@ -193,6 +193,7 @@ export default async function PayPage({
           token={token}
           amountCentavos={charge.amount_centavos}
           monthlyRate={config.default_interest_rate_monthly}
+          processingFeePct={config.processing_fee_pct}
           defaultTenor={config.default_tenor_months}
           maxTenor={config.max_tenor_months}
           availableCentavos={credit.availableCentavos}

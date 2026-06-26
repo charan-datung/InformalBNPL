@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { computeSchedule, type PaymentFrequency } from "@/lib/loans/schedule";
+import { type PaymentFrequency } from "@/lib/loans/schedule";
+import { computeLoanTerms } from "@/lib/loans/finance";
 import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
 import { checkoutAction } from "@/app/(public)/dashboard/actions";
@@ -22,12 +23,14 @@ import { buttonClasses } from "@/components/ui/Button";
 export default function Checkout({
   sellers,
   monthlyRate,
+  processingFeePct,
   defaultTenor,
   maxTenor,
   creditLimitCentavos,
 }: {
   sellers: VerifiedSeller[];
   monthlyRate: number;
+  processingFeePct: number;
   defaultTenor: number;
   maxTenor: number;
   creditLimitCentavos: number;
@@ -42,7 +45,13 @@ export default function Checkout({
     Number.isFinite(amountPesos) && amountPesos > 0
       ? Math.round(amountPesos * 100)
       : 0;
-  const schedule = computeSchedule(ticketCentavos, tenor, monthlyRate, frequency);
+  const terms = computeLoanTerms({
+    principalCentavos: ticketCentavos,
+    tenorMonths: tenor,
+    interestRateMonthly: monthlyRate,
+    frequency,
+    processingFeePct,
+  });
   const overLimit = ticketCentavos > creditLimitCentavos;
   const canConfirm = !!seller && ticketCentavos > 0 && tenor > 0 && !overLimit;
   const tenorOptions = Array.from({ length: maxTenor }, (_, i) => i + 1);
@@ -130,14 +139,14 @@ export default function Checkout({
               <span className="text-black/55">
                 Total{" "}
                 <span className="font-semibold text-foreground">
-                  {formatPeso(schedule.totalCentavos)}
+                  {formatPeso(terms.totalPayableCentavos)}
                 </span>{" "}
-                ({formatPeso(schedule.interestCentavos)} fee)
+                ({formatPeso(terms.financeChargeCentavos)} interest + fees)
               </span>
             </div>
             {/* Dates shown here are estimates from today; finalised when
                 repayment begins. */}
-            <ScheduleTable installments={schedule.installments} />
+            <ScheduleTable installments={terms.installments} />
             <p className="mt-1 text-[11px] text-black/40">
               Payment dates are estimated from today and are finalised once your
               order is confirmed.

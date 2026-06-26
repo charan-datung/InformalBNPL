@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { computeSchedule, type PaymentFrequency } from "@/lib/loans/schedule";
+import { type PaymentFrequency } from "@/lib/loans/schedule";
+import { computeLoanTerms } from "@/lib/loans/finance";
 import { formatPeso } from "@/lib/format";
 import ScheduleTable from "@/app/(public)/dashboard/ScheduleTable";
 import { authorizeChargeAction } from "@/app/(public)/charge/actions";
@@ -14,6 +15,7 @@ export default function PayConfirm({
   token,
   amountCentavos,
   monthlyRate,
+  processingFeePct,
   defaultTenor,
   maxTenor,
   availableCentavos,
@@ -21,13 +23,20 @@ export default function PayConfirm({
   token: string;
   amountCentavos: number;
   monthlyRate: number;
+  processingFeePct: number;
   defaultTenor: number;
   maxTenor: number;
   availableCentavos: number;
 }) {
   const [tenor, setTenor] = useState(Math.min(defaultTenor, maxTenor));
   const [frequency, setFrequency] = useState<PaymentFrequency>("monthly");
-  const schedule = computeSchedule(amountCentavos, tenor, monthlyRate, frequency);
+  const terms = computeLoanTerms({
+    principalCentavos: amountCentavos,
+    tenorMonths: tenor,
+    interestRateMonthly: monthlyRate,
+    frequency,
+    processingFeePct,
+  });
   const overLimit = amountCentavos > availableCentavos;
 
   if (overLimit) {
@@ -80,12 +89,12 @@ export default function PayConfirm({
           <span className="text-black/60 dark:text-white/60">
             Total{" "}
             <span className="font-semibold text-black dark:text-white">
-              {formatPeso(schedule.totalCentavos)}
+              {formatPeso(terms.totalPayableCentavos)}
             </span>{" "}
-            ({formatPeso(schedule.interestCentavos)} fee)
+            ({formatPeso(terms.financeChargeCentavos)} interest + fees)
           </span>
         </div>
-        <ScheduleTable installments={schedule.installments} />
+        <ScheduleTable installments={terms.installments} />
       </div>
 
       <button

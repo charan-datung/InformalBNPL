@@ -34,6 +34,8 @@ export type Loan = {
   payment_frequency: PaymentFrequency;
   interest_rate_monthly: number;
   merchant_fee_pct: number;
+  /** Capitalized processing fee added to the principal at booking. */
+  processing_fee_centavos: number;
   status: LoanStatus;
   created_at: string;
   updated_at: string;
@@ -67,6 +69,8 @@ export type BookLoanInput = {
   interestRateMonthly?: number;
   /** Defaults to system_config `default_merchant_fee_pct`. */
   merchantFeePct?: number;
+  /** Capitalized processing fee, % of ticket. Defaults to `processing_fee_pct`. */
+  processingFeePct?: number;
   /** Operator/admin performing the booking (recorded on the audit event). */
   actorUserId?: string | null;
   note?: string | null;
@@ -154,6 +158,9 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
   const merchantFeePct =
     input.merchantFeePct ??
     (await getConfigValue("default_merchant_fee_pct", supabase));
+  const processingFeePct =
+    input.processingFeePct ??
+    (await getConfigValue("processing_fee_pct", supabase));
   const paymentFrequency: PaymentFrequency =
     input.paymentFrequency === "biweekly" ? "biweekly" : "monthly";
 
@@ -168,6 +175,7 @@ export async function bookLoan(input: BookLoanInput): Promise<Loan> {
       p_actor: input.actorUserId ?? null,
       p_note: input.note ?? null,
       p_payment_frequency: paymentFrequency,
+      p_processing_fee_pct: processingFeePct,
     })
     .single<Loan>();
 

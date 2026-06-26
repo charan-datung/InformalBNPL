@@ -35,9 +35,9 @@ export const LENDER = {
    *  city; confirm with counsel if a different venue is intended. */
   governingVenueCity: "Taguig City",
 
-  /** Authorized signatory for the lender on agreements. CONFIRM name + title. */
-  signatoryName: "CONFIRM — authorized signatory",
-  signatoryTitle: "CONFIRM — title",
+  /** Authorized signatory for the lender on agreements. */
+  signatoryName: "Claudine Esguerra",
+  signatoryTitle: "Head of Accounting",
 
   /** Where borrowers remit repayments (mirrors repayment-details.ts). */
   remittance: {
