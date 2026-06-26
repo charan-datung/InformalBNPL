@@ -22,6 +22,13 @@ export const CONFIG_DEFAULTS = {
   auto_release_days: 3,
   /** Default monthly interest rate applied to new loans (0.035 = 3.5%/mo). */
   default_interest_rate_monthly: 0.035,
+  /** One-time processing/service fee as a percent of principal (3 = 3%). Part of
+   *  the finance charge and the EIR. PLACEHOLDER — confirm the official figure;
+   *  must keep the loan's EIR within the SEC MC 3-2022 ceiling. */
+  processing_fee_pct: 3,
+  /** Penalty/default interest per month on overdue amounts (0.05 = 5%/mo) — the
+   *  SEC MC 3-2022 ceiling for covered short-term loans. */
+  penalty_rate_monthly: 0.05,
   /** Default merchant fee percent charged to sellers (5 = 5%). */
   default_merchant_fee_pct: 5,
   /** Default rolling-reserve percent withheld from new sellers (10 = 10%). */
