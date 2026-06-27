@@ -2,7 +2,7 @@
 
 import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { Check, Loader2, Pencil, X, type LucideIcon } from "lucide-react";
+import { Check, Loader2, Pencil, X } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Callout from "@/components/ui/Callout";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -34,14 +34,16 @@ export type ReadOnlyRow = {
 
 export default function ProfileEditor({
   title,
-  icon: Icon,
+  icon,
   description,
   fields,
   readOnly = [],
   action,
 }: {
   title: string;
-  icon: LucideIcon;
+  // A RENDERED icon element (e.g. <User />), not the component — a server parent
+  // cannot pass a component function across the client boundary.
+  icon: ReactNode;
   description?: string;
   fields: EditableField[];
   readOnly?: ReadOnlyRow[];
@@ -68,8 +70,8 @@ export default function ProfileEditor({
     <Card className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-xl bg-brand-50 text-brand-600">
-            <Icon className="size-4.5" />
+          <span className="grid size-9 place-items-center rounded-xl bg-brand-50 text-brand-600 [&>svg]:size-4.5">
+            {icon}
           </span>
           <div>
             <h3 className="font-semibold leading-tight">{title}</h3>

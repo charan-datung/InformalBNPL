@@ -237,7 +237,7 @@ export default async function SellerPanel({
 
         <ProfileEditor
           title="Storefront"
-          icon={Store}
+          icon={<Store />}
           description="How buyers recognise your shop."
           action={updateSellerStorefrontAction}
           fields={[
@@ -302,7 +302,7 @@ export default async function SellerPanel({
 
         <ProfileEditor
           title="Account details"
-          icon={User}
+          icon={<User />}
           description="How operators reach you."
           action={updateAccountAction}
           fields={[

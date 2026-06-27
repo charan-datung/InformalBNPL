@@ -378,7 +378,7 @@ export default async function BuyerPanel({
         <SectionHeading icon={User}>Profile</SectionHeading>
         <ProfileEditor
           title="Account details"
-          icon={User}
+          icon={<User />}
           description="How sellers and operators reach you."
           action={updateAccountAction}
           fields={[
