@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import { qrSvg as makeQrSvg } from "@/lib/qr";
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { getRequestOrigin } from "@/lib/http/origin";
@@ -20,11 +20,7 @@ export default async function PosterPage() {
 
   const origin = await getRequestOrigin();
   const inviteUrl = `${origin}/signup?ref=${caps.userId}`;
-  const qrSvg = await QRCode.toString(inviteUrl, {
-    type: "svg",
-    margin: 1,
-    color: { dark: "#0e4d45", light: "#ffffff" },
-  });
+  const qrSvg = await makeQrSvg(inviteUrl);
 
   const sellerName = caps.email ?? "Your Datung seller";
 

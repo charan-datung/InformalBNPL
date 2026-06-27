@@ -40,7 +40,7 @@ async function uploadImage(
     throw new Error(`The ${label} must be an image.`);
   }
   const admin = createAdminClient();
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+  const ext = file.name.split(".").pop() || "jpg";
   const path = `${ownerId}/${Date.now()}-${label}.${ext}`;
   const { error } = await admin.storage
     .from(bucket)

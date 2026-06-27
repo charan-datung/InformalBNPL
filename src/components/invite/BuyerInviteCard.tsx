@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import { qrSvg as makeQrSvg } from "@/lib/qr";
 import CopyButton from "@/app/(public)/charge/[id]/CopyButton";
 
 /**
@@ -19,11 +19,7 @@ export default async function BuyerInviteCard({
   qrSize?: number;
 }) {
   const inviteUrl = `${origin}/signup?ref=${sellerUserId}`;
-  const qrSvg = await QRCode.toString(inviteUrl, {
-    type: "svg",
-    margin: 1,
-    color: { dark: "#0e4d45", light: "#ffffff" },
-  });
+  const qrSvg = await makeQrSvg(inviteUrl);
 
   return (
     <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-transparent">

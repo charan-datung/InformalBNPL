@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import { qrSvg as makeQrSvg } from "@/lib/qr";
 import { Users, Gift } from "lucide-react";
 import CopyButton from "@/app/(public)/charge/[id]/CopyButton";
 import { getRequestOrigin } from "@/lib/http/origin";
@@ -24,11 +24,7 @@ export default async function ReferSellers({
   ]);
 
   const referUrl = `${origin}/signup?intent=seller&sref=${sellerUserId}`;
-  const qrSvg = await QRCode.toString(referUrl, {
-    type: "svg",
-    margin: 1,
-    color: { dark: "#0e4d45", light: "#ffffff" },
-  });
+  const qrSvg = await makeQrSvg(referUrl);
 
   return (
     <div className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm">

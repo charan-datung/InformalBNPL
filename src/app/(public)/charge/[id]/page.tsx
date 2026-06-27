@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import QRCode from "qrcode";
+import { qrSvg as makeQrSvg } from "@/lib/qr";
 import { ArrowLeft, CheckCircle2, QrCode } from "lucide-react";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { getChargeById, isExpired } from "@/lib/payments/charges";
@@ -40,11 +40,7 @@ export default async function ChargePage({
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const payUrl = `${proto}://${host}/pay/${charge.token}`;
 
-  const qrSvg = await QRCode.toString(payUrl, {
-    type: "svg",
-    margin: 1,
-    color: { dark: "#0e4d45", light: "#ffffff" },
-  });
+  const qrSvg = await makeQrSvg(payUrl);
 
   return (
     <div className="mx-auto max-w-lg space-y-5">

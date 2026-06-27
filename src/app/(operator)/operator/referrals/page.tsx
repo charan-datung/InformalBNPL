@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import { qrSvg as makeQrSvg } from "@/lib/qr";
 import {
   listSellerReferralRewards,
   type ReferralStatus,
@@ -29,11 +29,7 @@ export default async function ReferralsPage({
   ]);
 
   const sellerSignupUrl = `${origin}/signup?intent=seller`;
-  const qrSvg = await QRCode.toString(sellerSignupUrl, {
-    type: "svg",
-    margin: 1,
-    color: { dark: "#0e4d45", light: "#ffffff" },
-  });
+  const qrSvg = await makeQrSvg(sellerSignupUrl);
 
   const owed = rows
     .filter((r) => r.status === "qualified")
