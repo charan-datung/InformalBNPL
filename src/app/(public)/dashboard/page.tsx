@@ -123,8 +123,8 @@ function CapabilityRow({
   if (status === "pending") {
     return (
       <Callout tone="warning" title={`${label} · under review`}>
-        Your {label.toLowerCase()} application is being reviewed by hand. We&apos;ll
-        update this once a decision is made.
+        We&apos;re reviewing your {label.toLowerCase()} application, and this page
+        updates automatically as soon as you&apos;re approved.
       </Callout>
     );
   }

@@ -72,7 +72,7 @@ export default function SellerApplicationForm({
         <>
           <StepIntro
             title="Who you are"
-            subtitle="A real person behind the shop. Stored privately, reviewed by hand."
+            subtitle="A real person behind the shop. Stored privately and securely."
           />
           <Field label="Full name">
             <TextInput name="name" required defaultValue={prefill?.name ?? ""} />
@@ -213,8 +213,8 @@ export default function SellerApplicationForm({
             <Textarea name="notes" rows={3} />
           </Field>
           <Callout tone="info">
-            We verify real sellers by hand — there&apos;s no instant decision.
-            We&apos;ll text you once it&apos;s reviewed.
+            We&apos;ll verify your shop and text you as soon as you&apos;re
+            approved.
           </Callout>
         </>
       ),

@@ -58,7 +58,7 @@ async function buyerPrefill(): Promise<SellerPrefill | null> {
  * documents; instead an operator verifies a real person + a real selling
  * presence from three signals: a government ID, a storefront/stall photo and
  * location, and social/marketplace proof. Everything is stored in a private
- * bucket and reviewed by hand.
+ * bucket and verified during review.
  */
 export default async function SellerOnboardingPage({
   searchParams,
@@ -78,8 +78,8 @@ export default async function SellerOnboardingPage({
       <div className="space-y-1.5">
         <h1 className="text-3xl font-bold tracking-tight">Seller verification</h1>
         <p className="text-sm text-black/55">
-          No business permits needed. We verify real sellers by hand — just show
-          us who you are and where you sell.
+          No business permits needed — just show us who you are and where you
+          sell, and we&apos;ll get you verified.
         </p>
       </div>
 

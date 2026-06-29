@@ -268,8 +268,8 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             time and it grows over time.
           </Callout>
           <Callout tone="info">
-            We review every application by hand — there&apos;s no instant
-            decision. We&apos;ll text you once it&apos;s reviewed.
+            We&apos;ll review your application and text you as soon as
+            it&apos;s approved.
           </Callout>
           <label className="flex items-start gap-3 rounded-xl border border-black/10 bg-white p-4 text-sm">
             <input
