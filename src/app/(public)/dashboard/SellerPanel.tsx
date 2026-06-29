@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { listSellerLoans, type SellerLoanView } from "@/lib/loans/views";
 import { getSellerExposure } from "@/lib/loans/credit";
+import { sellerPayoutInfo } from "@/lib/loans/payout";
 import { sellerStats } from "@/lib/loans/stats";
 import {
   getAccountProfile,
@@ -48,36 +50,6 @@ import {
  * orders that need the seller to act surfaced first, the full order list, growth
  * tools, and an editable storefront + account profile.
  */
-
-/** When the seller can expect this order's payout, and whether it's committed. */
-function payoutInfo(
-  l: SellerLoanView,
-  config: SystemConfig,
-): { payoutDate: string | null; isEstimate: boolean } {
-  if (l.releasedAt) {
-    return { payoutDate: addDays(l.releasedAt, config.seller_payout_days), isEstimate: false };
-  }
-  if (l.deliveredAt) {
-    return { payoutDate: addDays(l.deliveredAt, config.seller_payout_days), isEstimate: true };
-  }
-  if (l.shippedAt) {
-    return {
-      payoutDate: addDays(
-        l.shippedAt,
-        config.auto_release_days + config.seller_payout_days,
-      ),
-      isEstimate: true,
-    };
-  }
-  return { payoutDate: null, isEstimate: true };
-}
-
-function addDays(iso: string | null, days: number): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
-}
 
 /** Datung Pay: mint a Payment Request (QR + exclusive link) for a sale. */
 function NewSale() {
@@ -163,7 +135,7 @@ function OrderCard({
   l: SellerLoanView;
   config: SystemConfig;
 }) {
-  const { payoutDate, isEstimate } = payoutInfo(l, config);
+  const { payoutDate, isEstimate } = sellerPayoutInfo(l, config);
 
   return (
     <Card className="space-y-4">
@@ -177,6 +149,9 @@ function OrderCard({
           {formatDateTime(l.created_at)}
         </span>
       </div>
+      {l.memo ? (
+        <p className="-mt-2 text-xs text-black/50">For: {l.memo}</p>
+      ) : null}
 
       <PayoutTracker
         status={l.status}
@@ -240,6 +215,13 @@ function OrderCard({
           />
         </div>
       ) : null}
+
+      <Link
+        href={`/order/${l.id}`}
+        className="block border-t border-black/5 pt-3 text-xs font-medium text-brand-700 underline-offset-4 hover:underline"
+      >
+        View order details &amp; timeline →
+      </Link>
     </Card>
   );
 }
@@ -268,7 +250,7 @@ export default async function SellerPanel({
   // The soonest expected payout across in-flight orders, for the hero.
   const nextPayout = loans
     .filter((l) => l.status !== "settled" && l.status !== "refunded")
-    .map((l) => ({ l, ...payoutInfo(l, config) }))
+    .map((l) => ({ l, ...sellerPayoutInfo(l, config) }))
     .filter((x) => x.payoutDate)
     .sort((a, b) => (a.payoutDate! < b.payoutDate! ? -1 : 1))[0];
 

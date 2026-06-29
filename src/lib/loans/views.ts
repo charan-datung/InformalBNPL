@@ -15,10 +15,22 @@ async function namesMap(): Promise<Map<string, string>> {
 
 /** First-occurrence timestamps of key lifecycle events, per loan. */
 type KeyDates = {
+  paidAt: string | null; // escrow_held — buyer paid, money secured
   shippedAt: string | null;
   deliveredAt: string | null; // delivered_confirmed OR auto_released
   releasedAt: string | null;
+  settledAt: string | null;
 };
+
+function emptyDates(): KeyDates {
+  return {
+    paidAt: null,
+    shippedAt: null,
+    deliveredAt: null,
+    releasedAt: null,
+    settledAt: null,
+  };
+}
 
 async function keyEventDates(
   loanIds: string[],
@@ -32,17 +44,18 @@ async function keyEventDates(
     .select("loan_id, event_type, created_at")
     .in("loan_id", loanIds)
     .in("event_type", [
+      "escrow_held",
       "shipped",
       "delivered_confirmed",
       "auto_released",
       "escrow_released",
+      "settled",
     ])
     .order("created_at", { ascending: true });
 
   for (const e of data ?? []) {
-    const d =
-      map.get(e.loan_id) ??
-      ({ shippedAt: null, deliveredAt: null, releasedAt: null } as KeyDates);
+    const d = map.get(e.loan_id) ?? emptyDates();
+    if (e.event_type === "escrow_held" && !d.paidAt) d.paidAt = e.created_at;
     if (e.event_type === "shipped" && !d.shippedAt) d.shippedAt = e.created_at;
     if (
       (e.event_type === "delivered_confirmed" ||
@@ -52,6 +65,7 @@ async function keyEventDates(
       d.deliveredAt = e.created_at;
     if (e.event_type === "escrow_released" && !d.releasedAt)
       d.releasedAt = e.created_at;
+    if (e.event_type === "settled" && !d.settledAt) d.settledAt = e.created_at;
     map.set(e.loan_id, d);
   }
   return map;
@@ -135,12 +149,78 @@ export type SellerLoanView = {
   netCentavos: number;
   buyerName: string;
   created_at: string;
+  paidAt: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
   releasedAt: string | null;
+  settledAt: string | null;
+  handoverConfirmedAt: string | null;
+  /** True for an in-person sale (a hand-over code was minted). */
+  isInPerson: boolean;
   /** Set on an in-person order still awaiting the seller's handover-code entry. */
   handoverPending: boolean;
+  /** Seller's "what for" note, if known. */
+  memo: string | null;
 };
+
+const SELLER_LOAN_COLS =
+  "id, status, ticket_centavos, tenor_months, merchant_fee_pct, buyer_user_id, created_at, handover_code, handover_confirmed_at";
+
+type SellerLoanRow = {
+  id: string;
+  status: string;
+  ticket_centavos: number;
+  tenor_months: number;
+  merchant_fee_pct: number;
+  buyer_user_id: string;
+  created_at: string;
+  handover_code: string | null;
+  handover_confirmed_at: string | null;
+};
+
+function toSellerLoanView(
+  l: SellerLoanRow,
+  buyerName: string,
+  d: KeyDates | undefined,
+  memo: string | null,
+): SellerLoanView {
+  const fee = Math.round((l.ticket_centavos * l.merchant_fee_pct) / 100);
+  return {
+    id: l.id,
+    status: l.status as LoanStatus,
+    ticket_centavos: l.ticket_centavos,
+    tenor_months: l.tenor_months,
+    merchant_fee_pct: l.merchant_fee_pct,
+    feeCentavos: fee,
+    netCentavos: l.ticket_centavos - fee,
+    buyerName,
+    created_at: l.created_at,
+    paidAt: d?.paidAt ?? null,
+    shippedAt: d?.shippedAt ?? null,
+    deliveredAt: d?.deliveredAt ?? null,
+    releasedAt: d?.releasedAt ?? null,
+    settledAt: d?.settledAt ?? null,
+    handoverConfirmedAt: l.handover_confirmed_at,
+    isInPerson: Boolean(l.handover_code),
+    handoverPending: Boolean(l.handover_code) && !l.handover_confirmed_at,
+    memo,
+  };
+}
+
+/** Look up the "what for" memo for loans via their originating payment request. */
+async function memoByLoan(loanIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (loanIds.length === 0) return map;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("payment_requests")
+    .select("loan_id, memo")
+    .in("loan_id", loanIds);
+  for (const r of data ?? []) {
+    if (r.loan_id && r.memo) map.set(r.loan_id, r.memo);
+  }
+  return map;
+}
 
 export async function listSellerLoans(
   sellerUserId: string,
@@ -149,36 +229,53 @@ export async function listSellerLoans(
   const [{ data }, names] = await Promise.all([
     admin
       .from("loans")
-      .select(
-        "id, status, ticket_centavos, tenor_months, merchant_fee_pct, buyer_user_id, created_at, handover_code, handover_confirmed_at",
-      )
+      .select(SELLER_LOAN_COLS)
       .eq("seller_user_id", sellerUserId)
       .order("created_at", { ascending: false }),
     namesMap(),
   ]);
 
-  const loans = data ?? [];
-  const dates = await keyEventDates(loans.map((l) => l.id));
+  const loans = (data ?? []) as SellerLoanRow[];
+  const [dates, memos] = await Promise.all([
+    keyEventDates(loans.map((l) => l.id)),
+    memoByLoan(loans.map((l) => l.id)),
+  ]);
 
-  return loans.map((l) => {
-    const fee = Math.round((l.ticket_centavos * l.merchant_fee_pct) / 100);
-    const d = dates.get(l.id);
-    return {
-      id: l.id,
-      status: l.status as LoanStatus,
-      ticket_centavos: l.ticket_centavos,
-      tenor_months: l.tenor_months,
-      merchant_fee_pct: l.merchant_fee_pct,
-      feeCentavos: fee,
-      netCentavos: l.ticket_centavos - fee,
-      buyerName: names.get(l.buyer_user_id) ?? l.buyer_user_id,
-      created_at: l.created_at,
-      shippedAt: d?.shippedAt ?? null,
-      deliveredAt: d?.deliveredAt ?? null,
-      releasedAt: d?.releasedAt ?? null,
-      handoverPending: Boolean(l.handover_code) && !l.handover_confirmed_at,
-    };
-  });
+  return loans.map((l) =>
+    toSellerLoanView(
+      l,
+      names.get(l.buyer_user_id) ?? l.buyer_user_id,
+      dates.get(l.id),
+      memos.get(l.id) ?? null,
+    ),
+  );
+}
+
+/** A single seller order, scoped to the owning seller (null if not theirs). */
+export async function getSellerOrder(
+  sellerUserId: string,
+  loanId: string,
+): Promise<SellerLoanView | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("loans")
+    .select(SELLER_LOAN_COLS)
+    .eq("id", loanId)
+    .eq("seller_user_id", sellerUserId)
+    .maybeSingle();
+  if (!data) return null;
+  const l = data as SellerLoanRow;
+  const [names, dates, memos] = await Promise.all([
+    namesMap(),
+    keyEventDates([l.id]),
+    memoByLoan([l.id]),
+  ]);
+  return toSellerLoanView(
+    l,
+    names.get(l.buyer_user_id) ?? l.buyer_user_id,
+    dates.get(l.id),
+    memos.get(l.id) ?? null,
+  );
 }
 
 // ---- Buyer dashboard -------------------------------------------------------

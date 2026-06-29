@@ -25,6 +25,7 @@ export default function PhotoActionForm({
   submitLabel,
   pendingLabel,
   variant = "primary",
+  redirectTo,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   loanId: string;
@@ -36,11 +37,16 @@ export default function PhotoActionForm({
   submitLabel: string;
   pendingLabel: string;
   variant?: "primary" | "danger";
+  /** Optional internal path to return to (with ?ok/?error); defaults server-side. */
+  redirectTo?: string;
 }) {
   const [filled, setFilled] = useState(false);
   return (
     <form action={action} encType="multipart/form-data" className="space-y-3">
       <input type="hidden" name="loanId" value={loanId} />
+      {redirectTo ? (
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+      ) : null}
       {withReason ? (
         <Field label="What went wrong?">
           <Textarea name="reason" required rows={2} placeholder={reasonPlaceholder} />

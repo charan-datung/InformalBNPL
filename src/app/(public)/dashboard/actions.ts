@@ -26,6 +26,16 @@ function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Unexpected error.";
 }
 
+/** Resolve a safe internal return path from a form's redirectTo, else /dashboard. */
+function backTarget(formData: FormData): string {
+  const to = String(formData.get("redirectTo") ?? "");
+  return /^\/(dashboard|order\/[\w-]+)$/.test(to) ? to : BACK;
+}
+
+function withParam(path: string, key: string, value: string): string {
+  return `${path}?${key}=${encodeURIComponent(value)}`;
+}
+
 /** Upload a required image to a private bucket; returns the stored path. */
 async function uploadImage(
   bucket: string,
@@ -181,19 +191,23 @@ export async function confirmHandoverAction(formData: FormData) {
   const sellerUserId = await requireSeller();
   const loanId = String(formData.get("loanId") ?? "");
   const code = String(formData.get("code") ?? "");
+  const back = backTarget(formData);
 
   try {
     await confirmHandover({ loanId, sellerUserId, code });
   } catch (e) {
-    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+    redirect(withParam(back, "error", errorMessage(e)));
   }
-  redirect(BACK);
+  redirect(
+    withParam(back, "ok", "Hand-over confirmed — your payout is on the way."),
+  );
 }
 
 /** Seller marks shipped with required proof: escrow_held -> shipped. */
 export async function markShippedAction(formData: FormData) {
   const sellerUserId = await requireSeller();
   const loanId = String(formData.get("loanId") ?? "");
+  const back = backTarget(formData);
 
   try {
     const proofPath = await uploadImage(
@@ -204,7 +218,9 @@ export async function markShippedAction(formData: FormData) {
     );
     await markShipped({ loanId, sellerUserId, proofPath });
   } catch (e) {
-    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+    redirect(withParam(back, "error", errorMessage(e)));
   }
-  redirect(BACK);
+  redirect(
+    withParam(back, "ok", "Marked as shipped — we'll let the buyer know."),
+  );
 }

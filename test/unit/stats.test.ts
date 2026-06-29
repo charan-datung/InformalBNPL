@@ -43,10 +43,15 @@ function sellerLoan(partial: Partial<SellerLoanView>): SellerLoanView {
     netCentavos: 95000,
     buyerName: "Juan",
     created_at: "2026-06-10T00:00:00Z",
+    paidAt: null,
     shippedAt: null,
     deliveredAt: null,
     releasedAt: null,
+    settledAt: null,
+    handoverConfirmedAt: null,
+    isInPerson: false,
     handoverPending: false,
+    memo: null,
     ...partial,
   };
 }
