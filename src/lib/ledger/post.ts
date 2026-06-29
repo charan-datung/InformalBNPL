@@ -106,6 +106,50 @@ export function disbursementLines(
   return lines;
 }
 
+const REFUND_MEMO = "Refund reversal";
+
+/**
+ * Unwind a loan's ledger on refund: post the opposite of each account's current
+ * net balance for the loan, bringing every account to zero. Because every prior
+ * transaction is balanced, the loan's per-account nets sum to zero, so the
+ * reversal is itself balanced. Idempotent (skips if already reversed) and a
+ * no-op when nothing was ever posted (e.g. refunded straight from `booked`).
+ * Refunds only happen pre-release (booked/escrow_held/dispute/frozen), so there
+ * are no seller payouts or repayments to claw back.
+ */
+export async function reverseLoanLedger(
+  admin: SupabaseClient,
+  loanId: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("ledger_entries")
+    .select("account, direction, amount_centavos, memo")
+    .eq("loan_id", loanId);
+  if (error) throw new Error(`Ledger read failed: ${error.message}`);
+  const rows = data ?? [];
+  if (rows.length === 0) return null;
+  if (rows.some((r) => r.memo === REFUND_MEMO)) return null; // already reversed
+
+  const net = new Map<string, number>();
+  for (const r of rows) {
+    const signed =
+      r.direction === "credit" ? r.amount_centavos : -r.amount_centavos;
+    net.set(r.account, (net.get(r.account) ?? 0) + signed);
+  }
+  const lines: Line[] = [];
+  for (const [account, n] of net) {
+    if (n === 0) continue;
+    lines.push({
+      account,
+      direction: n > 0 ? "debit" : "credit", // opposite, to zero the balance
+      amountCentavos: Math.abs(n),
+      memo: REFUND_MEMO,
+    });
+  }
+  if (lines.length === 0) return null;
+  return postTransaction(admin, loanId, lines);
+}
+
 async function postTransaction(
   admin: SupabaseClient,
   loanId: string,

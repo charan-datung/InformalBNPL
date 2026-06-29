@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfigValue } from "@/lib/config/system-config";
 import { maybeQualifySellerReferral } from "@/lib/referrals/seller-referrals";
 import { notifyLoanStatus } from "@/lib/email/notify";
+import { reverseLoanLedger } from "@/lib/ledger/post";
 import {
   assertTransition,
   isLoanStatus,
@@ -353,6 +354,11 @@ export async function transitionLoan(
     throw new LoanMutationError("db", error.message);
   }
 
+  // On refund, unwind the loan's ledger to zero (balanced reversal).
+  if (input.to === "refunded") {
+    await reverseLoanLedger(supabase, input.loanId);
+  }
+
   // Milestone email(s) for this transition — best-effort, never blocks.
   await notifyLoanStatus(supabase, input.to, data);
 
@@ -488,6 +494,11 @@ export async function adminOverride(input: {
     entityId: input.loanId,
     detail: { to: input.to, reason: input.reason.trim() },
   });
+
+  // An override into refunded unwinds the ledger too.
+  if (input.to === "refunded") {
+    await reverseLoanLedger(supabase, input.loanId);
+  }
 
   return data;
 }

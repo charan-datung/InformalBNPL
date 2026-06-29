@@ -3,8 +3,30 @@ import {
   assertBalanced,
   balanceOf,
   disbursementLines,
+  reverseLoanLedger,
   LEDGER_ACCOUNTS,
 } from "@/lib/ledger/post";
+
+/** Minimal fake Supabase client for reverseLoanLedger: returns canned existing
+ *  rows on select, captures the inserted reversal rows. */
+function fakeAdmin(existing: Array<{ account: string; direction: string; amount_centavos: number; memo: string | null }>) {
+  const captured: { rows: typeof existing | null } = { rows: null };
+  const admin = {
+    from() {
+      return {
+        select() {
+          return { eq: async () => ({ data: existing, error: null }) };
+        },
+        async insert(rows: typeof existing) {
+          captured.rows = rows;
+          return { error: null };
+        },
+      };
+    },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { admin: admin as any, captured };
+}
 
 describe("double-entry ledger", () => {
   it("builds a balanced disbursement: ticket = sellerNet + fee", () => {
@@ -51,5 +73,67 @@ describe("double-entry ledger", () => {
 
   it("sums an empty set to zero", () => {
     expect(balanceOf([])).toEqual({ debits: 0, credits: 0 });
+  });
+});
+
+describe("refund reversal", () => {
+  const asRows = () =>
+    disbursementLines(100_000, 7, 0, 3_000).map((l) => ({
+      account: l.account,
+      direction: l.direction,
+      amount_centavos: l.amountCentavos,
+      memo: l.memo ?? null,
+    }));
+
+  it("posts a balanced reversal that zeroes every account", async () => {
+    const existing = asRows();
+    const { admin, captured } = fakeAdmin(existing);
+    await reverseLoanLedger(admin, "loan1");
+
+    const reversal = captured.rows!;
+    // The reversal itself is balanced.
+    expect(
+      balanceOf(
+        reversal.map((r) => ({
+          account: r.account,
+          direction: r.direction as "debit" | "credit",
+          amountCentavos: r.amount_centavos,
+        })),
+      ),
+    ).toMatchObject({ debits: expect.any(Number) });
+    const { debits, credits } = balanceOf(
+      reversal.map((r) => ({
+        account: r.account,
+        direction: r.direction as "debit" | "credit",
+        amountCentavos: r.amount_centavos,
+      })),
+    );
+    expect(debits).toBe(credits);
+
+    // existing + reversal nets to zero per account.
+    const net = new Map<string, number>();
+    for (const r of [...existing, ...reversal]) {
+      const s = r.direction === "credit" ? r.amount_centavos : -r.amount_centavos;
+      net.set(r.account, (net.get(r.account) ?? 0) + s);
+    }
+    for (const v of net.values()) expect(v).toBe(0);
+  });
+
+  it("is idempotent: skips when already reversed", async () => {
+    const existing = [
+      ...asRows(),
+      { account: "buyer_receivable", direction: "credit", amount_centavos: 1, memo: "Refund reversal" },
+    ];
+    const { admin, captured } = fakeAdmin(existing);
+    const txn = await reverseLoanLedger(admin, "loan1");
+    expect(txn).toBeNull();
+    expect(captured.rows).toBeNull();
+  });
+
+  it("no-ops when nothing was posted", async () => {
+    const { admin, captured } = fakeAdmin([]);
+    const txn = await reverseLoanLedger(admin, "loan1");
+    expect(txn).toBeNull();
+    expect(captured.rows).toBeNull();
   });
 });

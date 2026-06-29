@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RELEASED_STATUSES } from "@/lib/loans/credit";
-import type { LoanStatus } from "@/lib/loans/state-machine";
+import { isLoanStatus, type LoanStatus } from "@/lib/loans/state-machine";
 import type { EscrowEventType } from "@/lib/loans/events";
 import { getConfig } from "@/lib/config/system-config";
 import { disputeWindow } from "@/lib/loans/window";
@@ -59,14 +59,58 @@ async function overriddenLoanIds(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.loan_id));
 }
 
-export async function listLoans(): Promise<LoanRow[]> {
+export type LoanFilter = {
+  status?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type LoanListPage = {
+  rows: LoanRow[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function listLoans(f: LoanFilter = {}): Promise<LoanListPage> {
   const admin = createAdminClient();
-  const [{ data }, users, overridden] = await Promise.all([
-    admin.from("loans").select("*").order("created_at", { ascending: false }),
-    usersMap(),
-    overriddenLoanIds(),
-  ]);
-  return (data ?? []).map((l) => ({
+  const users = await usersMap();
+  const limit = Math.min(Math.max(f.limit ?? 50, 1), 200);
+  const offset = Math.max(f.offset ?? 0, 0);
+  const search = f.search?.trim();
+
+  let q = admin.from("loans").select("*", { count: "exact" });
+
+  if (f.status && isLoanStatus(f.status)) q = q.eq("status", f.status);
+
+  if (search) {
+    if (UUID_RE.test(search)) {
+      q = q.eq("id", search);
+    } else {
+      // Match the typed text against buyer/seller display names.
+      const needle = search.toLowerCase();
+      const ids = [...users.values()]
+        .filter((u) => u.name?.toLowerCase().includes(needle))
+        .map((u) => u.id);
+      if (ids.length === 0) {
+        return { rows: [], total: 0, limit, offset };
+      }
+      q = q.or(
+        `buyer_user_id.in.(${ids.join(",")}),seller_user_id.in.(${ids.join(",")})`,
+      );
+    }
+  }
+
+  const { data, count } = await q
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const overridden = await overriddenLoanIds();
+  const rows = (data ?? []).map((l) => ({
     ...(l as LoanRowBase),
     buyerName: users.get(l.buyer_user_id)?.name ?? l.buyer_user_id,
     buyerContact: users.get(l.buyer_user_id)?.contact ?? null,
@@ -74,6 +118,7 @@ export async function listLoans(): Promise<LoanRow[]> {
     sellerContact: users.get(l.seller_user_id)?.contact ?? null,
     hasOverride: overridden.has(l.id),
   }));
+  return { rows, total: count ?? rows.length, limit, offset };
 }
 
 export type EscrowEventRow = {

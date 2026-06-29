@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLoansPage() {
   await requireAdminOrRedirect();
-  const loans = await listLoans();
+  const { rows: loans } = await listLoans({ limit: 200 });
 
   return (
     <div className="space-y-4">
