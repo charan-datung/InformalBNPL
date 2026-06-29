@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { listBuyerLoans, listVerifiedSellers } from "@/lib/loans/views";
+import {
+  listBuyerLoans,
+  listVerifiedSellers,
+  type BuyerLoanView,
+} from "@/lib/loans/views";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { buyerStats, type UpcomingPayment } from "@/lib/loans/stats";
 import { getConfig } from "@/lib/config/system-config";
@@ -32,7 +36,10 @@ import {
   TrendingUp,
   ShoppingBag,
   AlertTriangle,
+  ShieldCheck,
+  RotateCcw,
   User,
+  type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -256,9 +263,17 @@ export default async function BuyerPanel({
           Your purchases ({loans.length})
         </SectionHeading>
         {loans.length === 0 ? (
-          <Card className="text-center text-sm text-black/55">
-            No purchases yet. Scan a seller&apos;s QR or pick one above to make
-            your first one.
+          <Card className="flex flex-col items-center gap-2 py-8 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-500">
+              <ShoppingBag className="size-6" />
+            </span>
+            <p className="text-sm font-medium text-foreground">
+              No purchases yet
+            </p>
+            <p className="max-w-xs text-xs text-black/50">
+              Scan a seller&apos;s Datung Pay QR — or pick a seller above — to
+              shop now and pay hulugan. Your orders will show up here.
+            </p>
           </Card>
         ) : (
           loans.map((l) => {
@@ -283,6 +298,9 @@ export default async function BuyerPanel({
                     {formatDateTime(l.created_at)}
                   </span>
                 </div>
+
+                {/* Plain-English line so every card explains its own state */}
+                <OrderStatusHint loan={l} />
 
                 {/* In-person hand-over: show the code the seller must enter */}
                 {l.status === "escrow_held" && l.handoverCode ? (
@@ -442,6 +460,86 @@ export default async function BuyerPanel({
         </p>
         <SupportForm context="buyer" defaultContact={account.contact} />
       </section>
+    </div>
+  );
+}
+
+/**
+ * A short, reassuring one-liner describing what's happening with an order, for
+ * the states that don't already render their own action block (hand-over code,
+ * confirm-receipt) or a richer view (repayment plan). Keeps every card
+ * self-explanatory without cold jargon.
+ */
+function OrderStatusHint({ loan }: { loan: BuyerLoanView }) {
+  type Tone = "neutral" | "brand" | "accent" | "amber";
+  let hint: { icon: LucideIcon; text: string; tone: Tone } | null = null;
+
+  switch (loan.status) {
+    case "booked":
+      hint = {
+        icon: ShieldCheck,
+        text: "Order placed — we're setting things up.",
+        tone: "neutral",
+      };
+      break;
+    case "escrow_held":
+      // In-person (handoverCode set) renders the code block instead.
+      if (!loan.handoverCode) {
+        hint = {
+          icon: ShieldCheck,
+          text: `Your payment is safe with Datung while you wait for ${loan.sellerName} to ship.`,
+          tone: "brand",
+        };
+      }
+      break;
+    case "delivered_confirmed":
+    case "auto_released":
+    case "escrow_released":
+      hint = {
+        icon: CheckCircle2,
+        text: "Received — we're setting up your installment plan.",
+        tone: "accent",
+      };
+      break;
+    case "dispute_raised":
+      hint = {
+        icon: AlertTriangle,
+        text: "Problem reported — our team is reviewing it and will be in touch.",
+        tone: "amber",
+      };
+      break;
+    case "refunded":
+      hint = {
+        icon: RotateCcw,
+        text: "This order was refunded to you.",
+        tone: "neutral",
+      };
+      break;
+    case "frozen_fraud_review":
+      hint = {
+        icon: AlertTriangle,
+        text: "This order is on hold for a quick review. We'll be in touch.",
+        tone: "amber",
+      };
+      break;
+    // repaying / settled are conveyed by the repayment plan below.
+  }
+
+  if (!hint) return null;
+  const { icon: Icon, text, tone } = hint;
+  const toneCls: Record<Tone, string> = {
+    neutral: "border-black/[0.06] bg-black/[0.015] text-black/60",
+    brand: "border-brand-100 bg-brand-50/60 text-brand-800",
+    accent: "border-accent-200 bg-accent-50/60 text-accent-800",
+    amber: "border-amber-200 bg-amber-50 text-amber-800",
+  };
+
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[13px] ${toneCls[tone]}`}
+    >
+      <Icon className="mt-0.5 size-4 shrink-0 opacity-70" />
+      <span>{text}</span>
     </div>
   );
 }

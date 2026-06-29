@@ -30,14 +30,38 @@ export function StatusBadge({
   };
   const label =
     audience === "customer" ? (CUSTOMER_LABELS[status] ?? base.label) : base.label;
+  const cls =
+    audience === "customer" ? (CUSTOMER_STYLES[status] ?? base.cls) : base.cls;
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${base.cls}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
     >
+      {audience === "customer" ? (
+        <span className="size-1.5 rounded-full bg-current opacity-60" />
+      ) : null}
       {label}
     </span>
   );
 }
+
+/**
+ * Softer, on-brand badge colours for the consumer surface. The operator palette
+ * (saturated slate/blue/indigo) is too cold for buyers/sellers, so customer
+ * screens get muted -50/-700 pairings keyed to the brand/accent system.
+ */
+const CUSTOMER_STYLES: Partial<Record<LoanStatus, string>> = {
+  booked: "bg-black/[0.05] text-black/60",
+  escrow_held: "bg-brand-50 text-brand-700",
+  shipped: "bg-brand-50 text-brand-700",
+  delivered_confirmed: "bg-accent-50 text-accent-700",
+  dispute_raised: "bg-red-50 text-red-700",
+  auto_released: "bg-accent-50 text-accent-700",
+  escrow_released: "bg-accent-50 text-accent-700",
+  repaying: "bg-brand-50 text-brand-700",
+  settled: "bg-accent-100 text-accent-800",
+  refunded: "bg-amber-50 text-amber-700",
+  frozen_fraud_review: "bg-amber-50 text-amber-700",
+};
 
 /**
  * Plain-English, reassuring labels for buyers and sellers. Deliberately avoids
