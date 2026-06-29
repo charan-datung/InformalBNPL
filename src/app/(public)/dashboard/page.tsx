@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   const caps = await getCapabilities();
   if (!caps) redirect("/login");
@@ -37,7 +37,7 @@ export default async function DashboardPage({
   if (caps.staffRole) redirect("/operator");
   if (hasNoCapability(caps)) redirect("/onboarding");
 
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
   const buyerVerified = caps.buyer === "verified";
   const sellerVerified = caps.seller === "verified";
   const bothVerified = buyerVerified && sellerVerified;
@@ -69,6 +69,7 @@ export default async function DashboardPage({
       </header>
 
       {error ? <Callout tone="error">{error}</Callout> : null}
+      {ok ? <Callout tone="success">{ok}</Callout> : null}
 
       {/* Active area: a mode toggle when both are approved, else the one panel. */}
       {bothVerified ? (

@@ -10,6 +10,10 @@ import {
   recordLoanDisclosureAcceptance,
   clientIp,
 } from "@/lib/legal/acceptance";
+import {
+  submitPaymentReport,
+  type PaymentMethod,
+} from "@/lib/payments/buyer-payments";
 
 /**
  * Buyer- and seller-initiated actions from the active dashboards. Identity comes
@@ -154,6 +158,35 @@ export async function confirmReceiptAction(formData: FormData) {
     redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
   }
   redirect(BACK);
+}
+
+/** Buyer reports a payment they've made (reference #) for operator confirmation. */
+export async function reportPaymentAction(formData: FormData) {
+  const buyerUserId = await requireBuyer();
+  const loanId = String(formData.get("loanId") ?? "");
+  const amountPesos = Number(formData.get("amount_pesos") ?? 0);
+  const referenceNo = String(formData.get("reference_no") ?? "");
+  const methodRaw = String(formData.get("method") ?? "gcash");
+  const method: PaymentMethod = (["gcash", "maya", "bank", "other"] as const).includes(
+    methodRaw as PaymentMethod,
+  )
+    ? (methodRaw as PaymentMethod)
+    : "other";
+
+  try {
+    await submitPaymentReport({
+      loanId,
+      buyerUserId,
+      amountCentavos: Math.round(amountPesos * 100),
+      referenceNo,
+      method,
+    });
+  } catch (e) {
+    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(
+    `${BACK}?ok=${encodeURIComponent("Payment submitted — your operator will confirm it shortly.")}`,
+  );
 }
 
 /** Buyer reports a problem: required photo + description -> dispute_raised. */

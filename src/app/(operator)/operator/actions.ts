@@ -21,6 +21,7 @@ import {
 import { markReferralPaid } from "@/lib/referrals/seller-referrals";
 import { resolveSupportRequest } from "@/lib/support/requests";
 import { recordReceiptCheck } from "@/lib/operator/queries";
+import { confirmPayment, rejectPayment } from "@/lib/payments/buyer-payments";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -133,6 +134,40 @@ export async function recordReceiptCheckAction(formData: FormData) {
   redirect(
     `${back}?ok=${encodeURIComponent("Receipt check recorded in the audit trail.")}`,
   );
+}
+
+/** Operator confirms a buyer-reported payment → allocate it across installments. */
+export async function confirmPaymentAction(formData: FormData) {
+  const staff = await requireStaff();
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const back = "/operator/payments";
+  try {
+    const { allocatedCentavos, excessCentavos } = await confirmPayment({
+      paymentId,
+      actorUserId: staff.id,
+    });
+    const extra =
+      excessCentavos > 0 ? ` (${formatPeso(excessCentavos)} over the balance)` : "";
+    redirect(
+      `${back}?ok=${encodeURIComponent(`Applied ${formatPeso(allocatedCentavos)}${extra}.`)}`,
+    );
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+}
+
+/** Operator rejects a payment report (wrong/duplicate/unverifiable reference). */
+export async function rejectPaymentAction(formData: FormData) {
+  const staff = await requireStaff();
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const back = "/operator/payments";
+  try {
+    await rejectPayment({ paymentId, actorUserId: staff.id, note });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(`${back}?ok=${encodeURIComponent("Payment marked as rejected.")}`);
 }
 
 export async function reviewBuyerAction(formData: FormData) {

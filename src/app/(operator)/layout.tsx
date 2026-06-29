@@ -21,6 +21,7 @@ export default async function OperatorLayout({
     { href: "/operator/metrics", label: "Metrics" },
     { href: "/operator/loans", label: "Loans" },
     { href: "/operator/releases", label: "Releases" },
+    { href: "/operator/payments", label: "Payments" },
     { href: "/operator/payouts", label: "Payouts" },
     { href: "/operator/reviews/buyers", label: "Buyer reviews" },
     { href: "/operator/reviews/sellers", label: "Seller reviews" },

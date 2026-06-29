@@ -23,6 +23,7 @@ import SupportForm from "@/app/(public)/dashboard/SupportForm";
 import PasskeySetup from "@/components/auth/PasskeySetup";
 import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
 import RepaymentPlan from "@/app/(public)/dashboard/RepaymentPlan";
+import PaymentReportForm from "@/app/(public)/dashboard/PaymentReportForm";
 import ScanToPay from "@/app/(public)/dashboard/ScanToPay";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
@@ -386,6 +387,20 @@ export default async function BuyerPanel({
                   todayIso={todayIso()}
                   penaltyRateMonthly={config.penalty_rate_monthly}
                 />
+
+                {/* Report a payment (reference #) for operator confirmation */}
+                {l.repayments.some(
+                  (r) => r.status !== "paid" && r.status !== "waived",
+                ) ? (
+                  <PaymentReportForm
+                    loanId={l.id}
+                    suggestedPesos={Math.round(
+                      (stats.nextPayment?.loanId === l.id
+                        ? stats.nextPayment.amountCentavos
+                        : 0) / 100,
+                    )}
+                  />
+                ) : null}
 
                 <Link
                   href={`/loan/${l.id}/documents`}
