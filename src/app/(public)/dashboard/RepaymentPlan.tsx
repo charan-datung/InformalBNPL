@@ -153,6 +153,13 @@ export default function RepaymentPlan({
         })}
       </ul>
 
+      {remainingCentavos > 0 && plan.length - paidCount > 1 ? (
+        <p className="mt-2 text-[11px] text-black/55">
+          Want to finish early? You can pay the full{" "}
+          <strong>{formatPeso(remainingCentavos)}</strong> remaining anytime —
+          enter that amount when you submit your reference below.
+        </p>
+      ) : null}
       <p className="mt-2 text-[11px] text-black/40">
         Payments are recorded by your operator once received. Keep your receipt
         just in case.

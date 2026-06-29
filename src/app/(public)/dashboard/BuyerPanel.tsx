@@ -6,6 +6,10 @@ import {
 } from "@/lib/loans/views";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { buyerStats, type UpcomingPayment } from "@/lib/loans/stats";
+import {
+  listBuyerPayments,
+  type BuyerPaymentLite,
+} from "@/lib/payments/buyer-payments";
 import { getConfig } from "@/lib/config/system-config";
 import {
   getAccountProfile,
@@ -74,6 +78,7 @@ export default async function BuyerPanel({
     getAccountProfile(userId, email),
     getBuyerProfileDetail(userId),
   ]);
+  const payments = await listBuyerPayments(userId);
 
   const stats = buyerStats(loans, todayIso(), config.penalty_rate_monthly);
   const usedPct =
@@ -414,6 +419,14 @@ export default async function BuyerPanel({
         )}
       </section>
 
+      {/* Payment history / receipts */}
+      {payments.length > 0 ? (
+        <section className="space-y-3">
+          <SectionHeading icon={CheckCircle2}>Payment history</SectionHeading>
+          <PaymentHistory payments={payments} />
+        </section>
+      ) : null}
+
       {/* Profile / account */}
       <section className="space-y-3">
         <SectionHeading icon={User}>Profile</SectionHeading>
@@ -612,6 +625,49 @@ function NextBillCard({ next }: { next: UpcomingPayment | null }) {
         />
       </div>
     </div>
+  );
+}
+
+/** Buyer's payment receipts — reference, amount, method, and confirmation state. */
+function PaymentHistory({ payments }: { payments: BuyerPaymentLite[] }) {
+  const tone: Record<string, string> = {
+    confirmed: "bg-accent-50 text-accent-700",
+    reported: "bg-amber-50 text-amber-700",
+    rejected: "bg-red-50 text-red-700",
+  };
+  const label: Record<string, string> = {
+    confirmed: "Confirmed",
+    reported: "Pending review",
+    rejected: "Rejected",
+  };
+  return (
+    <Card className="divide-y divide-black/5 p-0">
+      {payments.map((p) => (
+        <div
+          key={p.id}
+          className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+        >
+          <div className="min-w-0">
+            <div className="font-semibold tabular-nums">
+              {formatPeso(p.amount_centavos)}
+            </div>
+            <div className="truncate text-xs text-black/50">
+              {(p.method ?? "—").toUpperCase()} · ref {p.reference_no ?? "—"} ·{" "}
+              {formatDateTime(p.created_at)}
+            </div>
+          </div>
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone[p.status] ?? "bg-black/[0.05] text-black/50"}`}
+          >
+            {label[p.status] ?? p.status}
+          </span>
+        </div>
+      ))}
+      <p className="px-4 py-2 text-[11px] text-black/40">
+        These are your payment records. To save a receipt, use your
+        browser&apos;s Print → Save as PDF.
+      </p>
+    </Card>
   );
 }
 
