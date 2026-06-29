@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfig } from "@/lib/config/system-config";
 import { validateIdNumber } from "@/lib/profiles/id-validation";
 import { recordSellerReferral } from "@/lib/referrals/seller-referrals";
+import { recordDocumentAcceptance, clientIp } from "@/lib/legal/acceptance";
 
 /**
  * Stage 3 onboarding: a logged-in user applies for buyer and/or seller
@@ -73,6 +74,8 @@ export async function applyAsBuyer(formData: FormData) {
   const idType = str(formData, "id_type");
   const idNumber = str(formData, "id_number");
   const consent = str(formData, "consent") === "yes";
+  const agreeAgreement = str(formData, "agree_credit_agreement") === "yes";
+  const signature = str(formData, "signature");
   const idPhoto = formData.get("id_photo");
 
   // ---- Required core ----
@@ -91,6 +94,9 @@ export async function applyAsBuyer(formData: FormData) {
     buyerError("The ID photo must be an image.");
   }
   if (!consent) buyerError("Please confirm and consent to proceed.");
+  if (!agreeAgreement || !signature) {
+    buyerError("Please read and accept the Credit Agreement and sign with your name.");
+  }
 
   // ---- Branch-specific required ----
   const monthlySales = centavos(formData, "monthly_sales");
@@ -198,6 +204,15 @@ export async function applyAsBuyer(formData: FormData) {
     { onConflict: "user_id" },
   );
   if (error) buyerError(error.message);
+
+  // Record the borrower's one-time acceptance of the master Credit Agreement
+  // (+ data-privacy consent). No loan yet, so loan_id is null.
+  await recordDocumentAcceptance({
+    userId,
+    documentType: "credit_agreement",
+    signatureName: signature,
+    ipAddress: await clientIp(),
+  });
 
   // "Both" flow: after the buyer step, continue to the seller step.
   redirect(next === "seller" ? "/onboarding/seller" : "/dashboard");

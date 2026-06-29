@@ -284,6 +284,40 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
               my details and references.
             </span>
           </label>
+          <label className="flex items-start gap-3 rounded-xl border border-black/10 bg-white p-4 text-sm">
+            <input
+              type="checkbox"
+              name="agree_credit_agreement"
+              value="yes"
+              required
+              className="mt-0.5 size-5 accent-brand-600"
+            />
+            <span className="text-foreground">
+              I have read and agree to the{" "}
+              <a
+                href="/legal/credit-agreement"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-brand-700 underline underline-offset-4"
+              >
+                Datung Credit Agreement
+              </a>{" "}
+              and Data Privacy consent.
+            </span>
+          </label>
+          <label className="block space-y-1.5 text-sm">
+            <span className="font-medium text-foreground">
+              Type your full name to sign
+            </span>
+            <input
+              type="text"
+              name="signature"
+              required
+              autoComplete="name"
+              placeholder="Your full name"
+              className="h-12 w-full rounded-xl border border-black/10 bg-white px-3.5 text-[16px] shadow-sm focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            />
+          </label>
         </>
       ),
     },
