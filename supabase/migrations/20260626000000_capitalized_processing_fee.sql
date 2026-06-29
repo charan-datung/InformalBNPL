@@ -12,11 +12,30 @@
 --   total          = loan_amount + interest
 -- =============================================================================
 
+-- Self-contained prerequisites: this migration recreates book_loan/start_repayment
+-- with both payment frequency and the capitalized fee, so it must not assume the
+-- amortization-frequency migration (0017) was applied first. Create the type and
+-- columns only if they're missing — no-ops when 0017 already ran.
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'payment_frequency') then
+    create type public.payment_frequency as enum ('monthly', 'biweekly');
+  end if;
+end $$;
+
+alter table public.loans
+  add column if not exists payment_frequency public.payment_frequency not null default 'monthly';
+
 alter table public.loans
   add column if not exists processing_fee_centavos bigint not null default 0;
 
 -- ---- book_loan: compute + store the capitalized processing fee ----------------
--- Drop the 0017 signature and recreate with an added p_processing_fee_pct param.
+-- Drop any prior signature (8-arg pre-frequency, or 9-arg with frequency) and
+-- recreate with the added p_processing_fee_pct param. `if exists` makes each a
+-- no-op when that signature isn't present.
+drop function if exists public.book_loan(
+  uuid, uuid, bigint, int, numeric, numeric, uuid, text
+);
 drop function if exists public.book_loan(
   uuid, uuid, bigint, int, numeric, numeric, uuid, text, public.payment_frequency
 );
