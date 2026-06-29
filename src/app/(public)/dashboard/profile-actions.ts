@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  createSupportRequest,
+  type SupportContext,
+} from "@/lib/support/requests";
 
 /**
  * Account-management actions for the dashboard Profile section. Identity comes
@@ -18,6 +22,38 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type ActionState = { ok?: boolean; error?: string };
 
 const BACK = "/dashboard";
+
+/** Send a support request from the buyer/seller profile to the operator console. */
+export async function submitSupportAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const caps = await getCapabilities();
+  if (!caps) return { error: "You're not signed in." };
+
+  const message = String(formData.get("message") ?? "").trim();
+  const subject = String(formData.get("subject") ?? "").trim();
+  const contact = String(formData.get("contact") ?? "").trim();
+  const ctx = String(formData.get("context") ?? "general");
+  const context: SupportContext =
+    ctx === "buyer" ? "buyer" : ctx === "seller" ? "seller" : "general";
+
+  if (!message) return { error: "Please describe what you need help with." };
+  if (message.length > 2000) return { error: "Message is too long." };
+
+  try {
+    await createSupportRequest({
+      userId: caps.userId,
+      context,
+      message,
+      subject,
+      contact,
+    });
+  } catch {
+    return { error: "Couldn't send — please try again." };
+  }
+  return { ok: true };
+}
 
 /** Update the user's display name and contact. */
 export async function updateAccountAction(

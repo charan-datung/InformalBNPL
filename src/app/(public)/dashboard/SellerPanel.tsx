@@ -17,6 +17,7 @@ import { createChargeAction } from "@/app/(public)/charge/actions";
 import PayoutTracker from "@/app/(public)/dashboard/PayoutTracker";
 import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
+import SupportForm from "@/app/(public)/dashboard/SupportForm";
 import { formatPeso, formatDate } from "@/lib/format";
 import Card from "@/components/ui/Card";
 import { Stat, StatGrid } from "@/components/ui/Stat";
@@ -328,6 +329,7 @@ export default async function SellerPanel({
           Your trust tier, reserve and selling limit are set by Datung and rise
           as you complete clean orders.
         </p>
+        <SupportForm context="seller" defaultContact={account.contact} />
       </div>
     </section>
   );

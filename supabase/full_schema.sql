@@ -2,10 +2,8 @@
 -- Datung — FULL SCHEMA (canonical, regenerated from migrations)
 --
 -- The complete current schema in one file, kept in sync with supabase/migrations
--- and identical in body to supabase/catch_up.sql. Every statement is idempotent
--- (guarded create type, create table/index if not exists, create or replace
--- functions, drop+create policies/triggers, guarded constraints), so applying it
--- to a fresh or partially-migrated database converges it to the current state.
+-- and identical in body to supabase/catch_up.sql. Idempotent throughout; applying
+-- it to a fresh or partially-migrated DB converges it to the current state.
 -- amortization_frequency is folded into capitalized_processing_fee. Validated by
 -- running twice against a clean Postgres 16.
 -- =============================================================================
@@ -2020,4 +2018,36 @@ create index if not exists document_acceptances_loan_idx
   on public.document_acceptances (loan_id);
 
 alter table public.document_acceptances enable row level security;
+-- No policies: only the service-role client (which bypasses RLS) may read/write.
+
+-- ===== from migration: 20260629000000_support_requests.sql =====
+-- =============================================================================
+-- Support requests (migration 0020)
+--
+-- Buyers and sellers can contact support from their profile. Each message lands
+-- here for the operator console to triage and resolve. (A later phase will email
+-- operators when a new request arrives.) Service-role only (RLS, no policies).
+-- =============================================================================
+
+create table if not exists public.support_requests (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.users(id) on delete cascade,
+  -- Which surface the request came from: 'buyer' | 'seller' | 'general'.
+  context     text not null default 'general',
+  subject     text,
+  message     text not null,
+  -- Optional contact the user wants us to reply to (else use their profile).
+  contact     text,
+  status      text not null default 'open',  -- 'open' | 'resolved'
+  created_at  timestamptz not null default now(),
+  resolved_at timestamptz,
+  resolved_by uuid references public.users(id)
+);
+
+create index if not exists support_requests_status_idx
+  on public.support_requests (status, created_at desc);
+create index if not exists support_requests_user_idx
+  on public.support_requests (user_id);
+
+alter table public.support_requests enable row level security;
 -- No policies: only the service-role client (which bypasses RLS) may read/write.

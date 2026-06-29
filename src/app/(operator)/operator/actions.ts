@@ -19,6 +19,7 @@ import {
   rejectPayout,
 } from "@/lib/payouts/payouts";
 import { markReferralPaid } from "@/lib/referrals/seller-referrals";
+import { resolveSupportRequest } from "@/lib/support/requests";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -231,6 +232,20 @@ export async function markReferralPaidAction(formData: FormData) {
   if (!id) redirect(`${back}?error=${encodeURIComponent("Missing referral id.")}`);
   try {
     await markReferralPaid(id);
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+/** Mark a support request resolved. */
+export async function resolveSupportAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const back = "/operator/support";
+  if (!id) redirect(`${back}?error=${encodeURIComponent("Missing request id.")}`);
+  try {
+    await resolveSupportRequest(id, staff.id);
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
