@@ -52,16 +52,16 @@ export default async function HomePage({
       <section className="flex flex-col items-center pt-6 text-center sm:pt-10">
         <LogoMark className="mb-3 h-16 w-auto" />
         <p className="mb-6 text-sm font-medium tracking-wide text-brand-600">
-          Shop now, pay hulugan
+          Shop now, pay over time
         </p>
         <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Get it now, pay in small amounts
         </h1>
         <p className="mt-4 max-w-prose text-base text-black/60">
-          Datung lets you shop from trusted Filipino sellers and pay over time —
-          hulugan, in amounts that fit your budget. No credit card, no business
-          papers. Sell with Datung too, and get paid safely. One account to buy,
-          sell, or both.
+          Datung lets you shop from trusted Filipino sellers and pay over time,
+          in amounts that fit your budget. No credit card, no business papers.
+          Sell with Datung too, and get paid safely. One account to buy, sell,
+          or both.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

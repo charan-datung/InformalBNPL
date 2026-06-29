@@ -104,7 +104,7 @@ export default async function BuyerPanel({
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/70">
             <span className="flex items-center gap-1.5">
               <QrCode className="size-3.5" />
-              Shop now, pay hulugan — use it across any Datung seller
+              Shop now, pay over time — use it across any Datung seller
             </span>
             {stats.onTimePct !== null ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/90">
@@ -272,7 +272,7 @@ export default async function BuyerPanel({
             </p>
             <p className="max-w-xs text-xs text-black/50">
               Scan a seller&apos;s Datung Pay QR — or pick a seller above — to
-              shop now and pay hulugan. Your orders will show up here.
+              shop now and pay over time. Your orders will show up here.
             </p>
           </Card>
         ) : (
