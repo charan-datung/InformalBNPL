@@ -6,6 +6,7 @@ import { disputeWindow } from "@/lib/loans/window";
 import {
   transitionLoanAction,
   recordRepaymentAction,
+  recordReceiptCheckAction,
 } from "@/app/(operator)/operator/actions";
 import {
   LOAN_STATUSES,
@@ -136,6 +137,59 @@ export default async function LoanDetailPage({
             left). Hold release until then.
           </p>
         )
+      ) : null}
+
+      {/* Buyer contact + manual receipt check (anti-fraud before release) */}
+      {["escrow_held", "shipped", "delivered_confirmed", "auto_released"].includes(
+        loan.status,
+      ) ? (
+        <section className="space-y-3 rounded-lg border border-black/10 p-4 dark:border-white/10">
+          <h2 className="text-sm font-medium text-black/50 dark:text-white/50">
+            Buyer receipt check
+          </h2>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+            <Fact k="Buyer" v={loan.buyerName} />
+            <Fact k="Buyer contact" v={loan.buyerContact ?? "—"} />
+            <Fact k="Seller" v={loan.sellerName} />
+            <Fact k="Seller contact" v={loan.sellerContact ?? "—"} />
+          </div>
+          {loan.status === "escrow_held" && loan.handover_code ? (
+            <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              In-person sale awaiting hand-over. The buyer holds a 6-digit code;
+              the seller confirms by entering it. Not yet handed over.
+            </p>
+          ) : null}
+          <p className="text-xs text-black/50 dark:text-white/50">
+            Call or message the buyer to confirm they actually received the item,
+            then record the result. Logged to the audit trail below.
+          </p>
+          <form
+            action={recordReceiptCheckAction}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <input type="hidden" name="loanId" value={loan.id} />
+            <select
+              name="received"
+              defaultValue="yes"
+              className="rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            >
+              <option value="yes">Buyer received it</option>
+              <option value="no">Buyer did NOT receive it</option>
+            </select>
+            <input
+              type="text"
+              name="notes"
+              placeholder="Notes (e.g. called 0917…, confirmed)"
+              className="min-w-0 flex-1 rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+            <button
+              type="submit"
+              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+            >
+              Record check
+            </button>
+          </form>
+        </section>
       ) : null}
 
       {/* Transitions: only valid next states are enabled. */}

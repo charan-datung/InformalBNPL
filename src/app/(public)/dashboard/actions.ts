@@ -5,7 +5,7 @@ import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
-import { markShipped } from "@/lib/loans/seller";
+import { markShipped, confirmHandover } from "@/lib/loans/seller";
 import {
   recordLoanDisclosureAcceptance,
   clientIp,
@@ -171,6 +171,24 @@ export async function reportProblemAction(formData: FormData) {
 }
 
 // ---- Seller ----------------------------------------------------------------
+
+/**
+ * Seller confirms an in-person hand-over by entering the buyer's 6-digit code:
+ * escrow_held -> shipped (starts the dispute window). Anti-fraud — proves the
+ * goods changed hands instead of silently auto-advancing.
+ */
+export async function confirmHandoverAction(formData: FormData) {
+  const sellerUserId = await requireSeller();
+  const loanId = String(formData.get("loanId") ?? "");
+  const code = String(formData.get("code") ?? "");
+
+  try {
+    await confirmHandover({ loanId, sellerUserId, code });
+  } catch (e) {
+    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(BACK);
+}
 
 /** Seller marks shipped with required proof: escrow_held -> shipped. */
 export async function markShippedAction(formData: FormData) {

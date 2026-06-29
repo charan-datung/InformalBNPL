@@ -134,6 +134,8 @@ export type SellerLoanView = {
   shippedAt: string | null;
   deliveredAt: string | null;
   releasedAt: string | null;
+  /** Set on an in-person order still awaiting the seller's handover-code entry. */
+  handoverPending: boolean;
 };
 
 export async function listSellerLoans(
@@ -144,7 +146,7 @@ export async function listSellerLoans(
     admin
       .from("loans")
       .select(
-        "id, status, ticket_centavos, tenor_months, merchant_fee_pct, buyer_user_id, created_at",
+        "id, status, ticket_centavos, tenor_months, merchant_fee_pct, buyer_user_id, created_at, handover_code, handover_confirmed_at",
       )
       .eq("seller_user_id", sellerUserId)
       .order("created_at", { ascending: false }),
@@ -170,6 +172,7 @@ export async function listSellerLoans(
       shippedAt: d?.shippedAt ?? null,
       deliveredAt: d?.deliveredAt ?? null,
       releasedAt: d?.releasedAt ?? null,
+      handoverPending: Boolean(l.handover_code) && !l.handover_confirmed_at,
     };
   });
 }
@@ -184,6 +187,8 @@ export type BuyerLoanView = {
   sellerName: string;
   created_at: string;
   shippedAt: string | null;
+  /** In-person handover code to show the seller (null for ship / once confirmed). */
+  handoverCode: string | null;
   repayments: RepaymentLite[];
 };
 
@@ -195,7 +200,7 @@ export async function listBuyerLoans(
     admin
       .from("loans")
       .select(
-        "id, status, ticket_centavos, tenor_months, seller_user_id, created_at",
+        "id, status, ticket_centavos, tenor_months, seller_user_id, created_at, handover_code, handover_confirmed_at",
       )
       .eq("buyer_user_id", buyerUserId)
       .order("created_at", { ascending: false }),
@@ -216,6 +221,8 @@ export async function listBuyerLoans(
     sellerName: names.get(l.seller_user_id) ?? l.seller_user_id,
     created_at: l.created_at,
     shippedAt: dates.get(l.id)?.shippedAt ?? null,
+    // Only relevant while still awaiting handover (in-person, not yet confirmed).
+    handoverCode: l.handover_confirmed_at ? null : (l.handover_code ?? null),
     repayments: reps.get(l.id) ?? [],
   }));
 }

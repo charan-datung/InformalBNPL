@@ -20,6 +20,7 @@ import {
 } from "@/lib/payouts/payouts";
 import { markReferralPaid } from "@/lib/referrals/seller-referrals";
 import { resolveSupportRequest } from "@/lib/support/requests";
+import { recordReceiptCheck } from "@/lib/operator/queries";
 
 /**
  * Auth-gated operator actions. Each confirms the caller is staff, stamps the
@@ -73,6 +74,34 @@ export async function recordRepaymentAction(formData: FormData) {
 
   try {
     await recordRepayment({ repaymentId, actorUserId: staff.id });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(back);
+}
+
+/**
+ * Operator records a manual buyer-receipt check (call/message the buyer to
+ * verify delivery before releasing escrow). Logged as a `note` audit row.
+ */
+export async function recordReceiptCheckAction(formData: FormData) {
+  const staff = await requireStaff();
+  const loanId = String(formData.get("loanId") ?? "");
+  const received = String(formData.get("received") ?? "");
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const back = `/operator/loans/${loanId}`;
+
+  if (received !== "yes" && received !== "no") {
+    redirect(`${back}?error=${encodeURIComponent("Select whether the buyer received the item.")}`);
+  }
+
+  try {
+    await recordReceiptCheck({
+      loanId,
+      received: received as "yes" | "no",
+      notes,
+      actorUserId: staff.id,
+    });
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }

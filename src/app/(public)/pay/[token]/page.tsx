@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { getCapabilities } from "@/lib/profiles/capabilities";
-import { getChargeByToken, isExpired } from "@/lib/payments/charges";
+import {
+  getChargeByToken,
+  getHandoverCode,
+  isExpired,
+} from "@/lib/payments/charges";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso } from "@/lib/format";
@@ -67,6 +71,12 @@ export default async function PayPage({
 
   // Success (this buyer just paid).
   if (status === "authorized" && paid) {
+    // In-person sales: surface the hand-over code so the buyer can complete the
+    // exchange. Only set while the seller hasn't confirmed yet.
+    const handoverCode =
+      charge.fulfillment === "in_person" && charge.loan_id
+        ? await getHandoverCode(charge.loan_id)
+        : null;
     return shell(
       <>
         {amountCard}
@@ -83,6 +93,27 @@ export default async function PayPage({
             Go to dashboard
           </Link>
         </Card>
+        {handoverCode ? (
+          <Card className="space-y-2 p-6 text-center">
+            <p className="text-sm text-black/65">
+              Get the item from <strong>{charge.sellerName}</strong> first. Once
+              it&apos;s in your hands, read them this code so they can complete
+              the sale.
+            </p>
+            <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-brand-700/70">
+                Hand-over code
+              </div>
+              <div className="mt-0.5 font-mono text-4xl font-bold tracking-[0.4em] text-brand-800">
+                {handoverCode}
+              </div>
+            </div>
+            <p className="text-xs text-black/45">
+              Keep it private until you&apos;ve received the item — sharing it
+              early lets the seller get paid before you do.
+            </p>
+          </Card>
+        ) : null}
       </>,
     );
   }

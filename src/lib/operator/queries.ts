@@ -34,10 +34,20 @@ export type LoanRow = {
   created_at: string;
   updated_at: string;
   shipment_proof_path: string | null;
+  handover_code: string | null;
+  handover_confirmed_at: string | null;
   buyerName: string;
+  buyerContact: string | null;
   sellerName: string;
+  sellerContact: string | null;
   hasOverride: boolean;
 };
+
+/** The non-derived columns of a LoanRow, as read straight from the DB. */
+type LoanRowBase = Omit<
+  LoanRow,
+  "buyerName" | "buyerContact" | "sellerName" | "sellerContact" | "hasOverride"
+>;
 
 /** Loan ids that have at least one admin_override event. */
 async function overriddenLoanIds(): Promise<Set<string>> {
@@ -57,9 +67,11 @@ export async function listLoans(): Promise<LoanRow[]> {
     overriddenLoanIds(),
   ]);
   return (data ?? []).map((l) => ({
-    ...(l as Omit<LoanRow, "buyerName" | "sellerName" | "hasOverride">),
+    ...(l as LoanRowBase),
     buyerName: users.get(l.buyer_user_id)?.name ?? l.buyer_user_id,
+    buyerContact: users.get(l.buyer_user_id)?.contact ?? null,
     sellerName: users.get(l.seller_user_id)?.name ?? l.seller_user_id,
+    sellerContact: users.get(l.seller_user_id)?.contact ?? null,
     hasOverride: overridden.has(l.id),
   }));
 }
@@ -123,9 +135,11 @@ export async function getLoanWithEvents(loanId: string): Promise<{
   return {
     shipmentProofUrl,
     loan: {
-      ...(loan as Omit<LoanRow, "buyerName" | "sellerName" | "hasOverride">),
+      ...(loan as LoanRowBase),
       buyerName: users.get(loan.buyer_user_id)?.name ?? loan.buyer_user_id,
+      buyerContact: users.get(loan.buyer_user_id)?.contact ?? null,
       sellerName: users.get(loan.seller_user_id)?.name ?? loan.seller_user_id,
+      sellerContact: users.get(loan.seller_user_id)?.contact ?? null,
       hasOverride,
     },
     events: (events ?? []).map((e) => ({
@@ -372,11 +386,37 @@ export async function getOperatorCounts(): Promise<OperatorCounts> {
   };
 }
 
+/**
+ * Record an operator's manual receipt check (did the buyer actually receive the
+ * item?) as a `note` on the loan's append-only audit log. Used before releasing
+ * escrow when ops phones/messages the buyer to verify, so there's a trail.
+ */
+export async function recordReceiptCheck(input: {
+  loanId: string;
+  received: "yes" | "no";
+  notes: string | null;
+  actorUserId: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const verdict =
+    input.received === "yes"
+      ? "Buyer confirmed receipt"
+      : "Buyer did NOT confirm receipt";
+  const { error } = await admin.from("escrow_events").insert({
+    loan_id: input.loanId,
+    event_type: "note",
+    note: `Receipt check — ${verdict}.${input.notes ? ` ${input.notes}` : ""}`,
+    actor_user_id: input.actorUserId,
+  });
+  if (error) throw new Error(error.message);
+}
+
 // ---- Dispute window / auto-release queue -----------------------------------
 
 export type ReleaseItem = {
   id: string;
   buyerName: string;
+  buyerContact: string | null;
   sellerName: string;
   ticket_centavos: number;
   feeCentavos: number;
@@ -439,6 +479,7 @@ export async function listReleaseQueue(): Promise<ReleaseQueue> {
     const item: ReleaseItem = {
       id: l.id,
       buyerName: users.get(l.buyer_user_id)?.name ?? l.buyer_user_id,
+      buyerContact: users.get(l.buyer_user_id)?.contact ?? null,
       sellerName: users.get(l.seller_user_id)?.name ?? l.seller_user_id,
       ticket_centavos: l.ticket_centavos,
       feeCentavos: fee,

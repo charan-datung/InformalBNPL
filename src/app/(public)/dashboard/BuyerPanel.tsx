@@ -282,6 +282,29 @@ export default async function BuyerPanel({
                   </span>
                 </div>
 
+                {/* In-person hand-over: show the code the seller must enter */}
+                {l.status === "escrow_held" && l.handoverCode ? (
+                  <div className="space-y-2 border-t border-black/5 pt-3">
+                    <p className="text-black/65">
+                      Show this code to <strong>{l.sellerName}</strong> only
+                      after you have the item in hand. They&apos;ll type it to
+                      complete the hand-over.
+                    </p>
+                    <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-center">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-brand-700/70">
+                        Hand-over code
+                      </div>
+                      <div className="mt-0.5 font-mono text-3xl font-bold tracking-[0.4em] text-brand-800">
+                        {l.handoverCode}
+                      </div>
+                    </div>
+                    <p className="text-xs text-black/45">
+                      Keep this private until you&apos;ve received the item.
+                      Sharing it early lets the seller get paid before you do.
+                    </p>
+                  </div>
+                ) : null}
+
                 {/* Shipped: confirm receipt (positive) or report a problem */}
                 {l.status === "shipped" ? (
                   <div className="space-y-3 border-t border-black/5 pt-3">

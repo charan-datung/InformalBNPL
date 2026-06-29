@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import type { PaymentFrequency } from "@/lib/loans/schedule";
@@ -253,29 +253,16 @@ export async function authorizeCharge(input: {
       processingFeeCentavos: loan.processing_fee_centavos,
     });
 
-    // Authorization is now committed (loan booked, escrow held, ledger posted,
-    // charge marked authorized). Conservative posture: even an in-person sale
-    // stays in escrow to protect the buyer. We only record the hand-off (→
-    // shipped) so the goods-exchanged fact is captured; escrow then releases the
-    // normal way — buyer confirms receipt, or the short auto-release window
-    // elapses — before repayment begins. (Ship orders stay at escrow_held until
-    // the seller marks them shipped with proof.) Best-effort: a failure here
-    // simply leaves the loan at escrow_held, never rolled back.
+    // Anti-fraud for in-person sales: do NOT auto-advance. Mint a 6-digit
+    // handover code shown on the buyer's screen; the seller must enter it to
+    // confirm the goods changed hands (→ shipped). Ship orders stay at
+    // escrow_held until the seller marks them shipped with proof. Best-effort.
     if (charge.fulfillment === "in_person") {
-      try {
-        await transitionLoan({
-          loanId: loan.id,
-          to: "shipped",
-          actorUserId: input.buyerUserId,
-          note: "In-person hand-off (escrow held until receipt/auto-release)",
-        });
-      } catch (advanceErr) {
-        captureException(advanceErr, {
-          where: "authorizeCharge.inPersonHandoff",
-          loanId: loan.id,
-          chargeId: charge.id,
-        });
-      }
+      const handoverCode = String(randomInt(0, 1_000_000)).padStart(6, "0");
+      await admin
+        .from("loans")
+        .update({ handover_code: handoverCode })
+        .eq("id", loan.id);
     }
 
     return { loanId: loan.id };
@@ -288,6 +275,21 @@ export async function authorizeCharge(input: {
     captureException(e, { where: "authorizeCharge.book", chargeId: charge.id });
     throw friendlyChargeError(e);
   }
+}
+
+/**
+ * The in-person hand-over code minted for a loan, or null once confirmed / for
+ * shipped orders. Shown on the buyer's pay-success screen and dashboard.
+ */
+export async function getHandoverCode(loanId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("loans")
+    .select("handover_code, handover_confirmed_at")
+    .eq("id", loanId)
+    .maybeSingle();
+  if (!data || data.handover_confirmed_at) return null;
+  return data.handover_code ?? null;
 }
 
 export async function listSellerCharges(

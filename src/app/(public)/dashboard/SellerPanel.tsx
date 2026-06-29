@@ -8,7 +8,10 @@ import {
 import MarketingKit from "@/components/invite/MarketingKit";
 import ReferSellers from "@/components/invite/ReferSellers";
 import { getConfig } from "@/lib/config/system-config";
-import { markShippedAction } from "@/app/(public)/dashboard/actions";
+import {
+  markShippedAction,
+  confirmHandoverAction,
+} from "@/app/(public)/dashboard/actions";
 import {
   updateAccountAction,
   updateSellerStorefrontAction,
@@ -206,7 +209,44 @@ export default async function SellerPanel({
                   payoutIsEstimate={payoutIsEstimate}
                 />
 
-                {l.status === "escrow_held" ? (
+                {l.status === "escrow_held" && l.handoverPending ? (
+                  <div className="space-y-2.5 border-t border-black/5 pt-3">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                      <p className="font-medium">Hand over in person</p>
+                      <p className="mt-0.5 text-xs text-amber-700/90">
+                        You&apos;ve been paid into escrow. Give the item to{" "}
+                        <strong>{l.buyerName}</strong>, then ask them to read the
+                        6-digit code on their Datung screen and type it here to
+                        release. Don&apos;t enter a code before handing the item
+                        over.
+                      </p>
+                    </div>
+                    <form
+                      action={confirmHandoverAction}
+                      className="flex flex-wrap items-end gap-2"
+                    >
+                      <input type="hidden" name="loanId" value={l.id} />
+                      <Field label="Buyer's 6-digit code">
+                        <TextInput
+                          name="code"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          maxLength={6}
+                          pattern="[0-9]*"
+                          placeholder="123456"
+                          required
+                          className="w-32 tracking-[0.3em]"
+                        />
+                      </Field>
+                      <button
+                        type="submit"
+                        className={buttonClasses({ className: "bg-accent-600 hover:bg-accent-700" })}
+                      >
+                        Confirm hand-over
+                      </button>
+                    </form>
+                  </div>
+                ) : l.status === "escrow_held" ? (
                   <div className="border-t border-black/5 pt-3">
                     <PhotoActionForm
                       action={markShippedAction}

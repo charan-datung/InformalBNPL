@@ -24,6 +24,7 @@ function buyerLoan(partial: Partial<BuyerLoanView>): BuyerLoanView {
     sellerName: "Aling Nena",
     created_at: "2026-06-01T00:00:00Z",
     shippedAt: null,
+    handoverCode: null,
     repayments: [],
     ...partial,
   };
@@ -43,6 +44,7 @@ function sellerLoan(partial: Partial<SellerLoanView>): SellerLoanView {
     shippedAt: null,
     deliveredAt: null,
     releasedAt: null,
+    handoverPending: false,
     ...partial,
   };
 }

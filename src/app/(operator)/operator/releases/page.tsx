@@ -140,6 +140,9 @@ function Row({
           {formatPeso(l.ticket_centavos)} · {l.buyerName} → {l.sellerName}
         </div>
         <div className="text-xs text-black/50 dark:text-white/50">{sub}</div>
+        <div className="text-xs text-black/50 dark:text-white/50">
+          Buyer contact: {l.buyerContact ?? "—"} · verify receipt before release
+        </div>
       </div>
       <Link
         href={`/operator/loans/${l.id}`}
