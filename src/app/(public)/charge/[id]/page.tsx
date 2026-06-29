@@ -67,7 +67,9 @@ export default async function ChargePage({
           <div className="mt-1.5 text-sm text-black/55">{charge.memo}</div>
         ) : null}
         <div className="mt-1 text-xs text-black/40">
-          {charge.fulfillment === "ship" ? "Ship — you get paid after delivery" : "In-person — hand over now"}
+          {charge.fulfillment === "ship"
+            ? "Ship — you get paid after delivery"
+            : "In-person — you get paid once the buyer enters their code"}
         </div>
       </Card>
 
@@ -102,6 +104,10 @@ export default async function ChargePage({
               Waiting for the buyer to approve…
             </span>
           </Callout>
+          <p className="text-center text-xs text-black/40">
+            This request is valid for about 30 minutes. If it expires, just start
+            a new sale.
+          </p>
         </>
       ) : status === "authorized" ? (
         <Card className="space-y-2 p-6 text-center">
@@ -111,7 +117,7 @@ export default async function ChargePage({
             {formatPeso(charge.amount_centavos)} approved.{" "}
             {charge.fulfillment === "ship"
               ? "Payment kept safe — send the order, then mark it shipped to get paid."
-              : "You can hand over the goods now."}
+              : "Payment kept safe — hand the item over, then enter the buyer's 6-digit code on your orders screen to get paid."}
           </p>
           <Link
             href="/dashboard"

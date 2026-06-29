@@ -30,9 +30,26 @@ function stepIndex(status: LoanStatus): number {
   }
 }
 
-/** A non-happy-path banner, or null. */
+/** A short status banner (positive on the happy path, cautionary otherwise). */
 function banner(status: LoanStatus): { text: string; cls: string } | null {
   switch (status) {
+    case "delivered_confirmed":
+    case "auto_released":
+      return {
+        text: "Delivered — your payout is being released.",
+        cls: "bg-accent-50 text-accent-800",
+      };
+    case "escrow_released":
+    case "repaying":
+      return {
+        text: "Released — your payout is on the way.",
+        cls: "bg-accent-50 text-accent-800",
+      };
+    case "settled":
+      return {
+        text: "Complete — this order is paid out.",
+        cls: "bg-accent-100 text-accent-800",
+      };
     case "dispute_raised":
       return {
         text: "Problem reported by buyer — payout on hold until resolved.",
