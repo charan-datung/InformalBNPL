@@ -228,6 +228,7 @@ export async function authorizeCharge(input: {
       ticketCentavos: loan.ticket_centavos,
       merchantFeePct: loan.merchant_fee_pct,
       reservePct: sellerProfile?.rolling_reserve_pct ?? 0,
+      processingFeeCentavos: loan.processing_fee_centavos,
     });
 
     // Authorization is now committed (loan booked, escrow held, ledger posted,

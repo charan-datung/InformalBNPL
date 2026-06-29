@@ -14,6 +14,7 @@ export const LEDGER_ACCOUNTS = {
   sellerPayable: "seller_payable", // liability: net we owe the seller now
   sellerReserve: "seller_reserve", // liability: rolling reserve withheld
   merchantFeeIncome: "merchant_fee_income", // income: our fee on the sale
+  processingFeeIncome: "processing_fee_income", // income: buyer processing fee
   interestIncome: "interest_income", // income: financing interest earned
   cashClearing: "cash_clearing", // clearing: buyer repayments received
   payoutClearing: "payout_clearing", // clearing: payouts staged for rails
@@ -59,16 +60,19 @@ export function disbursementLines(
   ticketCentavos: number,
   merchantFeePct: number,
   reservePct = 0,
+  processingFeeCentavos = 0,
 ): Line[] {
   const fee = Math.round((ticketCentavos * merchantFeePct) / 100);
   const reserve = Math.round((ticketCentavos * reservePct) / 100);
   const sellerNet = ticketCentavos - fee - reserve;
+  // The buyer owes the loan principal, which capitalizes the processing fee on
+  // top of the purchase; that fee is our income, recognized at disbursement.
   const lines: Line[] = [
     {
       account: LEDGER_ACCOUNTS.buyerReceivable,
       direction: "debit",
-      amountCentavos: ticketCentavos,
-      memo: "Principal receivable from buyer",
+      amountCentavos: ticketCentavos + processingFeeCentavos,
+      memo: "Principal receivable from buyer (incl. processing fee)",
     },
     {
       account: LEDGER_ACCOUNTS.sellerPayable,
@@ -89,6 +93,14 @@ export function disbursementLines(
       direction: "credit",
       amountCentavos: reserve,
       memo: `Rolling reserve ${reservePct}% withheld`,
+    });
+  }
+  if (processingFeeCentavos > 0) {
+    lines.push({
+      account: LEDGER_ACCOUNTS.processingFeeIncome,
+      direction: "credit",
+      amountCentavos: processingFeeCentavos,
+      memo: "Processing fee (capitalized)",
     });
   }
   return lines;
@@ -127,6 +139,7 @@ export async function postLoanDisbursement(
     ticketCentavos: number;
     merchantFeePct: number;
     reservePct?: number;
+    processingFeeCentavos?: number;
   },
 ): Promise<string> {
   return postTransaction(
@@ -136,6 +149,7 @@ export async function postLoanDisbursement(
       input.ticketCentavos,
       input.merchantFeePct,
       input.reservePct ?? 0,
+      input.processingFeeCentavos ?? 0,
     ),
   );
 }

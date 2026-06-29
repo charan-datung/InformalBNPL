@@ -1913,10 +1913,14 @@ declare
   v_loan             public.loans;
   v_loan_amount      bigint;
   v_monthly_interest bigint;
+  v_total_interest   bigint;
   v_total            bigint;
   v_periods          int;
   v_base             bigint;
+  v_base_interest    bigint;
   v_amount           bigint;
+  v_interest         bigint;
+  v_principal        bigint;
   i                  int;
 begin
   update public.loans
@@ -1940,24 +1944,33 @@ begin
   -- Principal = purchase + capitalized processing fee; interest accrues on it.
   v_loan_amount      := v_loan.ticket_centavos + coalesce(v_loan.processing_fee_centavos, 0);
   v_monthly_interest := round(v_loan_amount * v_loan.interest_rate_monthly)::bigint;
-  v_total            := v_loan_amount + v_monthly_interest * v_loan.tenor_months;
+  v_total_interest   := v_monthly_interest * v_loan.tenor_months;
+  v_total            := v_loan_amount + v_total_interest;
   v_periods := case
                  when v_loan.payment_frequency = 'biweekly'
                    then v_loan.tenor_months * 2
                  else v_loan.tenor_months
                end;
-  v_base := v_total / v_periods;  -- integer (floor) division
+  v_base          := v_total / v_periods;           -- integer (floor) division
+  v_base_interest := v_total_interest / v_periods;  -- per-installment interest
 
   for i in 1 .. v_periods loop
     if i < v_periods then
-      v_amount := v_base;
+      v_amount   := v_base;
+      v_interest := v_base_interest;
     else
-      v_amount := v_total - v_base * (v_periods - 1);  -- remainder on last
+      v_amount   := v_total - v_base * (v_periods - 1);          -- remainder on last
+      v_interest := v_total_interest - v_base_interest * (v_periods - 1);
     end if;
+    -- Principal (incl. the capitalized fee) is the rest; sum(principal) == loan
+    -- amount, sum(interest) == total interest. The buyer-side ledger draws the
+    -- receivable down by principal and recognizes interest from these columns.
+    v_principal := v_amount - v_interest;
 
-    insert into public.repayments (loan_id, amount_centavos, due_date, status)
+    insert into public.repayments
+      (loan_id, amount_centavos, principal_centavos, interest_centavos, due_date, status)
     values (
-      p_loan_id, v_amount,
+      p_loan_id, v_amount, v_principal, v_interest,
       case
         when v_loan.payment_frequency = 'biweekly'
           then (current_date + (i * 14 || ' day')::interval)::date
