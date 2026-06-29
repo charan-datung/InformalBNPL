@@ -1,5 +1,20 @@
 import type { NextConfig } from "next";
 
+// Files the tesseract.js OCR worker needs at runtime on Vercel. Includes the
+// full data + core + library dirs (so require.resolve of their package.json
+// works) and the worker-script's transitive deps (it require()s these inside a
+// worker_thread, which file-tracing can't detect).
+const OCR_TRACE_INCLUDES = [
+  "./node_modules/@tesseract.js-data/eng/**",
+  "./node_modules/tesseract.js-core/**",
+  "./node_modules/tesseract.js/**",
+  "./node_modules/bmp-js/**",
+  "./node_modules/is-url/**",
+  "./node_modules/wasm-feature-detect/**",
+  "./node_modules/regenerator-runtime/**",
+  "./node_modules/node-fetch/**",
+];
+
 const nextConfig: NextConfig = {
   // tesseract.js uses worker threads + WASM; keep it external so Next doesn't
   // try to bundle it into the server build (OCR runs in operator-side actions).
@@ -8,16 +23,13 @@ const nextConfig: NextConfig = {
   // runtime via dynamic paths, which file-tracing can't detect — force-include
   // them in the operator review route bundles so OCR works on Vercel.
   outputFileTracingIncludes: {
-    "/operator/reviews/buyers": [
-      "./node_modules/@tesseract.js-data/eng/4.0.0_best_int/**",
-      "./node_modules/tesseract.js-core/**",
-      "./node_modules/tesseract.js/dist/**",
-    ],
-    "/operator/reviews/sellers": [
-      "./node_modules/@tesseract.js-data/eng/4.0.0_best_int/**",
-      "./node_modules/tesseract.js-core/**",
-      "./node_modules/tesseract.js/dist/**",
-    ],
+    // OCR runs in the server actions imported by these review pages. The worker
+    // runs in a worker_thread that require()s the core wasm, the language data,
+    // and several small deps at runtime — paths file-tracing can't follow
+    // because tesseract.js is an external package. Ship them all (full package
+    // dirs incl. package.json, which require.resolve needs).
+    "/operator/reviews/buyers": OCR_TRACE_INCLUDES,
+    "/operator/reviews/sellers": OCR_TRACE_INCLUDES,
   },
   experimental: {
     // Seller verification uploads a live item photo through a server action;
