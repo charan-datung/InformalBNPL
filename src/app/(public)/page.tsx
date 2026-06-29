@@ -52,7 +52,7 @@ export default async function HomePage({
       <section className="flex flex-col items-center pt-6 text-center sm:pt-10">
         <LogoMark className="mb-3 h-16 w-auto" />
         <p className="mb-6 text-sm font-medium tracking-wide text-brand-600">
-          Shop now, pay paunti-unti
+          Shop now, pay hulugan
         </p>
         <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Get it now, pay in small amounts

@@ -31,7 +31,7 @@ export default function ShareMessages({
       channel: "messenger",
       label: "Messenger / Facebook",
       Icon: MessageCircle,
-      text: `Hi! Good news — pwede ka nang mag-shop ngayon, bayad nang paunti-unti${withMe} on Datung! 🛍️ Walang credit card, libre mag-sign up. Once approved, may spending limit ka na pwedeng gamitin agad. Sign up here: ${inviteUrl}`,
+      text: `Hi! Good news — pwede ka nang mag-shop ngayon, bayad nang hulugan${withMe} on Datung! 🛍️ Walang credit card, libre mag-sign up. Once approved, may spending limit ka na pwedeng gamitin agad. Sign up here: ${inviteUrl}`,
     },
     {
       channel: "sms",
@@ -43,7 +43,7 @@ export default function ShareMessages({
       channel: "story",
       label: "Story caption",
       Icon: Sparkles,
-      text: `Shop ngayon, bayad paunti-unti${who ? `${withMe}` : ""}! 🛍️✨ Walang credit card, libreng sign-up. Tap the link 👉 ${inviteUrl} #ShopNowPayLater #Datung #Hulugan`,
+      text: `Shop ngayon, bayad hulugan${who ? `${withMe}` : ""}! 🛍️✨ Walang credit card, libreng sign-up. Tap the link 👉 ${inviteUrl} #ShopNowPayLater #Datung #Hulugan`,
     },
   ];
 
