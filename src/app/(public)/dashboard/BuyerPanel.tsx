@@ -63,7 +63,7 @@ export default async function BuyerPanel({
     getBuyerProfileDetail(userId),
   ]);
 
-  const stats = buyerStats(loans, todayIso());
+  const stats = buyerStats(loans, todayIso(), config.penalty_rate_monthly);
   const usedPct =
     credit.limitCentavos > 0
       ? Math.round((credit.outstandingCentavos / credit.limitCentavos) * 100)
@@ -156,6 +156,13 @@ export default async function BuyerPanel({
                 {stats.overdueCount} overdue payment
                 {stats.overdueCount === 1 ? "" : "s"}
               </strong>
+              {stats.totalPenaltyCentavos > 0 ? (
+                <>
+                  {" "}
+                  with <strong>{formatPeso(stats.totalPenaltyCentavos)}</strong>{" "}
+                  in penalties accrued ({(config.penalty_rate_monthly * 100).toFixed(0)}%/month)
+                </>
+              ) : null}
               . Settle with your operator to keep your credit healthy.
             </span>
           </div>
@@ -198,10 +205,15 @@ export default async function BuyerPanel({
                   <div className="text-xs text-black/50">
                     {formatDate(p.dueDate)}
                   </div>
+                  {p.penaltyCentavos > 0 ? (
+                    <div className="text-xs font-medium text-red-600">
+                      + {formatPeso(p.penaltyCentavos)} penalty
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2.5">
                   <span className="font-semibold tabular-nums">
-                    {formatPeso(p.amountCentavos)}
+                    {formatPeso(p.amountCentavos + p.penaltyCentavos)}
                   </span>
                   {p.overdue ? (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
@@ -213,7 +225,7 @@ export default async function BuyerPanel({
                     </span>
                   )}
                   <PayInstructions
-                    amountCentavos={p.amountCentavos}
+                    amountCentavos={p.amountCentavos + p.penaltyCentavos}
                     label="Pay"
                     variant="secondary"
                   />

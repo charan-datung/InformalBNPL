@@ -13,6 +13,7 @@ import {
   isTerminal,
 } from "@/lib/loans/state-machine";
 import { STATUS_STYLES, StatusBadge } from "@/lib/loans/status-ui";
+import { installmentPenaltyCentavos } from "@/lib/loans/finance";
 import { formatPeso, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -207,6 +208,14 @@ export default async function LoanDetailPage({
             <tbody>
               {repayments.map((r, i) => {
                 const overdue = r.status !== "paid" && r.due_date < today;
+                const penalty = overdue
+                  ? installmentPenaltyCentavos({
+                      amountCentavos: r.amount_centavos,
+                      dueDate: r.due_date,
+                      todayIso: today,
+                      penaltyRateMonthly: config.penalty_rate_monthly,
+                    })
+                  : 0;
                 return (
                   <tr
                     key={r.id}
@@ -223,7 +232,10 @@ export default async function LoanDetailPage({
                       {r.status === "paid" ? (
                         <span className="text-green-600">paid</span>
                       ) : overdue ? (
-                        <span className="text-red-600">overdue</span>
+                        <span className="text-red-600">
+                          overdue
+                          {penalty > 0 ? ` · +${formatPeso(penalty)} penalty` : ""}
+                        </span>
                       ) : (
                         <span className="text-black/50 dark:text-white/50">
                           pending

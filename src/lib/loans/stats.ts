@@ -1,5 +1,6 @@
 import type { BuyerLoanView, SellerLoanView } from "@/lib/loans/views";
 import { RELEASED_STATUSES } from "@/lib/loans/credit";
+import { installmentPenaltyCentavos } from "@/lib/loans/finance";
 
 /**
  * Pure, unit-testable summaries derived from the buyer/seller dashboard views.
@@ -14,6 +15,8 @@ export type UpcomingPayment = {
   amountCentavos: number;
   dueDate: string;
   overdue: boolean;
+  /** Penalty accrued so far if overdue (0 otherwise). */
+  penaltyCentavos: number;
 };
 
 export type BuyerStats = {
@@ -35,18 +38,25 @@ export type BuyerStats = {
   /** All unpaid installments, soonest first. */
   upcoming: UpcomingPayment[];
   overdueCount: number;
+  /** Total penalty accrued across all overdue installments. */
+  totalPenaltyCentavos: number;
 };
 
-/** `todayIso` is a YYYY-MM-DD date string (used for the overdue comparison). */
+/**
+ * `todayIso` is a YYYY-MM-DD date string (used for the overdue comparison).
+ * `penaltyRateMonthly` accrues a prorated penalty on overdue installments.
+ */
 export function buyerStats(
   loans: BuyerLoanView[],
   todayIso: string,
+  penaltyRateMonthly = 0,
 ): BuyerStats {
   let totalOwed = 0;
   let totalPaid = 0;
   let paidCount = 0;
   let totalCount = 0;
   let onTime = 0;
+  let totalPenalty = 0;
   const upcoming: UpcomingPayment[] = [];
 
   for (const l of loans) {
@@ -61,12 +71,20 @@ export function buyerStats(
         if (r.paid_at && r.paid_at.slice(0, 10) <= r.due_date) onTime += 1;
       } else {
         totalOwed += r.amount_centavos;
+        const penalty = installmentPenaltyCentavos({
+          amountCentavos: r.amount_centavos,
+          dueDate: r.due_date,
+          todayIso,
+          penaltyRateMonthly,
+        });
+        totalPenalty += penalty;
         upcoming.push({
           loanId: l.id,
           sellerName: l.sellerName,
           amountCentavos: r.amount_centavos,
           dueDate: r.due_date,
           overdue: r.due_date < todayIso,
+          penaltyCentavos: penalty,
         });
       }
     }
@@ -88,6 +106,7 @@ export function buyerStats(
     nextPayment: upcoming[0] ?? null,
     upcoming,
     overdueCount: upcoming.filter((u) => u.overdue).length,
+    totalPenaltyCentavos: totalPenalty,
   };
 }
 

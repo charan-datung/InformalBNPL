@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { computeLoanTerms, effectiveAnnualRate } from "@/lib/loans/finance";
+import {
+  computeLoanTerms,
+  effectiveAnnualRate,
+  installmentPenaltyCentavos,
+} from "@/lib/loans/finance";
 
 const START = new Date("2026-06-01T00:00:00Z");
 
@@ -120,6 +124,34 @@ describe("computeLoanTerms", () => {
         interestRateMonthly: 0.035,
       }).installments,
     ).toHaveLength(0);
+  });
+});
+
+describe("installmentPenaltyCentavos", () => {
+  const base = {
+    amountCentavos: 100_000, // ₱1,000
+    dueDate: "2026-06-01",
+    penaltyRateMonthly: 0.05,
+  };
+  it("is zero before and on the due date", () => {
+    expect(
+      installmentPenaltyCentavos({ ...base, todayIso: "2026-05-20" }),
+    ).toBe(0);
+    expect(
+      installmentPenaltyCentavos({ ...base, todayIso: "2026-06-01" }),
+    ).toBe(0);
+  });
+  it("accrues a full month's penalty after 30 days", () => {
+    // 30 days late → 5% of ₱1,000 = ₱50.00
+    expect(
+      installmentPenaltyCentavos({ ...base, todayIso: "2026-07-01" }),
+    ).toBe(5_000);
+  });
+  it("prorates by day", () => {
+    // 15 days late → ~2.5% = ₱25.00
+    expect(
+      installmentPenaltyCentavos({ ...base, todayIso: "2026-06-16" }),
+    ).toBe(2_500);
   });
 });
 

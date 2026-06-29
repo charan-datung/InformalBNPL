@@ -140,6 +140,26 @@ export function effectiveAnnualRate(
   return (lo + hi) / 2;
 }
 
+/**
+ * Penalty accrued on a single overdue installment, prorated by day at the monthly
+ * penalty rate (so it grows continuously until paid, per the Promissory Note).
+ * Returns 0 when not yet overdue. Dates are YYYY-MM-DD (UTC calendar days).
+ */
+export function installmentPenaltyCentavos(input: {
+  amountCentavos: number;
+  dueDate: string;
+  todayIso: string;
+  penaltyRateMonthly: number;
+}): number {
+  const due = Date.parse(`${input.dueDate}T00:00:00Z`);
+  const today = Date.parse(`${input.todayIso}T00:00:00Z`);
+  if (!Number.isFinite(due) || !Number.isFinite(today) || today <= due) return 0;
+  const daysLate = Math.round((today - due) / 86_400_000);
+  return Math.round(
+    input.amountCentavos * input.penaltyRateMonthly * (daysLate / 30),
+  );
+}
+
 export function computeLoanTerms(input: LoanTermsInput): LoanTerms {
   const frequency: PaymentFrequency =
     input.frequency === "biweekly" ? "biweekly" : "monthly";
