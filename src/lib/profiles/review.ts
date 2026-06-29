@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAudit } from "@/lib/audit/log";
 import { getConfig, getConfigValue } from "@/lib/config/system-config";
+import { sendApprovalEmail } from "@/lib/email/notify";
 
 /**
  * Operator review of pending buyer/seller applications. Approval is fully
@@ -59,6 +60,11 @@ export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
       notes: input.notes ?? null,
     },
   });
+
+  // Tell the buyer they're in (best-effort; never blocks the approval).
+  if (input.decision === "approve") {
+    await sendApprovalEmail(admin, input.userId, "buyer");
+  }
 }
 
 export type SellerReviewInput = {
@@ -120,4 +126,9 @@ export async function reviewSeller(input: SellerReviewInput): Promise<void> {
       notes: input.notes ?? null,
     },
   });
+
+  // Tell the seller they're in (best-effort; never blocks the approval).
+  if (input.decision === "approve") {
+    await sendApprovalEmail(admin, input.userId, "seller");
+  }
 }
