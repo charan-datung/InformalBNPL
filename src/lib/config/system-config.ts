@@ -31,8 +31,12 @@ export const CONFIG_DEFAULTS = {
   penalty_rate_monthly: 0.05,
   /** Merchant discount rate (MDR) charged to sellers on each sale (7 = 7%). */
   default_merchant_fee_pct: 7,
-  /** Default rolling-reserve percent withheld from new sellers (10 = 10%). */
-  default_reserve_pct: 10,
+  /** Default rolling-reserve percent withheld from sellers. 0 by default —
+   *  escrow + dispute window + handover code + manual payouts already cover the
+   *  post-payout clawback risk a reserve guards, so held cash is just friction
+   *  for informal sellers. Operators can still set a per-seller reserve on a
+   *  flagged account from the review screen. */
+  default_reserve_pct: 0,
   /** Default buyer credit limit in centavos (500_000 = ₱5,000.00). */
   default_credit_limit_centavos: 500_000,
   /** Hard ceiling (centavos) an operator may approve a buyer at (₱5,000). A
