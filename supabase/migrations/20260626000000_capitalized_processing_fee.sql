@@ -30,15 +30,22 @@ alter table public.loans
   add column if not exists processing_fee_centavos bigint not null default 0;
 
 -- ---- book_loan: compute + store the capitalized processing fee ----------------
--- Drop any prior signature (8-arg pre-frequency, or 9-arg with frequency) and
--- recreate with the added p_processing_fee_pct param. `if exists` makes each a
--- no-op when that signature isn't present.
-drop function if exists public.book_loan(
-  uuid, uuid, bigint, int, numeric, numeric, uuid, text
-);
-drop function if exists public.book_loan(
-  uuid, uuid, bigint, int, numeric, numeric, uuid, text, public.payment_frequency
-);
+-- Drop EVERY existing book_loan overload by looking them up dynamically, so no
+-- statement has to name the payment_frequency enum in a signature (which would
+-- error if the type were somehow absent). Recreated below with the new param.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select oid::regprocedure::text as sig
+    from pg_proc
+    where proname = 'book_loan'
+      and pronamespace = 'public'::regnamespace
+  loop
+    execute 'drop function ' || r.sig;
+  end loop;
+end $$;
 
 create or replace function public.book_loan(
   p_buyer                 uuid,
