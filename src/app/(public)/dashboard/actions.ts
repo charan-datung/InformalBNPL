@@ -120,7 +120,15 @@ export async function checkoutAction(formData: FormData) {
       note: "Escrow held on checkout",
     });
   } catch (e) {
-    redirect(`${BACK}?error=${encodeURIComponent(errorMessage(e))}`);
+    // Don't show the seller's exposure-cap math to the buyer — it's the seller's
+    // limit, not their fault. Map known cases to friendly copy; raw otherwise.
+    const raw = errorMessage(e);
+    const msg = /seller exposure cap/i.test(raw)
+      ? "This seller can't accept new orders right now. Please try again later."
+      : /available credit/i.test(raw)
+        ? "That's more than you can spend right now. Try a smaller amount."
+        : raw;
+    redirect(`${BACK}?error=${encodeURIComponent(msg)}`);
   }
   redirect(BACK);
 }

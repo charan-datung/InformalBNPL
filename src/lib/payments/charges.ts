@@ -39,6 +39,28 @@ const TTL_MINUTES = 30;
 
 export class ChargeError extends Error {}
 
+/**
+ * Translate a raw booking error into a buyer-friendly message. The seller's
+ * exposure cap being full is the SELLER's limit, not the buyer's fault, so we
+ * never show the raw cap math to the buyer (the real reason is logged for ops).
+ */
+function friendlyChargeError(e: unknown): ChargeError {
+  const msg = e instanceof Error ? e.message : "";
+  if (/seller exposure cap/i.test(msg)) {
+    return new ChargeError(
+      "This seller can't accept new orders right now. Please try again later or contact the seller.",
+    );
+  }
+  if (/available credit/i.test(msg)) {
+    return new ChargeError(
+      "This is more than your available credit right now. Pay down a loan and try again.",
+    );
+  }
+  return e instanceof ChargeError
+    ? e
+    : new ChargeError("We couldn't complete this payment. Please try again.");
+}
+
 function newToken(): string {
   return randomBytes(12).toString("base64url"); // ~16 url-safe chars
 }
@@ -263,7 +285,8 @@ export async function authorizeCharge(input: {
       .from("payment_requests")
       .update({ status: "pending", buyer_user_id: null, authorized_at: null })
       .eq("id", charge.id);
-    throw e instanceof Error ? e : new ChargeError("Authorization failed.");
+    captureException(e, { where: "authorizeCharge.book", chargeId: charge.id });
+    throw friendlyChargeError(e);
   }
 }
 

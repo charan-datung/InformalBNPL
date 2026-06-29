@@ -17,6 +17,7 @@ import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
 import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
+import ScanToPay from "@/app/(public)/dashboard/ScanToPay";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
 import Card from "@/components/ui/Card";
@@ -108,6 +109,9 @@ export default async function BuyerPanel({
             )}
           </div>
         </div>
+
+        {/* Primary action: scan a seller's QR or paste their pay link. */}
+        <ScanToPay />
 
         {/* Headline numbers */}
         <StatGrid>
