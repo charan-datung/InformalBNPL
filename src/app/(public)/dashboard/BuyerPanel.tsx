@@ -20,6 +20,7 @@ import Checkout from "@/app/(public)/dashboard/Checkout";
 import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
+import PasskeySetup from "@/components/auth/PasskeySetup";
 import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
 import RepaymentPlan from "@/app/(public)/dashboard/RepaymentPlan";
 import ScanToPay from "@/app/(public)/dashboard/ScanToPay";
@@ -458,6 +459,7 @@ export default async function BuyerPanel({
           Your credit limit is set during underwriting. Need a higher limit? Ask
           your operator.
         </p>
+        <PasskeySetup />
         <SupportForm context="buyer" defaultContact={account.contact} />
       </section>
     </div>

@@ -8,6 +8,7 @@ import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
 import Card from "@/components/ui/Card";
 import Callout from "@/components/ui/Callout";
 import { Field, TextInput } from "@/components/ui/Field";
+import PasskeySignIn from "@/components/auth/PasskeySignIn";
 
 export default async function LoginPage({
   searchParams,
@@ -69,6 +70,14 @@ export default async function LoginPage({
             Log in
           </SubmitButton>
         </form>
+
+        <div className="my-4 flex items-center gap-3 text-xs text-black/35">
+          <span className="h-px flex-1 bg-black/10" />
+          or
+          <span className="h-px flex-1 bg-black/10" />
+        </div>
+
+        <PasskeySignIn />
       </Card>
 
       <p className="text-center text-sm text-black/55">

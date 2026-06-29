@@ -21,6 +21,7 @@ import PayoutTracker from "@/app/(public)/dashboard/PayoutTracker";
 import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
+import PasskeySetup from "@/components/auth/PasskeySetup";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
 import Card from "@/components/ui/Card";
@@ -467,6 +468,7 @@ export default async function SellerPanel({
           Your trust tier and selling limit are set by Datung and rise as you
           complete clean orders.
         </p>
+        <PasskeySetup />
         <SupportForm context="seller" defaultContact={account.contact} />
       </div>
     </section>
