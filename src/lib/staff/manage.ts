@@ -45,6 +45,60 @@ export async function listAllUsers(): Promise<UserRow[]> {
   }));
 }
 
+/**
+ * Create a brand-new staff login (admin only). Used to stand up a second
+ * operator/admin so maker-checker has two distinct people. Creates the auth user
+ * with the email pre-confirmed (they can sign in immediately), relies on the
+ * handle_new_user trigger to mirror the public.users row, then stamps the name +
+ * staff_role. The admin shares the email + temporary password out-of-band.
+ */
+export async function createStaffMember(input: {
+  email: string;
+  name: string;
+  password: string;
+  role: "operator" | "admin";
+  actorUserId: string;
+}): Promise<void> {
+  const email = input.email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+  if (input.password.length < 8) {
+    throw new Error("Temporary password must be at least 8 characters.");
+  }
+  if (!input.name.trim()) throw new Error("Enter a name.");
+  if (input.role !== "operator" && input.role !== "admin") {
+    throw new Error("Pick a role.");
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: { name: input.name.trim() },
+  });
+  if (error) throw new Error(error.message);
+  const newId = data.user?.id;
+  if (!newId) throw new Error("Could not create the account.");
+
+  // The on_auth_user_created trigger mirrors the public.users row; upsert is a
+  // belt-and-braces in case of timing, and stamps the staff role + name.
+  const { error: upErr } = await admin.from("users").upsert(
+    { id: newId, name: input.name.trim(), contact: email, staff_role: input.role },
+    { onConflict: "id" },
+  );
+  if (upErr) throw new Error(upErr.message);
+
+  await recordAudit(admin, {
+    actorUserId: input.actorUserId,
+    action: "staff_member_created",
+    entityType: "user",
+    entityId: newId,
+    detail: { email, role: input.role },
+  });
+}
+
 export async function updateStaffRole(input: {
   userId: string;
   role: StaffRoleValue;

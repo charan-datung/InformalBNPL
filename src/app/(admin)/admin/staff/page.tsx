@@ -1,6 +1,9 @@
 import { requireAdminOrRedirect } from "@/lib/auth/staff";
 import { listAllUsers } from "@/lib/staff/manage";
-import { updateStaffRoleAction } from "@/app/(admin)/admin/actions";
+import {
+  updateStaffRoleAction,
+  addStaffMemberAction,
+} from "@/app/(admin)/admin/actions";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -8,17 +11,19 @@ export const dynamic = "force-dynamic";
 export default async function StaffPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   const me = await requireAdminOrRedirect();
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
   const users = await listAllUsers();
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Staff & users ({users.length})</h1>
       <p className="text-sm text-black/60 dark:text-white/60">
-        Promote or demote staff roles. You can&apos;t change your own role.
+        Promote or demote staff roles, or add a new staff login. You can&apos;t
+        change your own role. Maker-checker payouts need two different staff
+        members, so add a second operator/admin here.
       </p>
 
       {error ? (
@@ -26,6 +31,78 @@ export default async function StaffPage({
           {error}
         </p>
       ) : null}
+
+      {ok ? (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950/40 dark:text-green-300">
+          {ok}
+        </p>
+      ) : null}
+
+      {/* Add a brand-new staff login */}
+      <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <summary className="cursor-pointer text-sm font-medium">
+          + Add a staff member
+        </summary>
+        <form
+          action={addStaffMemberAction}
+          className="mt-3 grid gap-3 sm:grid-cols-2"
+        >
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Full name</span>
+            <input
+              name="name"
+              required
+              placeholder="e.g. Maria Santos"
+              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Email</span>
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="checker@datung.io"
+              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Temporary password</span>
+            <input
+              name="password"
+              type="text"
+              required
+              minLength={8}
+              placeholder="at least 8 characters"
+              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Role</span>
+            <select
+              name="role"
+              defaultValue="operator"
+              className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
+            >
+              <option value="operator">operator</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+            >
+              Create account
+            </button>
+            <p className="mt-1.5 text-xs text-black/45 dark:text-white/45">
+              The account is ready to use immediately. Share the email +
+              temporary password with them; they can change it later via Forgot
+              password.
+            </p>
+          </div>
+        </form>
+      </details>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

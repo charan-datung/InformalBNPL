@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/staff";
 import { updateSystemConfig } from "@/lib/config/update";
 import { CONFIG_DEFAULTS, type ConfigKey } from "@/lib/config/system-config";
-import { updateStaffRole, type StaffRoleValue } from "@/lib/staff/manage";
+import {
+  updateStaffRole,
+  createStaffMember,
+  type StaffRoleValue,
+} from "@/lib/staff/manage";
 import { adminOverride } from "@/lib/loans/mutations";
 import { isLoanStatus } from "@/lib/loans/state-machine";
 
@@ -52,6 +56,27 @@ export async function updateStaffRoleAction(formData: FormData) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
   redirect(back);
+}
+
+export async function addStaffMemberAction(formData: FormData) {
+  const back = "/admin/staff";
+  const email = String(formData.get("email") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const roleRaw = String(formData.get("role") ?? "");
+  const role = roleRaw === "admin" ? "admin" : "operator";
+
+  try {
+    const admin = await requireAdmin();
+    await createStaffMember({ email, name, password, role, actorUserId: admin.id });
+  } catch (e) {
+    redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
+  }
+  redirect(
+    `${back}?ok=${encodeURIComponent(
+      `Created ${role} account for ${email.trim().toLowerCase()}. Share the email + temporary password so they can log in.`,
+    )}`,
+  );
 }
 
 export async function adminOverrideAction(formData: FormData) {
