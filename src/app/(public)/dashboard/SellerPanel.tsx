@@ -101,8 +101,14 @@ function NewSale() {
               inputMode="numeric"
             />
           </Field>
-          <Field label="What for?" optional>
-            <TextInput type="text" name="memo" placeholder="e.g. 2 ukay bundles" />
+          <Field label="What for?">
+            <TextInput
+              type="text"
+              name="memo"
+              required
+              maxLength={120}
+              placeholder="e.g. 2 ukay bundles"
+            />
           </Field>
         </div>
         <fieldset className="grid gap-2 sm:grid-cols-2">

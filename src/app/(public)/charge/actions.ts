@@ -23,7 +23,7 @@ export async function createChargeAction(formData: FormData) {
   }
 
   const amountPesos = Number(formData.get("amount_pesos") ?? 0);
-  const memo = String(formData.get("memo") ?? "");
+  const memo = String(formData.get("memo") ?? "").trim();
   const fulfillment: Fulfillment =
     String(formData.get("fulfillment") ?? "in_person") === "ship"
       ? "ship"
@@ -31,6 +31,12 @@ export async function createChargeAction(formData: FormData) {
 
   if (!Number.isFinite(amountPesos) || amountPesos <= 0) {
     redirect("/dashboard?error=" + encodeURIComponent("Enter a valid amount."));
+  }
+  if (!memo) {
+    redirect(
+      "/dashboard?error=" +
+        encodeURIComponent("Add what the sale is for so the buyer knows what they're paying."),
+    );
   }
 
   let id: string;

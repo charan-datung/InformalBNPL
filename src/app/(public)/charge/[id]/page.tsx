@@ -110,18 +110,51 @@ export default async function ChargePage({
           </p>
         </>
       ) : status === "authorized" ? (
-        <Card className="space-y-2 p-6 text-center">
-          <CheckCircle2 className="mx-auto size-12 text-accent-500" />
-          <div className="text-xl font-semibold text-accent-800">Approved</div>
-          <p className="text-sm text-black/55">
-            {formatPeso(charge.amount_centavos)} approved.{" "}
-            {charge.fulfillment === "ship"
-              ? "Payment kept safe — send the order, then mark it shipped to get paid."
-              : "Payment kept safe — hand the item over, then enter the buyer's 6-digit code on your orders screen to get paid."}
-          </p>
+        <Card className="space-y-3 p-6">
+          <div className="text-center">
+            <CheckCircle2 className="mx-auto size-12 text-accent-500" />
+            <div className="text-xl font-semibold text-accent-800">Approved</div>
+            <p className="text-sm text-black/55">
+              {formatPeso(charge.amount_centavos)} is now kept safe by Datung.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-black/[0.07] bg-black/[0.015] p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
+              What to do next
+            </div>
+            <ol className="mt-2 space-y-1.5">
+              {(charge.fulfillment === "ship"
+                ? [
+                    "Pack and send the order to the buyer.",
+                    "Open the order on your dashboard and tap “Mark as shipped” (a photo of the parcel is required).",
+                    "You get paid after the buyer confirms delivery — or automatically after the dispute window.",
+                  ]
+                : [
+                    "Hand the item to the buyer now.",
+                    "Ask them to read the 6-digit code on their Datung screen.",
+                    "Enter that code on the order in your dashboard to release your payout.",
+                  ]
+              ).map((step, i) => (
+                <li key={i} className="flex gap-2 text-[13px] text-black/70">
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-700">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            {charge.fulfillment === "in_person" ? (
+              <p className="mt-2.5 text-[11px] text-black/45">
+                Don&apos;t enter a code until the buyer has the item in hand — the
+                code is your proof the hand-over really happened.
+              </p>
+            ) : null}
+          </div>
+
           <Link
             href="/dashboard"
-            className={buttonClasses({ variant: "primary", size: "md", className: "mt-2 w-full" })}
+            className={buttonClasses({ variant: "primary", size: "md", className: "w-full" })}
           >
             Go to your orders
           </Link>

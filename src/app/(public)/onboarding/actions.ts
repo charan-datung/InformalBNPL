@@ -240,8 +240,10 @@ export async function applyAsSeller(formData: FormData) {
   const lat = parseFloat(String(formData.get("storefront_lat") ?? ""));
   const lng = parseFloat(String(formData.get("storefront_lng") ?? ""));
 
-  if (!name || !contact || !socialHandle) {
-    sellerError("Name, contact, and social handle are required.");
+  // Social handle is optional — we're onboarding physical stores, whose proof of
+  // selling is their stall location + photos, not an online presence.
+  if (!name || !contact) {
+    sellerError("Name and contact are required.");
   }
   if (!idType) sellerError("Select your government ID type.");
   if (!storefrontAddress) sellerError("Tell us where you sell.");
@@ -316,7 +318,7 @@ export async function applyAsSeller(formData: FormData) {
   const { error } = await admin.from("seller_profiles").upsert(
     {
       user_id: userId,
-      social_handle: socialHandle,
+      social_handle: socialHandle || null,
       marketplace_url: marketplaceUrl || null,
       selling_since: sellingSince || null,
       id_type: idType,

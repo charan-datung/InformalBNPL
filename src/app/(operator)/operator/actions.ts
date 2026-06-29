@@ -81,8 +81,11 @@ export async function recordRepaymentAction(formData: FormData) {
 }
 
 /**
- * Operator records a manual buyer-receipt check (call/message the buyer to
- * verify delivery before releasing escrow). Logged as a `note` audit row.
+ * Operator confirms (or flags) whether the buyer received the item, after
+ * contacting them. On "yes" for a shipped order this ADVANCES the loan to
+ * delivered_confirmed — the same state the buyer reaches by self-confirming —
+ * so the seller's payout can be released. On "no" it records a note only.
+ * Always writes an audit trail entry; redirects with ?ok=… for visible feedback.
  */
 export async function recordReceiptCheckAction(formData: FormData) {
   const staff = await requireStaff();
@@ -96,6 +99,28 @@ export async function recordReceiptCheckAction(formData: FormData) {
   }
 
   try {
+    // Read current status to decide whether we can advance the order.
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+    const { data: loan } = await admin
+      .from("loans")
+      .select("status")
+      .eq("id", loanId)
+      .maybeSingle();
+
+    if (received === "yes" && loan?.status === "shipped") {
+      // Operator-confirmed receipt → delivered_confirmed (release-ready). The
+      // note (who confirmed + any details) rides on the transition's audit row.
+      await transitionLoan({
+        loanId,
+        to: "delivered_confirmed",
+        actorUserId: staff.id,
+        note: `Operator confirmed buyer received the item.${notes ? ` ${notes}` : ""}`,
+      });
+      redirect(`${back}?ok=${encodeURIComponent("Receipt confirmed — this order is ready to release.")}`);
+    }
+
+    // Otherwise (problem reported, or not in a shippable state) just log a note.
     await recordReceiptCheck({
       loanId,
       received: received as "yes" | "no",
@@ -105,7 +130,9 @@ export async function recordReceiptCheckAction(formData: FormData) {
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
-  redirect(back);
+  redirect(
+    `${back}?ok=${encodeURIComponent("Receipt check recorded in the audit trail.")}`,
+  );
 }
 
 export async function reviewBuyerAction(formData: FormData) {

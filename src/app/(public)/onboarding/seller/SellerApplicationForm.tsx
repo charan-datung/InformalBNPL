@@ -135,10 +135,13 @@ export default function SellerApplicationForm({
             title="Where you sell"
             subtitle="Your selling presence — online and on the ground."
           />
-          <Field label="Social / marketplace handle(s)">
+          <Field
+            label="Social / marketplace handle(s)"
+            optional
+            hint="Only if you sell online too — leave blank if you're a physical store."
+          >
             <TextInput
               name="social_handle"
-              required
               placeholder="@yourshop, fb.com/yourshop"
             />
           </Field>

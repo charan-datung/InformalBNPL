@@ -24,10 +24,10 @@ export default async function LoanDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
   const { loan, events, repayments, shipmentProofUrl } =
     await getLoanWithEvents(id);
   if (!loan) notFound();
@@ -92,6 +92,12 @@ export default async function LoanDetailPage({
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
+        </p>
+      ) : null}
+
+      {ok ? (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950/40 dark:text-green-300">
+          {ok}
         </p>
       ) : null}
 
@@ -161,7 +167,10 @@ export default async function LoanDetailPage({
           ) : null}
           <p className="text-xs text-black/50 dark:text-white/50">
             Call or message the buyer to confirm they actually received the item,
-            then record the result. Logged to the audit trail below.
+            then record the result.{" "}
+            {loan.status === "shipped"
+              ? "Confirming receipt here marks the order delivered (release-ready) — the same as the buyer tapping “I received it.”"
+              : "This is logged to the audit trail."}
           </p>
           <form
             action={recordReceiptCheckAction}
@@ -173,7 +182,11 @@ export default async function LoanDetailPage({
               defaultValue="yes"
               className="rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
             >
-              <option value="yes">Buyer received it</option>
+              <option value="yes">
+                {loan.status === "shipped"
+                  ? "Buyer received it → mark delivered"
+                  : "Buyer received it"}
+              </option>
               <option value="no">Buyer did NOT receive it</option>
             </select>
             <input
