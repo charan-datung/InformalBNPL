@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { signUpAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { LogoMark } from "@/components/brand/Logo";
-import Button from "@/components/ui/Button";
+import { buttonClasses } from "@/components/ui/Button";
+import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
 import Card from "@/components/ui/Card";
 import Callout from "@/components/ui/Callout";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -119,9 +120,12 @@ export default async function SignupPage({
               placeholder="••••••••"
             />
           </Field>
-          <Button type="submit" size="lg" className="w-full">
+          <SubmitButton
+            pendingText="Creating account…"
+            className={buttonClasses({ size: "lg", className: "w-full" })}
+          >
             Create account
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
 

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { signInAction } from "@/app/(public)/auth/actions";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { LogoMark } from "@/components/brand/Logo";
-import Button from "@/components/ui/Button";
+import { buttonClasses } from "@/components/ui/Button";
+import SubmitButton from "@/app/(public)/onboarding/SubmitButton";
 import Card from "@/components/ui/Card";
 import Callout from "@/components/ui/Callout";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -61,9 +62,12 @@ export default async function LoginPage({
               Forgot password?
             </Link>
           </div>
-          <Button type="submit" size="lg" className="w-full">
+          <SubmitButton
+            pendingText="Logging in…"
+            className={buttonClasses({ size: "lg", className: "w-full" })}
+          >
             Log in
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
 
