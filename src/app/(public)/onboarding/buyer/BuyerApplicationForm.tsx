@@ -263,9 +263,9 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
             title="Confirm & consent"
             subtitle="Almost done — review and submit."
           />
-          <Callout tone="success" title="No need to ask for an amount">
-            Once you&apos;re approved, you get a spending limit to start. Pay on
-            time and it grows over time.
+          <Callout tone="success" title="You don't pick a limit yourself">
+            Once you&apos;re approved, you&apos;ll get a starting spending limit.
+            Pay on time and it grows.
           </Callout>
           <Callout tone="info">
             We&apos;ll review your application and text you as soon as

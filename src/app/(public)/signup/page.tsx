@@ -110,12 +110,12 @@ export default async function SignupPage({
               placeholder="+63 9XX XXX XXXX"
             />
           </Field>
-          <Field label="Password" hint="At least 6 characters.">
+          <Field label="Password" hint="At least 8 characters.">
             <TextInput
               name="password"
               type="password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
               placeholder="••••••••"
             />

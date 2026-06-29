@@ -1,7 +1,7 @@
 {
-  "name": "Datung — Buy now, pay later",
+  "name": "Datung — Shop now, pay over time",
   "short_name": "Datung",
-  "description": "BNPL platform for the Philippines, built for informal merchants. Records loan and escrow state only.",
+  "description": "Shop from trusted Filipino sellers and pay over time. Built for how Filipinos really buy and sell.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

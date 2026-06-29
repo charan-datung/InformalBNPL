@@ -110,7 +110,7 @@ export default async function ChargePage({
           <p className="text-sm text-black/55">
             {formatPeso(charge.amount_centavos)} approved.{" "}
             {charge.fulfillment === "ship"
-              ? "Payment kept safe — ship the order and mark it shipped to get paid."
+              ? "Payment kept safe — send the order, then mark it shipped to get paid."
               : "You can hand over the goods now."}
           </p>
           <Link

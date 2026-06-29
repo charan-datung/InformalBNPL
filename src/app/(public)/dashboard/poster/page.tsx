@@ -1,6 +1,7 @@
 import { qrSvg as makeQrSvg } from "@/lib/qr";
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
+import { getAccountProfile } from "@/lib/profiles/account";
 import { getRequestOrigin } from "@/lib/http/origin";
 import { Wordmark } from "@/components/brand/Logo";
 import PrintButton from "@/app/(public)/dashboard/poster/PrintButton";
@@ -22,13 +23,10 @@ export default async function PosterPage() {
   const inviteUrl = `${origin}/signup?ref=${caps.userId}`;
   const qrSvg = await makeQrSvg(inviteUrl);
 
-  const sellerName = caps.email ?? "Your Datung seller";
+  const account = await getAccountProfile(caps.userId, caps.email);
+  const sellerName = account.name?.trim() || "a Datung seller";
 
-  const steps = [
-    "Scan the code",
-    "Get approved",
-    "Buy now, pay later",
-  ];
+  const steps = ["Scan the code", "Get approved", "Pay in small amounts"];
 
   return (
     <div className="min-h-screen w-full bg-white">
@@ -50,7 +48,7 @@ export default async function PosterPage() {
           </div>
 
           <h1 className="mt-8 text-5xl font-bold tracking-tight text-brand-900 sm:text-6xl">
-            Shop now, pay later
+            Shop now, pay over time
           </h1>
           <p className="mt-3 text-lg text-black/60">
             Scan to sign up for Datung credit

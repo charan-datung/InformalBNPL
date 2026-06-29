@@ -214,8 +214,8 @@ export default async function SellerPanel({
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                       <p className="font-medium">Hand over in person</p>
                       <p className="mt-0.5 text-xs text-amber-700/90">
-                        You&apos;ve been paid into escrow. Give the item to{" "}
-                        <strong>{l.buyerName}</strong>, then ask them to read the
+                        Your payment is being kept safe by Datung. Give the item
+                        to <strong>{l.buyerName}</strong>, then ask them to read the
                         6-digit code on their Datung screen and type it here to
                         release. Don&apos;t enter a code before handing the item
                         over.

@@ -29,7 +29,7 @@ export function approvalEmail(input: {
       html: layout(
         `You're approved, ${who}! 🎉`,
         `<p>Your Datung buyer account is approved. You can now shop from Datung
-         sellers and pay in small installments — just scan a seller's QR or open
+         sellers and pay in installments — just scan a seller's QR or open
          their pay link to check out.</p>`,
       ),
     };
