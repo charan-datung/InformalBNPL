@@ -60,6 +60,8 @@ async function keyEventDates(
 export type RepaymentLite = {
   id: string;
   amount_centavos: number;
+  principal_centavos: number | null;
+  interest_centavos: number | null;
   due_date: string;
   paid_at: string | null;
   status: string;
@@ -74,7 +76,9 @@ async function repaymentsByLoan(
   const admin = createAdminClient();
   const { data } = await admin
     .from("repayments")
-    .select("id, loan_id, amount_centavos, due_date, paid_at, status")
+    .select(
+      "id, loan_id, amount_centavos, principal_centavos, interest_centavos, due_date, paid_at, status",
+    )
     .in("loan_id", loanIds)
     .order("due_date", { ascending: true });
 

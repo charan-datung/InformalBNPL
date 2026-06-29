@@ -8,6 +8,8 @@ function rep(
   return {
     id: "r",
     amount_centavos: 0,
+    principal_centavos: null,
+    interest_centavos: null,
     due_date: "2026-06-01",
     paid_at: null,
     status: "scheduled",

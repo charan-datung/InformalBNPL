@@ -17,6 +17,7 @@ import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
 import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
+import RepaymentPlan from "@/app/(public)/dashboard/RepaymentPlan";
 import ScanToPay from "@/app/(public)/dashboard/ScanToPay";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
@@ -267,8 +268,6 @@ export default async function BuyerPanel({
             const reportOpen = reportDeadline
               ? new Date() < reportDeadline
               : false;
-            const plan = l.repayments.filter((r) => r.status !== "waived");
-            const paid = plan.filter((r) => r.status === "paid").length;
 
             return (
               <Card key={l.id} className="space-y-3 text-sm">
@@ -362,55 +361,12 @@ export default async function BuyerPanel({
                   </div>
                 ) : null}
 
-                {/* Repayment schedule — collapsed to keep the list scannable */}
-                {plan.length > 0 ? (
-                  <details className="group border-t border-black/5 pt-3">
-                    <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold text-black/55 hover:text-black/80">
-                      <span>Payment plan</span>
-                      <span className="font-medium text-black/45">
-                        {paid}/{plan.length} paid
-                      </span>
-                    </summary>
-                    <table className="mt-2 w-full">
-                      <tbody>
-                        {plan.map((r, i) => {
-                          const overdue =
-                            r.status !== "paid" && r.due_date < todayIso();
-                          return (
-                            <tr
-                              key={r.id}
-                              className="border-b border-black/5 last:border-0"
-                            >
-                              <td className="py-1 pr-3 text-black/40">{i + 1}</td>
-                              <td className="py-1 pr-3 tabular-nums">
-                                {formatDate(r.due_date)}
-                              </td>
-                              <td className="py-1 pr-3 text-right font-medium tabular-nums">
-                                {formatPeso(r.amount_centavos)}
-                              </td>
-                              <td className="py-1 text-right">
-                                {r.status === "paid" ? (
-                                  <span className="font-medium text-accent-700">
-                                    paid
-                                  </span>
-                                ) : overdue ? (
-                                  <span className="font-medium text-red-600">
-                                    late
-                                  </span>
-                                ) : (
-                                  <span className="text-black/50">due</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    <p className="mt-1 text-[11px] text-black/40">
-                      Payments are recorded by the operator when received.
-                    </p>
-                  </details>
-                ) : null}
+                {/* Repayment plan — progress, splits, inline pay on next due */}
+                <RepaymentPlan
+                  repayments={l.repayments}
+                  todayIso={todayIso()}
+                  penaltyRateMonthly={config.penalty_rate_monthly}
+                />
 
                 <Link
                   href={`/loan/${l.id}/documents`}
