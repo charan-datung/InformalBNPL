@@ -1,4 +1,4 @@
-import { listSellerLoans } from "@/lib/loans/views";
+import { listSellerLoans, type SellerLoanView } from "@/lib/loans/views";
 import { getSellerExposure } from "@/lib/loans/credit";
 import { sellerStats } from "@/lib/loans/stats";
 import {
@@ -7,7 +7,7 @@ import {
 } from "@/lib/profiles/account";
 import MarketingKit from "@/components/invite/MarketingKit";
 import ReferSellers from "@/components/invite/ReferSellers";
-import { getConfig } from "@/lib/config/system-config";
+import { getConfig, type SystemConfig } from "@/lib/config/system-config";
 import {
   markShippedAction,
   confirmHandoverAction,
@@ -21,7 +21,8 @@ import PayoutTracker from "@/app/(public)/dashboard/PayoutTracker";
 import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
-import { formatPeso, formatDate } from "@/lib/format";
+import { StatusBadge } from "@/lib/loans/status-ui";
+import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
 import Card from "@/components/ui/Card";
 import { Stat, StatGrid } from "@/components/ui/Stat";
 import { Field, TextInput } from "@/components/ui/Field";
@@ -36,14 +37,46 @@ import {
   User,
   BadgeCheck,
   Megaphone,
+  ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
 
 /**
- * Seller dashboard. Leads with the money picture (gross sales, pending payout,
- * paid out, this month), then instant checkout via Datung Pay, the order list
- * (each with its payout tracker), growth tools, and an editable storefront +
- * account profile.
+ * Seller dashboard. Organised into zones: a "get paid" hero (money on the way +
+ * the next expected payout), the primary New Sale action, a slim numbers row,
+ * orders that need the seller to act surfaced first, the full order list, growth
+ * tools, and an editable storefront + account profile.
  */
+
+/** When the seller can expect this order's payout, and whether it's committed. */
+function payoutInfo(
+  l: SellerLoanView,
+  config: SystemConfig,
+): { payoutDate: string | null; isEstimate: boolean } {
+  if (l.releasedAt) {
+    return { payoutDate: addDays(l.releasedAt, config.seller_payout_days), isEstimate: false };
+  }
+  if (l.deliveredAt) {
+    return { payoutDate: addDays(l.deliveredAt, config.seller_payout_days), isEstimate: true };
+  }
+  if (l.shippedAt) {
+    return {
+      payoutDate: addDays(
+        l.shippedAt,
+        config.auto_release_days + config.seller_payout_days,
+      ),
+      isEstimate: true,
+    };
+  }
+  return { payoutDate: null, isEstimate: true };
+}
+
+function addDays(iso: string | null, days: number): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
 
 /** Datung Pay: mint a Payment Request (QR + exclusive link) for a sale. */
 function NewSale() {
@@ -75,8 +108,18 @@ function NewSale() {
         <fieldset className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["in_person", "In-person", "Hand over now", true],
-              ["ship", "Ship", "Get paid after it's delivered", false],
+              [
+                "in_person",
+                "In-person",
+                "You hand it over now. Get paid once the buyer enters their code.",
+                true,
+              ],
+              [
+                "ship",
+                "Ship",
+                "You ship it. Get paid after it's delivered.",
+                false,
+              ],
             ] as [string, string, string, boolean][]
           ).map(([value, label, desc, checked]) => (
             <label
@@ -105,11 +148,93 @@ function NewSale() {
   );
 }
 
-function addDays(iso: string | null, days: number): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
+/** One order, with its payout tracker and any fulfillment action the seller owes. */
+function OrderCard({
+  l,
+  config,
+}: {
+  l: SellerLoanView;
+  config: SystemConfig;
+}) {
+  const { payoutDate, isEstimate } = payoutInfo(l, config);
+
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <StatusBadge status={l.status} audience="customer" />
+        <span className="font-semibold">{formatPeso(l.ticket_centavos)}</span>
+        <span className="text-black/55">
+          · {l.tenor_months} months · from {l.buyerName}
+        </span>
+        <span className="ml-auto text-xs text-black/40">
+          {formatDateTime(l.created_at)}
+        </span>
+      </div>
+
+      <PayoutTracker
+        status={l.status}
+        netCentavos={l.netCentavos}
+        feeCentavos={l.feeCentavos}
+        merchantFeePct={l.merchant_fee_pct}
+        payoutDate={payoutDate}
+        payoutIsEstimate={isEstimate}
+      />
+
+      {l.status === "escrow_held" && l.handoverPending ? (
+        <div className="space-y-2.5 border-t border-black/5 pt-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+            <p className="font-medium">Hand over in person</p>
+            <p className="mt-0.5 text-xs text-amber-700/90">
+              Your payment is being kept safe by Datung. Give the item to{" "}
+              <strong>{l.buyerName}</strong>, then ask them to read the 6-digit
+              code on their Datung screen and type it here to release.
+              Don&apos;t enter a code before handing the item over.
+            </p>
+          </div>
+          <form
+            action={confirmHandoverAction}
+            className="flex flex-wrap items-end gap-2"
+          >
+            <input type="hidden" name="loanId" value={l.id} />
+            <Field label="Buyer's 6-digit code">
+              <TextInput
+                name="code"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={6}
+                pattern="[0-9]*"
+                placeholder="123456"
+                required
+                className="w-32 tracking-[0.3em]"
+              />
+            </Field>
+            <button
+              type="submit"
+              className={buttonClasses({ className: "bg-accent-600 hover:bg-accent-700" })}
+            >
+              Confirm hand-over
+            </button>
+          </form>
+        </div>
+      ) : l.status === "escrow_held" ? (
+        <div className="space-y-2 border-t border-black/5 pt-3">
+          <p className="text-sm text-black/65">
+            Payment kept safe. Ship the order, then upload proof to start the
+            payout clock.
+          </p>
+          <PhotoActionForm
+            action={markShippedAction}
+            loanId={l.id}
+            fileName="proof"
+            fileLabel="Proof of shipment (required)"
+            fileHint="A photo of the parcel or hand-off. On a phone this opens the camera."
+            submitLabel="Mark as shipped"
+            pendingLabel="Submitting…"
+          />
+        </div>
+      ) : null}
+    </Card>
+  );
 }
 
 export default async function SellerPanel({
@@ -129,150 +254,121 @@ export default async function SellerPanel({
 
   const stats = sellerStats(loans, new Date().toISOString().slice(0, 7));
 
+  // Orders that need the seller to do something (hand over / ship) come first.
+  const actionNeeded = loans.filter((l) => l.status === "escrow_held");
+  const rest = loans.filter((l) => l.status !== "escrow_held");
+
+  // The soonest expected payout across in-flight orders, for the hero.
+  const nextPayout = loans
+    .filter((l) => l.status !== "settled" && l.status !== "refunded")
+    .map((l) => ({ l, ...payoutInfo(l, config) }))
+    .filter((x) => x.payoutDate)
+    .sort((a, b) => (a.payoutDate! < b.payoutDate! ? -1 : 1))[0];
+
   return (
     <section className="space-y-8">
-      {/* Money picture */}
-      <StatGrid>
-        <Stat
-          label="Gross sales"
-          value={formatPeso(stats.grossSalesCentavos)}
-          hint={`${stats.totalOrders} order${stats.totalOrders === 1 ? "" : "s"}`}
-          icon={TrendingUp}
-        />
-        <Stat
-          label="Pending payout"
-          tone="brand"
-          value={formatPeso(stats.pendingPayoutCentavos)}
-          hint={`${stats.activeOrders} in progress`}
-          icon={Wallet}
-        />
-        <Stat
-          label="Paid out"
-          tone="accent"
-          value={formatPeso(stats.paidOutCentavos)}
-          hint={`${stats.completedOrders} completed`}
-          icon={Banknote}
-        />
-        <Stat
-          label="This month"
-          value={formatPeso(stats.thisMonthSalesCentavos)}
-          hint="gross sales"
-          icon={Package}
-        />
-      </StatGrid>
+      {/* Zone 1 — Get paid */}
+      <section className="space-y-4">
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-sm shadow-brand-950/20">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/60">
+              On the way to you
+            </span>
+            <span className="text-xs text-white/60">
+              {stats.activeOrders} order{stats.activeOrders === 1 ? "" : "s"} in
+              progress
+            </span>
+          </div>
+          <div className="mt-1 text-4xl font-bold tabular-nums">
+            {formatPeso(stats.pendingPayoutCentavos)}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/70">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5" />
+              Datung holds the buyer&apos;s payment until the order is delivered.
+            </span>
+            {nextPayout?.payoutDate ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/90">
+                <CalendarClock className="size-3" /> Next payout ~{" "}
+                {formatDate(nextPayout.payoutDate)}
+              </span>
+            ) : null}
+          </div>
+        </div>
 
-      <NewSale />
+        {/* Primary action */}
+        <NewSale />
+
+        {/* Slim numbers */}
+        <StatGrid>
+          <Stat
+            label="Gross sales"
+            value={formatPeso(stats.grossSalesCentavos)}
+            hint={`${stats.totalOrders} order${stats.totalOrders === 1 ? "" : "s"}`}
+            icon={TrendingUp}
+          />
+          <Stat
+            label="Paid out"
+            tone="accent"
+            value={formatPeso(stats.paidOutCentavos)}
+            hint={`${stats.completedOrders} completed`}
+            icon={Banknote}
+          />
+          <Stat
+            label="This month"
+            value={formatPeso(stats.thisMonthSalesCentavos)}
+            hint="gross sales"
+            icon={Wallet}
+          />
+        </StatGrid>
+      </section>
+
+      {/* Zone 2 — Orders that need the seller to act */}
+      {actionNeeded.length > 0 ? (
+        <div className="space-y-3">
+          <SectionHeading icon={Package}>
+            Needs your action ({actionNeeded.length})
+          </SectionHeading>
+          {actionNeeded.map((l) => (
+            <OrderCard key={l.id} l={l} config={config} />
+          ))}
+        </div>
+      ) : null}
 
       {/* Orders */}
       <div className="space-y-3">
         <SectionHeading icon={Package}>
-          Your orders ({loans.length})
+          {actionNeeded.length > 0 ? "Other orders" : "Your orders"} ({rest.length})
         </SectionHeading>
 
         {loans.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-8 text-center">
+            <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-500">
+              <Package className="size-6" />
+            </span>
+            <p className="text-sm font-medium text-foreground">No orders yet</p>
+            <p className="max-w-xs text-xs text-black/50">
+              Create a sale above and share the QR or link. Orders buyers pay for
+              will show up here, each with its payout tracker.
+            </p>
+          </Card>
+        ) : rest.length === 0 ? (
           <Card className="text-center text-sm text-black/55">
-            No orders yet. Buyers who purchase from you will appear here.
+            Nothing else right now — your open orders are up top.
           </Card>
         ) : (
-          loans.map((l) => {
-            // Committed once escrow is released; estimated before that.
-            let payoutDate: string | null = null;
-            let payoutIsEstimate = true;
-            if (l.releasedAt) {
-              payoutDate = addDays(l.releasedAt, config.seller_payout_days);
-              payoutIsEstimate = false;
-            } else if (l.deliveredAt) {
-              payoutDate = addDays(l.deliveredAt, config.seller_payout_days);
-            } else if (l.shippedAt) {
-              payoutDate = addDays(
-                l.shippedAt,
-                config.auto_release_days + config.seller_payout_days,
-              );
-            }
-
-            return (
-              <Card key={l.id} className="space-y-4">
-                <div className="flex flex-wrap justify-between gap-2 text-sm">
-                  <span className="text-black/55">
-                    Order from{" "}
-                    <strong className="text-foreground">{l.buyerName}</strong> ·{" "}
-                    {formatPeso(l.ticket_centavos)} · {l.tenor_months} months
-                  </span>
-                </div>
-
-                <PayoutTracker
-                  status={l.status}
-                  netCentavos={l.netCentavos}
-                  feeCentavos={l.feeCentavos}
-                  merchantFeePct={l.merchant_fee_pct}
-                  payoutDate={payoutDate}
-                  payoutIsEstimate={payoutIsEstimate}
-                />
-
-                {l.status === "escrow_held" && l.handoverPending ? (
-                  <div className="space-y-2.5 border-t border-black/5 pt-3">
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
-                      <p className="font-medium">Hand over in person</p>
-                      <p className="mt-0.5 text-xs text-amber-700/90">
-                        Your payment is being kept safe by Datung. Give the item
-                        to <strong>{l.buyerName}</strong>, then ask them to read the
-                        6-digit code on their Datung screen and type it here to
-                        release. Don&apos;t enter a code before handing the item
-                        over.
-                      </p>
-                    </div>
-                    <form
-                      action={confirmHandoverAction}
-                      className="flex flex-wrap items-end gap-2"
-                    >
-                      <input type="hidden" name="loanId" value={l.id} />
-                      <Field label="Buyer's 6-digit code">
-                        <TextInput
-                          name="code"
-                          inputMode="numeric"
-                          autoComplete="off"
-                          maxLength={6}
-                          pattern="[0-9]*"
-                          placeholder="123456"
-                          required
-                          className="w-32 tracking-[0.3em]"
-                        />
-                      </Field>
-                      <button
-                        type="submit"
-                        className={buttonClasses({ className: "bg-accent-600 hover:bg-accent-700" })}
-                      >
-                        Confirm hand-over
-                      </button>
-                    </form>
-                  </div>
-                ) : l.status === "escrow_held" ? (
-                  <div className="border-t border-black/5 pt-3">
-                    <PhotoActionForm
-                      action={markShippedAction}
-                      loanId={l.id}
-                      fileName="proof"
-                      fileLabel="Proof of shipment (required)"
-                      fileHint="A photo of the parcel or hand-off. On a phone this opens the camera."
-                      submitLabel="Mark as shipped"
-                      pendingLabel="Submitting…"
-                    />
-                  </div>
-                ) : null}
-              </Card>
-            );
-          })
+          rest.map((l) => <OrderCard key={l.id} l={l} config={config} />)
         )}
       </div>
 
-      {/* Growth tools */}
+      {/* Zone 3 — Grow your shop */}
       <div className="space-y-3">
         <SectionHeading icon={Megaphone}>Grow your shop</SectionHeading>
         <MarketingKit sellerUserId={userId} />
         <ReferSellers sellerUserId={userId} />
       </div>
 
-      {/* Profile / account */}
+      {/* Zone 4 — Profile / account */}
       <div className="space-y-3">
         <SectionHeading icon={Store}>Profile</SectionHeading>
 
@@ -323,10 +419,6 @@ export default async function SellerPanel({
             },
             { label: "Trust tier", value: titleCase(profile.trustTier) },
             {
-              label: "Payout reserve",
-              value: `${profile.rollingReservePct}%`,
-            },
-            {
               label: "Selling limit",
               value: formatPeso(exposure.limitCentavos),
             },
@@ -366,8 +458,8 @@ export default async function SellerPanel({
         />
 
         <p className="px-1 text-xs text-black/45">
-          Your trust tier, reserve and selling limit are set by Datung and rise
-          as you complete clean orders.
+          Your trust tier and selling limit are set by Datung and rise as you
+          complete clean orders.
         </p>
         <SupportForm context="seller" defaultContact={account.contact} />
       </div>
