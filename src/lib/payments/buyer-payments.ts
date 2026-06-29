@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { maybeGraduateBuyer } from "@/lib/loans/graduation";
 
 /**
  * Buyer payment reports + operator confirmation. A buyer who has paid an
@@ -144,6 +145,7 @@ export async function confirmPayment(input: {
     p_payment_id: payment.id,
   });
   if (error) throw new Error(error.message);
+  await maybeGraduateBuyer(admin, payment.loan_id);
   const r = data as { allocated_centavos: number; excess_centavos: number };
   return { allocatedCentavos: r.allocated_centavos, excessCentavos: r.excess_centavos };
 }

@@ -450,6 +450,11 @@ export async function recordRepayment(input: {
   }
 
   const r = data as { loan_id: string; remaining: number };
+
+  // On-time repayment may graduate the buyer's credit limit — best-effort.
+  const { maybeGraduateBuyer } = await import("@/lib/loans/graduation");
+  await maybeGraduateBuyer(supabase, r.loan_id);
+
   return { loanId: r.loan_id, remaining: r.remaining };
 }
 

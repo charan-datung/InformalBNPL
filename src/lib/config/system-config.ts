@@ -51,6 +51,11 @@ export const CONFIG_DEFAULTS = {
   /** How many days before an installment's due date to send the buyer a heads-up
    *  reminder email (the daily reminder cron reads this). */
   reminder_days_before: 3,
+  /** On-time payments per buyer credit-limit graduation step. */
+  buyer_graduation_threshold: 4,
+  /** Limit increase (centavos) granted per graduation step (₱1,000), capped at
+   *  max_credit_limit_centavos. */
+  buyer_graduation_step_centavos: 100_000,
   /** Exposure cap (centavos) for a `new`, ungraduated seller (₱5,000). */
   seller_cap_new_centavos: 500_000,
   /** Exposure cap (centavos) for a `trusted` seller (₱50,000). */

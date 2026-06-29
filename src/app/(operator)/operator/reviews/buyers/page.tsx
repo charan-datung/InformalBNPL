@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { listPendingBuyers } from "@/lib/operator/queries";
+import { fraudFlagsForUsers } from "@/lib/operator/fraud-flags";
 import { reviewBuyerAction } from "@/app/(operator)/operator/actions";
 import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
 import {
@@ -126,6 +127,7 @@ async function BuyerQueue({
 }) {
   const { error } = await searchParams;
   const [buyers, config] = await Promise.all([listPendingBuyers(), getConfig()]);
+  const flags = await fraudFlagsForUsers(buyers.map((b) => b.user_id));
 
   // Default credit limit prefilled from system_config (pesos); approvals are
   // capped at the configured ceiling.
@@ -161,6 +163,17 @@ async function BuyerQueue({
               className="rounded-lg border border-black/10 p-4 dark:border-white/10"
             >
               <input type="hidden" name="userId" value={b.user_id} />
+
+              {flags.get(b.user_id)?.length ? (
+                <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  <span className="font-semibold">⚠ Review flags:</span>
+                  <ul className="mt-0.5 list-disc pl-4">
+                    {flags.get(b.user_id)!.map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

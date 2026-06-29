@@ -37,6 +37,16 @@ function daysBetween(fromIso: string, toIso: string): number {
 /** Loan statuses where chasing a payment makes sense. */
 const ACTIVE = new Set(["escrow_released", "repaying"]);
 
+/** Overdue escalation ladder (days past due). One email per stage reached. */
+const OVERDUE_STAGES = [1, 3, 7, 14, 30];
+
+/** The highest escalation stage reached for an installment this many days late. */
+function overdueStage(daysLate: number): number {
+  let stage = OVERDUE_STAGES[0];
+  for (const m of OVERDUE_STAGES) if (daysLate >= m) stage = m;
+  return stage;
+}
+
 export async function runPaymentReminders(): Promise<ReminderResult> {
   const result: ReminderResult = {
     upcoming: 0,
@@ -102,7 +112,10 @@ export async function runPaymentReminders(): Promise<ReminderResult> {
     }
 
     const overdue = r.due_date < today;
-    const kind = overdue ? "overdue" : "upcoming";
+    const daysLate = overdue ? daysBetween(r.due_date, today) : 0;
+    // Escalating dunning: a distinct kind per stage so each fires once as the
+    // installment ages (overdue_1, overdue_3, …). Upcoming sends once.
+    const kind = overdue ? `overdue_${overdueStage(daysLate)}` : "upcoming";
     if (alreadySent.has(`${r.id}:${kind}`)) {
       result.skipped++;
       continue;
@@ -130,6 +143,7 @@ export async function runPaymentReminders(): Promise<ReminderResult> {
           amountCentavos: r.amount_centavos,
           penaltyCentavos: penalty,
           dueDate: r.due_date,
+          daysLate,
         });
         const res = await sendEmail({ to: email, ...m });
         if (!res.ok) {

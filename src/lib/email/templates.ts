@@ -202,21 +202,34 @@ export function paymentDueSoonBuyerEmail(i: {
   };
 }
 
-/** Buyer: an installment is overdue (penalty accruing). */
+/** Buyer: an installment is overdue (penalty accruing). Escalates with daysLate. */
 export function paymentOverdueBuyerEmail(i: {
   buyerName: string | null;
   amountCentavos: number;
   penaltyCentavos: number;
   dueDate: string;
+  daysLate?: number;
 }): Email {
   const total = i.amountCentavos + i.penaltyCentavos;
+  const d = i.daysLate ?? 0;
+  // Tone escalates as the debt ages.
+  const subject =
+    d >= 14
+      ? `URGENT: ${formatPeso(total)} is ${d} days overdue`
+      : d >= 7
+        ? `Please pay: ${formatPeso(i.amountCentavos)} is ${d} days overdue`
+        : `Action needed: ${formatPeso(i.amountCentavos)} payment is overdue`;
+  const closer =
+    d >= 14
+      ? "This account is seriously past due. Please settle immediately or contact us to arrange payment — continued non-payment affects your credit standing."
+      : "Please settle it as soon as you can to protect your credit. Open Datung to see how to pay, or reply if you need help.";
   return {
-    subject: `Action needed: ${formatPeso(i.amountCentavos)} payment is overdue`,
+    subject,
     html: layout(
-      "Your payment is overdue",
+      d >= 7 ? "Your payment is seriously overdue" : "Your payment is overdue",
       `<p>${firstName(i.buyerName)}, your installment of
        <strong>${formatPeso(i.amountCentavos)}</strong> was due on
-       <strong>${longDate(i.dueDate)}</strong> and is now overdue.</p>
+       <strong>${longDate(i.dueDate)}</strong>${d > 0 ? ` — ${d} day${d === 1 ? "" : "s"} ago` : ""}.</p>
        ${
          i.penaltyCentavos > 0
            ? `<p>A penalty of <strong>${formatPeso(i.penaltyCentavos)}</strong> has
@@ -224,8 +237,7 @@ export function paymentOverdueBuyerEmail(i: {
               It grows each day until paid.</p>`
            : ""
        }
-       <p style="color:#444">Please settle it as soon as you can to protect your
-       credit. Open Datung to see how to pay, or reply if you need help.</p>`,
+       <p style="color:#444">${closer}</p>`,
     ),
   };
 }

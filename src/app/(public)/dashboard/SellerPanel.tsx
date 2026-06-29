@@ -350,6 +350,48 @@ export default async function SellerPanel({
         )}
       </div>
 
+      {/* Payout statement */}
+      {(() => {
+        const paidOut = loans.filter((l) => l.status === "settled");
+        if (paidOut.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            <SectionHeading icon={Banknote}>Payout statement</SectionHeading>
+            <Card className="divide-y divide-black/5 p-0">
+              <div className="flex items-center justify-between px-4 py-2.5 text-xs font-medium text-black/50">
+                <span>{paidOut.length} paid-out order(s)</span>
+                <span className="tabular-nums">
+                  Total {formatPeso(stats.paidOutCentavos)}
+                </span>
+              </div>
+              {paidOut.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold tabular-nums">
+                      {formatPeso(l.netCentavos)}
+                    </div>
+                    <div className="truncate text-xs text-black/50">
+                      {l.buyerName}
+                      {l.memo ? ` · ${l.memo}` : ""} ·{" "}
+                      {formatDate(l.settledAt ?? l.releasedAt ?? l.created_at)}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs text-black/40">
+                    net of {l.merchant_fee_pct}% fee
+                  </span>
+                </div>
+              ))}
+              <p className="px-4 py-2 text-[11px] text-black/40">
+                To save a statement, use your browser&apos;s Print → Save as PDF.
+              </p>
+            </Card>
+          </div>
+        );
+      })()}
+
       {/* Zone 3 — Grow your shop */}
       <div className="space-y-3">
         <SectionHeading icon={Megaphone}>Grow your shop</SectionHeading>
