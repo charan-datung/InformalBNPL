@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfigValue } from "@/lib/config/system-config";
 import { maybeQualifySellerReferral } from "@/lib/referrals/seller-referrals";
+import { notifyLoanStatus } from "@/lib/email/notify";
 import {
   assertTransition,
   isLoanStatus,
@@ -210,7 +211,9 @@ export async function releaseEscrow(
 
   const { data: current, error: readErr } = await supabase
     .from("loans")
-    .select("status, seller_user_id")
+    .select(
+      "status, buyer_user_id, seller_user_id, ticket_centavos, tenor_months, merchant_fee_pct",
+    )
     .eq("id", input.loanId)
     .maybeSingle();
   if (readErr) throw new LoanMutationError("db", readErr.message);
@@ -256,6 +259,22 @@ export async function releaseEscrow(
     net_centavos: number;
     merchant_fee_pct: number;
   };
+
+  // "Payout released" email to the seller — best-effort.
+  await notifyLoanStatus(
+    supabase,
+    "escrow_released",
+    {
+      id: input.loanId,
+      buyer_user_id: current.buyer_user_id,
+      seller_user_id: current.seller_user_id,
+      ticket_centavos: current.ticket_centavos,
+      tenor_months: current.tenor_months,
+      merchant_fee_pct: current.merchant_fee_pct,
+    },
+    { netCentavos: r.net_centavos },
+  );
+
   return {
     loanId: input.loanId,
     grossCentavos: r.gross_centavos,
@@ -333,6 +352,10 @@ export async function transitionLoan(
     }
     throw new LoanMutationError("db", error.message);
   }
+
+  // Milestone email(s) for this transition — best-effort, never blocks.
+  await notifyLoanStatus(supabase, input.to, data);
+
   return data;
 }
 
