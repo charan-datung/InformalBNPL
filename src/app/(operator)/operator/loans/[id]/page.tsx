@@ -71,6 +71,13 @@ export default async function LoanDetailPage({
             OVERRIDE
           </span>
         ) : null}
+        <Link
+          href={`/loan/${loan.id}/documents`}
+          target="_blank"
+          className="ml-auto text-sm font-medium text-brand-700 underline underline-offset-4"
+        >
+          View loan documents
+        </Link>
       </div>
 
       {loan.hasOverride ? (

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listBuyerLoans, listVerifiedSellers } from "@/lib/loans/views";
 import { getBuyerCredit } from "@/lib/loans/credit";
 import { buyerStats } from "@/lib/loans/stats";
@@ -367,6 +368,13 @@ export default async function BuyerPanel({
                     </p>
                   </details>
                 ) : null}
+
+                <Link
+                  href={`/loan/${l.id}/documents`}
+                  className="inline-block border-t border-black/5 pt-3 text-xs font-medium text-brand-700 underline-offset-4 hover:underline"
+                >
+                  View loan agreement &amp; disclosure
+                </Link>
               </Card>
             );
           })

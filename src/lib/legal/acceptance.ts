@@ -84,6 +84,101 @@ export async function recordLoanDisclosureAcceptance(input: {
   });
 }
 
+export type LoanDocumentsData = {
+  loanId: string;
+  buyerUserId: string;
+  borrowerName: string;
+  borrowerContact: string | null;
+  /** ISO date the loan was booked (used as the document date). */
+  date: string;
+  sellerName: string | null;
+  terms: LoanTerms;
+  /** The recorded acceptance, if one exists (older loans may have none). */
+  acceptance: {
+    signatureName: string;
+    acceptedAt: string;
+    documentVersion: string;
+    ipAddress: string | null;
+  } | null;
+};
+
+/**
+ * Everything needed to render a loan's Disclosure Statement + Promissory Note:
+ * the borrower, the terms (from the recorded acceptance snapshot when present,
+ * else recomputed from the loan), and the acceptance metadata. Returns null if
+ * the loan does not exist. Service-role read.
+ */
+export async function getLoanDocuments(
+  loanId: string,
+): Promise<LoanDocumentsData | null> {
+  const admin = createAdminClient();
+  const { data: loan } = await admin
+    .from("loans")
+    .select(
+      "id, buyer_user_id, seller_user_id, ticket_centavos, tenor_months, interest_rate_monthly, processing_fee_centavos, payment_frequency, created_at",
+    )
+    .eq("id", loanId)
+    .maybeSingle();
+  if (!loan) return null;
+
+  const [{ data: buyer }, { data: seller }, { data: acc }] = await Promise.all([
+    admin
+      .from("users")
+      .select("name, contact")
+      .eq("id", loan.buyer_user_id)
+      .maybeSingle(),
+    admin
+      .from("users")
+      .select("name")
+      .eq("id", loan.seller_user_id)
+      .maybeSingle(),
+    admin
+      .from("document_acceptances")
+      .select("signature_name, accepted_at, document_version, ip_address, terms_snapshot")
+      .eq("loan_id", loanId)
+      .eq("document_type", "disclosure_statement")
+      .order("accepted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  let terms = (acc?.terms_snapshot as LoanTerms | null) ?? null;
+  if (!terms) {
+    const penalty = await getConfigValue("penalty_rate_monthly", admin);
+    const feePct =
+      loan.ticket_centavos > 0
+        ? (loan.processing_fee_centavos / loan.ticket_centavos) * 100
+        : 0;
+    terms = computeLoanTerms({
+      principalCentavos: loan.ticket_centavos,
+      tenorMonths: loan.tenor_months,
+      interestRateMonthly: loan.interest_rate_monthly,
+      frequency: loan.payment_frequency,
+      processingFeePct: feePct,
+      penaltyRateMonthly: penalty,
+      startDate: new Date(loan.created_at),
+    });
+  }
+
+  return {
+    loanId: loan.id,
+    buyerUserId: loan.buyer_user_id,
+    borrowerName: buyer?.name ?? "",
+    borrowerContact: buyer?.contact ?? null,
+    date: loan.created_at,
+    sellerName: seller?.name ?? null,
+    terms,
+    acceptance: acc
+      ? {
+          signatureName: acc.signature_name,
+          acceptedAt: acc.accepted_at,
+          documentVersion: acc.document_version,
+          ipAddress: acc.ip_address,
+        }
+      : null,
+  };
+}
+
 /** Whether this borrower has already accepted the master Credit Agreement. */
 export async function hasAcceptedCreditAgreement(
   userId: string,
