@@ -1,13 +1,12 @@
 -- =============================================================================
--- Datung — FULL SCHEMA (canonical, regenerated from migrations)
+-- Datung — CONSOLIDATED IDEMPOTENT SCHEMA / CATCH-UP
 --
--- The complete current schema in one file, kept in sync with supabase/migrations
--- and identical in body to supabase/catch_up.sql. Every statement is idempotent
--- (guarded create type, create table/index if not exists, create or replace
--- functions, drop+create policies/triggers, guarded constraints), so applying it
--- to a fresh or partially-migrated database converges it to the current state.
--- amortization_frequency is folded into capitalized_processing_fee. Validated by
--- running twice against a clean Postgres 16.
+-- Brings any database to the current schema in one paste. Every statement is
+-- idempotent (guarded create type, create table/index if not exists, create or
+-- replace functions, drop+create policies/triggers, guarded constraints), so it
+-- is safe to run on a fresh DB or one that is partially migrated. Generated from
+-- supabase/migrations (amortization_frequency is folded into capitalized_
+-- processing_fee). Re-run any time; it converges to the same state.
 -- =============================================================================
 
 -- ===== from migration: 20260618120000_init_schema.sql =====
