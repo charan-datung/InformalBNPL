@@ -165,3 +165,67 @@ export function orderRefundedBuyerEmail(i: {
     ),
   };
 }
+
+const longDate = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-PH", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+/** Buyer: an installment is coming up. */
+export function paymentDueSoonBuyerEmail(i: {
+  buyerName: string | null;
+  amountCentavos: number;
+  dueDate: string;
+  daysUntil: number;
+  sellerName: string | null;
+}): Email {
+  const when =
+    i.daysUntil <= 0
+      ? "due today"
+      : i.daysUntil === 1
+        ? "due tomorrow"
+        : `due in ${i.daysUntil} days`;
+  const from = i.sellerName?.trim() ? ` (your order from ${i.sellerName.trim()})` : "";
+  return {
+    subject: `Reminder: ${formatPeso(i.amountCentavos)} payment ${when}`,
+    html: layout(
+      `Your next payment is ${when}`,
+      `<p>${firstName(i.buyerName)}, a friendly heads-up: your installment of
+       <strong>${formatPeso(i.amountCentavos)}</strong>${from} is due on
+       <strong>${longDate(i.dueDate)}</strong>.</p>
+       <p style="color:#444">Pay on time to keep your credit healthy and growing.
+       Open Datung to see how to pay.</p>`,
+    ),
+  };
+}
+
+/** Buyer: an installment is overdue (penalty accruing). */
+export function paymentOverdueBuyerEmail(i: {
+  buyerName: string | null;
+  amountCentavos: number;
+  penaltyCentavos: number;
+  dueDate: string;
+}): Email {
+  const total = i.amountCentavos + i.penaltyCentavos;
+  return {
+    subject: `Action needed: ${formatPeso(i.amountCentavos)} payment is overdue`,
+    html: layout(
+      "Your payment is overdue",
+      `<p>${firstName(i.buyerName)}, your installment of
+       <strong>${formatPeso(i.amountCentavos)}</strong> was due on
+       <strong>${longDate(i.dueDate)}</strong> and is now overdue.</p>
+       ${
+         i.penaltyCentavos > 0
+           ? `<p>A penalty of <strong>${formatPeso(i.penaltyCentavos)}</strong> has
+              accrued so far — total now <strong>${formatPeso(total)}</strong>.
+              It grows each day until paid.</p>`
+           : ""
+       }
+       <p style="color:#444">Please settle it as soon as you can to protect your
+       credit. Open Datung to see how to pay, or reply if you need help.</p>`,
+    ),
+  };
+}

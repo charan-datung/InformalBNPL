@@ -48,6 +48,9 @@ export const CONFIG_DEFAULTS = {
   max_tenor_months: 4,
   /** Days after escrow release before the seller's payout is committed. */
   seller_payout_days: 2,
+  /** How many days before an installment's due date to send the buyer a heads-up
+   *  reminder email (the daily reminder cron reads this). */
+  reminder_days_before: 3,
   /** Exposure cap (centavos) for a `new`, ungraduated seller (₱5,000). */
   seller_cap_new_centavos: 500_000,
   /** Exposure cap (centavos) for a `trusted` seller (₱50,000). */
