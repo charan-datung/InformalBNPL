@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listBuyerLoans, listVerifiedSellers } from "@/lib/loans/views";
 import { getBuyerCredit } from "@/lib/loans/credit";
-import { buyerStats } from "@/lib/loans/stats";
+import { buyerStats, type UpcomingPayment } from "@/lib/loans/stats";
 import { getConfig } from "@/lib/config/system-config";
 import {
   getAccountProfile,
@@ -96,7 +96,7 @@ export default async function BuyerPanel({
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/70">
             <span className="flex items-center gap-1.5">
               <QrCode className="size-3.5" />
-              Scan a seller&apos;s Datung Pay QR to buy instantly
+              Shop now, pay hulugan — use it across any Datung seller
             </span>
             {stats.onTimePct !== null ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/90">
@@ -110,10 +110,13 @@ export default async function BuyerPanel({
           </div>
         </div>
 
-        {/* Primary action: scan a seller's QR or paste their pay link. */}
-        <ScanToPay />
+        {/* Two focal points, balanced: pay (scan) and what's owed (next bill). */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ScanToPay />
+          <NextBillCard next={stats.nextPayment} />
+        </div>
 
-        {/* Headline numbers */}
+        {/* Headline numbers — secondary to the two focal cards above */}
         <StatGrid>
           <Stat
             label="You owe"
@@ -121,20 +124,6 @@ export default async function BuyerPanel({
             value={formatPeso(stats.totalOwedCentavos)}
             hint={`across ${stats.activeOrders} active order${stats.activeOrders === 1 ? "" : "s"}`}
             icon={Wallet}
-          />
-          <Stat
-            label="Next payment"
-            value={
-              stats.nextPayment
-                ? formatPeso(stats.nextPayment.amountCentavos)
-                : "—"
-            }
-            hint={
-              stats.nextPayment
-                ? `due ${formatDate(stats.nextPayment.dueDate)}`
-                : "nothing due"
-            }
-            icon={CalendarClock}
           />
           <Stat
             label="Paid to date"
@@ -174,16 +163,30 @@ export default async function BuyerPanel({
         ) : null}
       </section>
 
-      {/* Instant checkout */}
-      <Checkout
-        sellers={sellers}
-        monthlyRate={config.default_interest_rate_monthly}
-        processingFeePct={config.processing_fee_pct}
-        penaltyRateMonthly={config.penalty_rate_monthly}
-        defaultTenor={config.default_tenor_months}
-        maxTenor={config.max_tenor_months}
-        creditLimitCentavos={credit.availableCentavos}
-      />
+      {/* Manual checkout — secondary to scanning a seller's QR. Tucked into a
+          disclosure so the home stays focused on the two cards above. */}
+      <details className="group rounded-2xl border border-black/10 bg-white">
+        <summary className="flex cursor-pointer items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-foreground">
+          <span className="flex items-center gap-2">
+            <ShoppingBag className="size-4 text-black/35" />
+            Buy from a seller manually
+          </span>
+          <span className="text-xs font-normal text-black/45 group-open:hidden">
+            No QR? Tap to pick a seller
+          </span>
+        </summary>
+        <div className="border-t border-black/5 p-4 sm:p-5">
+          <Checkout
+            sellers={sellers}
+            monthlyRate={config.default_interest_rate_monthly}
+            processingFeePct={config.processing_fee_pct}
+            penaltyRateMonthly={config.penalty_rate_monthly}
+            defaultTenor={config.default_tenor_months}
+            maxTenor={config.max_tenor_months}
+            creditLimitCentavos={credit.availableCentavos}
+          />
+        </div>
+      </details>
 
       {/* Unified upcoming payments across every order */}
       {stats.upcoming.length > 0 ? (
@@ -483,6 +486,60 @@ export default async function BuyerPanel({
         </p>
         <SupportForm context="buyer" defaultContact={account.contact} />
       </section>
+    </div>
+  );
+}
+
+/**
+ * The single most urgent bill, given equal billing with the pay action. Shows a
+ * reassuring "all caught up" state when nothing is due, and turns red when the
+ * next installment is overdue.
+ */
+function NextBillCard({ next }: { next: UpcomingPayment | null }) {
+  if (!next) {
+    return (
+      <div className="flex flex-col justify-center rounded-2xl border border-black/10 bg-white p-5 text-center">
+        <CheckCircle2 className="mx-auto size-7 text-accent-500" />
+        <p className="mt-1.5 text-sm font-medium text-foreground">
+          You&apos;re all caught up
+        </p>
+        <p className="text-xs text-black/45">No payments due right now.</p>
+      </div>
+    );
+  }
+
+  const total = next.amountCentavos + next.penaltyCentavos;
+
+  return (
+    <div
+      className={`flex flex-col justify-between rounded-2xl border p-5 ${
+        next.overdue
+          ? "border-red-200 bg-red-50"
+          : "border-brand-100 bg-brand-50/60"
+      }`}
+    >
+      <div>
+        <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-black/50">
+          <CalendarClock className="size-3.5" />
+          {next.overdue ? "Overdue payment" : "Next payment"}
+        </span>
+        <div className="mt-1 text-3xl font-bold tabular-nums text-foreground">
+          {formatPeso(total)}
+        </div>
+        <div className="mt-0.5 text-xs text-black/55">
+          {next.sellerName} · due {formatDate(next.dueDate)}
+          {next.penaltyCentavos > 0
+            ? ` · incl. ${formatPeso(next.penaltyCentavos)} penalty`
+            : ""}
+        </div>
+      </div>
+      <div className="mt-3">
+        <PayInstructions
+          amountCentavos={total}
+          label="Pay this bill"
+          variant={next.overdue ? "primary" : "secondary"}
+        />
+      </div>
     </div>
   );
 }

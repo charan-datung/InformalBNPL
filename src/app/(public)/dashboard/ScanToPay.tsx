@@ -120,13 +120,27 @@ export default function ScanToPay() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={buttonClasses({ size: "lg", className: "w-full" })}
-      >
-        <QrCode className="size-5" /> Scan to pay
-      </button>
+      <div className="flex flex-col justify-between rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
+        <div>
+          <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-black/50">
+            <QrCode className="size-3.5" /> Pay a seller
+          </span>
+          <p className="mt-1 text-base font-semibold text-foreground">
+            Scan their Datung Pay QR
+          </p>
+          <p className="mt-0.5 text-xs text-black/55">
+            Point your camera at the seller&apos;s QR, or paste the link they
+            sent — then pick how you&apos;ll pay it back.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={buttonClasses({ size: "lg", className: "mt-3 w-full" })}
+        >
+          <QrCode className="size-5" /> Scan to pay
+        </button>
+      </div>
 
       {open ? (
         <div className="fixed inset-0 z-50 flex flex-col bg-black">
