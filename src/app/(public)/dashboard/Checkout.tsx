@@ -158,6 +158,37 @@ export default function Checkout({
           </div>
         ) : null}
 
+        <fieldset className="grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              ["ship", "Ship to me", "Seller ships it; pay back over time.", true],
+              [
+                "in_person",
+                "Pick up in person",
+                "You'll get a code to give the seller on hand-over.",
+                false,
+              ],
+            ] as [string, string, string, boolean][]
+          ).map(([value, label, desc, checked]) => (
+            <label
+              key={value}
+              className="group flex cursor-pointer items-start gap-2 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50"
+            >
+              <input
+                type="radio"
+                name="fulfillment"
+                value={value}
+                defaultChecked={checked}
+                className="mt-0.5 accent-brand-600"
+              />
+              <span>
+                <span className="block font-medium text-foreground">{label}</span>
+                <span className="block text-xs text-black/50">{desc}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+
         {overLimit ? (
           <Callout tone="error">
             That&apos;s more than you can spend right now (

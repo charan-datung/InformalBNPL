@@ -1,10 +1,10 @@
 "use server";
 
+import { randomInt } from "crypto";
 import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
-import { postLoanDisbursement } from "@/lib/ledger/post";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
 import { markShipped, confirmHandover } from "@/lib/loans/seller";
 import {
@@ -100,6 +100,7 @@ export async function checkoutAction(formData: FormData) {
     String(formData.get("payment_frequency") ?? "monthly") === "biweekly"
       ? "biweekly"
       : "monthly";
+  const inPerson = String(formData.get("fulfillment") ?? "ship") === "in_person";
   const agreed = formData.get("agree") != null;
   const signatureName = String(formData.get("signature") ?? "").trim();
 
@@ -133,22 +134,17 @@ export async function checkoutAction(formData: FormData) {
       actorUserId: buyerUserId,
       amountCentavos: loan.ticket_centavos,
       note: "Escrow held on checkout",
+      // The disbursement ledger is posted inside this transition (exactly-once).
     });
-    // Post the disbursement ledger (mirrors the Datung Pay path) — without this
-    // the seller's payable is never recorded and they can't be paid out.
-    const admin = createAdminClient();
-    const { data: sellerProfile } = await admin
-      .from("seller_profiles")
-      .select("rolling_reserve_pct")
-      .eq("user_id", sellerUserId)
-      .maybeSingle();
-    await postLoanDisbursement(admin, {
-      loanId: loan.id,
-      ticketCentavos: loan.ticket_centavos,
-      merchantFeePct: loan.merchant_fee_pct,
-      reservePct: sellerProfile?.rolling_reserve_pct ?? 0,
-      processingFeeCentavos: loan.processing_fee_centavos,
-    });
+    // In-person: mint a hand-over code (same anti-fraud as Datung Pay). Ship
+    // orders stay at escrow_held until the seller marks them shipped with proof.
+    if (inPerson) {
+      const handoverCode = String(randomInt(0, 1_000_000)).padStart(6, "0");
+      await createAdminClient()
+        .from("loans")
+        .update({ handover_code: handoverCode })
+        .eq("id", loan.id);
+    }
   } catch (e) {
     // Don't show the seller's exposure-cap math to the buyer — it's the seller's
     // limit, not their fault. Map known cases to friendly copy; raw otherwise.

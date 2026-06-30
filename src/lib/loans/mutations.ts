@@ -1,8 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getConfigValue } from "@/lib/config/system-config";
 import { maybeQualifySellerReferral } from "@/lib/referrals/seller-referrals";
+import { after } from "next/server";
 import { notifyLoanStatus } from "@/lib/email/notify";
-import { reverseLoanLedger } from "@/lib/ledger/post";
+import { reverseLoanLedger, postLoanDisbursement } from "@/lib/ledger/post";
+
+/** Run a best-effort side-effect after the response when possible (keeps email
+ *  off the request's critical path); fall back to awaiting outside request scope. */
+async function fireAndForget(fn: () => Promise<unknown>): Promise<void> {
+  try {
+    after(fn);
+  } catch {
+    await fn().catch(() => {});
+  }
+}
 import {
   assertTransition,
   isLoanStatus,
@@ -261,19 +272,21 @@ export async function releaseEscrow(
     merchant_fee_pct: number;
   };
 
-  // "Payout released" email to the seller — best-effort.
-  await notifyLoanStatus(
-    supabase,
-    "escrow_released",
-    {
-      id: input.loanId,
-      buyer_user_id: current.buyer_user_id,
-      seller_user_id: current.seller_user_id,
-      ticket_centavos: current.ticket_centavos,
-      tenor_months: current.tenor_months,
-      merchant_fee_pct: current.merchant_fee_pct,
-    },
-    { netCentavos: r.net_centavos },
+  // "Payout released" email to the seller — off the critical path.
+  await fireAndForget(() =>
+    notifyLoanStatus(
+      supabase,
+      "escrow_released",
+      {
+        id: input.loanId,
+        buyer_user_id: current.buyer_user_id,
+        seller_user_id: current.seller_user_id,
+        ticket_centavos: current.ticket_centavos,
+        tenor_months: current.tenor_months,
+        merchant_fee_pct: current.merchant_fee_pct,
+      },
+      { netCentavos: r.net_centavos },
+    ),
   );
 
   return {
@@ -354,13 +367,32 @@ export async function transitionLoan(
     throw new LoanMutationError("db", error.message);
   }
 
+  // On escrow_held (credit committed), post the disbursement ledger here — the
+  // booked→escrow_held transition is CAS-guarded and only happens once, so this
+  // is exactly-once and CANNOT be skipped by any caller (the bug that hit the
+  // manual checkout path). Reserve defaults to 0 unless an operator set one.
+  if (input.to === "escrow_held") {
+    const { data: sp } = await supabase
+      .from("seller_profiles")
+      .select("rolling_reserve_pct")
+      .eq("user_id", data.seller_user_id)
+      .maybeSingle();
+    await postLoanDisbursement(supabase, {
+      loanId: data.id,
+      ticketCentavos: data.ticket_centavos,
+      merchantFeePct: data.merchant_fee_pct,
+      reservePct: sp?.rolling_reserve_pct ?? 0,
+      processingFeeCentavos: data.processing_fee_centavos,
+    });
+  }
+
   // On refund, unwind the loan's ledger to zero (balanced reversal).
   if (input.to === "refunded") {
     await reverseLoanLedger(supabase, input.loanId);
   }
 
-  // Milestone email(s) for this transition — best-effort, never blocks.
-  await notifyLoanStatus(supabase, input.to, data);
+  // Milestone email(s) — off the critical path so the user isn't blocked on SMTP.
+  await fireAndForget(() => notifyLoanStatus(supabase, input.to, data));
 
   return data;
 }

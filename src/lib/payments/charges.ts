@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
 import type { PaymentFrequency } from "@/lib/loans/schedule";
 import { getBuyerCredit } from "@/lib/loans/credit";
-import { postLoanDisbursement } from "@/lib/ledger/post";
 import { recordLoanDisclosureAcceptance } from "@/lib/legal/acceptance";
 import { captureException } from "@/lib/observability/logger";
 
@@ -239,19 +238,8 @@ export async function authorizeCharge(input: {
         ipAddress: input.ipAddress ?? null,
       });
     }
-    // Withhold the seller's rolling reserve as a separate ledger liability.
-    const { data: sellerProfile } = await admin
-      .from("seller_profiles")
-      .select("rolling_reserve_pct")
-      .eq("user_id", charge.seller_user_id)
-      .maybeSingle();
-    await postLoanDisbursement(admin, {
-      loanId: loan.id,
-      ticketCentavos: loan.ticket_centavos,
-      merchantFeePct: loan.merchant_fee_pct,
-      reservePct: sellerProfile?.rolling_reserve_pct ?? 0,
-      processingFeeCentavos: loan.processing_fee_centavos,
-    });
+    // (The disbursement ledger is posted inside the escrow_held transition above,
+    // so every checkout path records it exactly once — see transitionLoan.)
 
     // Anti-fraud for in-person sales: do NOT auto-advance. Mint a 6-digit
     // handover code shown on the buyer's screen; the seller must enter it to
