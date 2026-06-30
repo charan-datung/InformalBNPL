@@ -9,6 +9,12 @@ import { formatPeso, formatDateTime } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
 import { getRequestOrigin } from "@/lib/http/origin";
 import BuyerInviteCard from "@/components/invite/BuyerInviteCard";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  latestLocations,
+  mapsLink,
+  type LocationEvent,
+} from "@/lib/location/events";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +83,34 @@ function Td({ children, right = false }: { children: React.ReactNode; right?: bo
   );
 }
 
+/** Latest consented device-location capture, as a map link (or a dash). */
+function LocationCell({
+  event,
+  consent,
+}: {
+  event?: LocationEvent;
+  consent: boolean;
+}) {
+  if (!event) {
+    return (
+      <span className="text-xs text-black/40 dark:text-white/40">
+        {consent ? "consented · no fix" : "—"}
+      </span>
+    );
+  }
+  return (
+    <a
+      href={mapsLink(event.lat, event.lng)}
+      target="_blank"
+      rel="noreferrer"
+      className="whitespace-nowrap text-xs underline underline-offset-2"
+      title={`${event.source} · ${formatDateTime(event.captured_at)}`}
+    >
+      📍 {event.source}
+    </a>
+  );
+}
+
 async function BuyersTable() {
   const buyers = await listApprovedBuyers();
   if (buyers.length === 0) {
@@ -86,6 +120,10 @@ async function BuyersTable() {
       </p>
     );
   }
+  const locations = await latestLocations(
+    createAdminClient(),
+    buyers.map((b) => b.user_id),
+  );
   return (
     <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/10">
       <table className="w-full text-sm">
@@ -98,6 +136,7 @@ async function BuyersTable() {
             <Th right>Outstanding</Th>
             <Th right>Available</Th>
             <Th right>Loans</Th>
+            <Th>Location</Th>
             <Th>Approved</Th>
           </tr>
         </thead>
@@ -111,6 +150,12 @@ async function BuyersTable() {
               <Td right>{formatPeso(b.outstanding_centavos)}</Td>
               <Td right>{formatPeso(b.available_centavos)}</Td>
               <Td right>{b.loan_count}</Td>
+              <Td>
+                <LocationCell
+                  event={locations.get(b.user_id)}
+                  consent={b.location_consent}
+                />
+              </Td>
               <Td>{formatDateTime(b.approved_at)}</Td>
             </tr>
           ))}
@@ -132,6 +177,10 @@ async function SellersTable() {
       </p>
     );
   }
+  const locations = await latestLocations(
+    createAdminClient(),
+    sellers.map((s) => s.user_id),
+  );
   return (
     <div className="space-y-6">
     <div className="overflow-x-auto rounded-lg border border-black/10 dark:border-white/10">
@@ -142,6 +191,7 @@ async function SellersTable() {
             <Th>Contact</Th>
             <Th>Sells</Th>
             <Th>Location</Th>
+            <Th>Device loc.</Th>
             <Th>Tier</Th>
             <Th right>Reserve</Th>
             <Th right>Exposure cap</Th>
@@ -178,6 +228,12 @@ async function SellersTable() {
                 </div>
               </Td>
               <Td>{s.storefront_location ?? "—"}</Td>
+              <Td>
+                <LocationCell
+                  event={locations.get(s.user_id)}
+                  consent={s.location_consent}
+                />
+              </Td>
               <Td>
                 <span
                   className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${

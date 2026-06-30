@@ -10,6 +10,8 @@ import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
 import { getConfig } from "@/lib/config/system-config";
 import { formatDateTime } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { latestLocations, mapsLink } from "@/lib/location/events";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -82,6 +84,10 @@ async function SellerQueue({
   const { error, ok } = await searchParams;
   const [sellers, config] = await Promise.all([listPendingSellers(), getConfig()]);
   const flags = await fraudFlagsForUsers(sellers.map((s) => s.user_id));
+  const locations = await latestLocations(
+    createAdminClient(),
+    sellers.map((s) => s.user_id),
+  );
 
   const defaultReservePct = config.seller_reserve_new_pct;
   const defaultCapPesos = Math.round(config.seller_cap_new_centavos / 100);
@@ -210,6 +216,25 @@ async function SellerQueue({
                       </>
                     ) : null}
                   </div>
+                  {locations.get(s.user_id) ? (
+                    <div className="text-xs text-black/60 dark:text-white/60">
+                      📲 Device location:{" "}
+                      <a
+                        href={mapsLink(
+                          locations.get(s.user_id)!.lat,
+                          locations.get(s.user_id)!.lng,
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2"
+                      >
+                        map
+                      </a>{" "}
+                      <span className="text-black/40 dark:text-white/40">
+                        (consented {formatDateTime(locations.get(s.user_id)!.captured_at)})
+                      </span>
+                    </div>
+                  ) : null}
                   {s.verification_notes ? (
                     <p className="mt-2 whitespace-pre-wrap rounded bg-black/[0.03] p-2 text-sm dark:bg-white/[0.04]">
                       {s.verification_notes}

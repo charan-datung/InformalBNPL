@@ -11,6 +11,8 @@ import type { BuyerApplication } from "@/lib/profiles/buyer-application";
 import { getConfig } from "@/lib/config/system-config";
 import { formatPeso, formatDateTime } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { latestLocations, mapsLink } from "@/lib/location/events";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -128,6 +130,10 @@ async function BuyerQueue({
   const { error, ok } = await searchParams;
   const [buyers, config] = await Promise.all([listPendingBuyers(), getConfig()]);
   const flags = await fraudFlagsForUsers(buyers.map((b) => b.user_id));
+  const locations = await latestLocations(
+    createAdminClient(),
+    buyers.map((b) => b.user_id),
+  );
 
   // Default credit limit prefilled from system_config (pesos); approvals are
   // capped at the configured ceiling.
@@ -204,6 +210,25 @@ async function BuyerQueue({
                     </span>{" "}
                     — verify identity, adjust only for risk
                   </div>
+                  {locations.get(b.user_id) ? (
+                    <div className="mt-0.5 text-xs text-black/60 dark:text-white/60">
+                      📍 Signup location:{" "}
+                      <a
+                        href={mapsLink(
+                          locations.get(b.user_id)!.lat,
+                          locations.get(b.user_id)!.lng,
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2"
+                      >
+                        map
+                      </a>{" "}
+                      <span className="text-black/40 dark:text-white/40">
+                        (consented {formatDateTime(locations.get(b.user_id)!.captured_at)})
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
                 {b.idPhotoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element

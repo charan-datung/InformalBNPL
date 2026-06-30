@@ -16,6 +16,7 @@ import {
   submitPaymentReport,
   type PaymentMethod,
 } from "@/lib/payments/buyer-payments";
+import { recordLocationEvent } from "@/lib/location/events";
 
 /**
  * Buyer- and seller-initiated actions from the active dashboards. Identity comes
@@ -116,6 +117,13 @@ export async function checkoutAction(formData: FormData) {
   const agreed = formData.get("agree") != null;
   const signatureName = String(formData.get("signature") ?? "").trim();
 
+  // Optional, explicitly-consented location for this purchase (the per-order
+  // monitoring trail). Captured client-side only when the buyer ticks consent.
+  const locationConsent = String(formData.get("location_consent") ?? "") === "yes";
+  const geoLat = parseFloat(String(formData.get("geo_lat") ?? ""));
+  const geoLng = parseFloat(String(formData.get("geo_lng") ?? ""));
+  const geoAcc = Number(String(formData.get("geo_accuracy") ?? ""));
+
   if (!agreed || !signatureName) {
     redirect(
       `${BACK}?error=${encodeURIComponent(
@@ -156,6 +164,17 @@ export async function checkoutAction(formData: FormData) {
         .from("loans")
         .update({ handover_code: handoverCode })
         .eq("id", loan.id);
+    }
+    // Per-purchase location stamp (the monitoring trail), only if consented.
+    if (locationConsent) {
+      await recordLocationEvent(createAdminClient(), {
+        userId: buyerUserId,
+        source: "checkout",
+        loanId: loan.id,
+        lat: geoLat,
+        lng: geoLng,
+        accuracyM: Number.isFinite(geoAcc) ? geoAcc : null,
+      });
     }
   } catch (e) {
     // Don't show the seller's exposure-cap math to the buyer — it's the seller's

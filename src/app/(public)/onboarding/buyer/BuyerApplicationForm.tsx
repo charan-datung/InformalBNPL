@@ -27,6 +27,8 @@ import CheckboxGroup from "@/components/ui/CheckboxGroup";
 import FileUpload from "@/components/ui/FileUpload";
 import Callout from "@/components/ui/Callout";
 import Wizard, { type WizardStep } from "@/components/ui/Wizard";
+import LocationConsent from "@/components/location/LocationConsent";
+import ImportContacts from "@/components/contacts/ImportContacts";
 
 function StepIntro({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -305,6 +307,7 @@ export default function BuyerApplicationForm({ next }: { next?: string }) {
               and Data Privacy consent.
             </span>
           </label>
+          <LocationConsent purpose="to help verify my account and protect against fraud" />
           <label className="block space-y-1.5 text-sm">
             <span className="font-medium text-foreground">
               Type your full name to sign
@@ -438,11 +441,14 @@ function businessSteps(): WizardStep[] {
           </div>
           <CashFlowFields />
           <Field label="Character references" optional>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextInput name="ref1_name" placeholder="Reference 1 — name" />
-              <TextInput name="ref1_contact" placeholder="Reference 1 — mobile" />
-              <TextInput name="ref2_name" placeholder="Reference 2 — name" />
-              <TextInput name="ref2_contact" placeholder="Reference 2 — mobile" />
+            <div className="space-y-2.5">
+              <ImportContacts />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput name="ref1_name" placeholder="Reference 1 — name" />
+                <TextInput name="ref1_contact" placeholder="Reference 1 — mobile" />
+                <TextInput name="ref2_name" placeholder="Reference 2 — name" />
+                <TextInput name="ref2_contact" placeholder="Reference 2 — mobile" />
+              </div>
             </div>
           </Field>
         </>

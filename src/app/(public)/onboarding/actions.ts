@@ -7,6 +7,7 @@ import { getConfig } from "@/lib/config/system-config";
 import { validateIdNumber } from "@/lib/profiles/id-validation";
 import { recordSellerReferral } from "@/lib/referrals/seller-referrals";
 import { recordDocumentAcceptance, clientIp } from "@/lib/legal/acceptance";
+import { recordLocationEvent } from "@/lib/location/events";
 
 /**
  * Stage 3 onboarding: a logged-in user applies for buyer and/or seller
@@ -77,6 +78,14 @@ export async function applyAsBuyer(formData: FormData) {
   const agreeAgreement = str(formData, "agree_credit_agreement") === "yes";
   const signature = str(formData, "signature");
   const idPhoto = formData.get("id_photo");
+
+  // Optional, explicitly-consented device location + voluntary contact import.
+  const locationConsent = str(formData, "location_consent") === "yes";
+  const contactsConsent = str(formData, "contacts_consent") === "yes";
+  const geoLat = parseFloat(str(formData, "geo_lat"));
+  const geoLng = parseFloat(str(formData, "geo_lng"));
+  const geoAcc = Number(str(formData, "geo_accuracy"));
+  const nowIso = new Date().toISOString();
 
   // ---- Required core ----
   if (!name || !contact) buyerError("Name and mobile number are required.");
@@ -200,10 +209,25 @@ export async function applyAsBuyer(formData: FormData) {
       id_document_path: idPath,
       credit_limit_centavos: config.default_credit_limit_centavos,
       application,
+      location_consent: locationConsent,
+      location_consent_at: locationConsent ? nowIso : null,
+      contacts_consent: contactsConsent,
+      contacts_consent_at: contactsConsent ? nowIso : null,
     },
     { onConflict: "user_id" },
   );
   if (error) buyerError(error.message);
+
+  // Record the consented location capture (append-only; best-effort).
+  if (locationConsent) {
+    await recordLocationEvent(admin, {
+      userId,
+      source: "signup",
+      lat: geoLat,
+      lng: geoLng,
+      accuracyM: Number.isFinite(geoAcc) ? geoAcc : null,
+    });
+  }
 
   // Record the borrower's one-time acceptance of the master Credit Agreement
   // (+ data-privacy consent). No loan yet, so loan_id is null.
@@ -240,6 +264,12 @@ export async function applyAsSeller(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim();
   const lat = parseFloat(String(formData.get("storefront_lat") ?? ""));
   const lng = parseFloat(String(formData.get("storefront_lng") ?? ""));
+
+  // Optional, explicitly-consented device location.
+  const locationConsent = str(formData, "location_consent") === "yes";
+  const geoLat = parseFloat(str(formData, "geo_lat"));
+  const geoLng = parseFloat(str(formData, "geo_lng"));
+  const geoAcc = Number(str(formData, "geo_accuracy"));
 
   // Social handle is optional — we're onboarding physical stores, whose proof of
   // selling is their stall location + photos, not an online presence.
@@ -333,12 +363,25 @@ export async function applyAsSeller(formData: FormData) {
       kyc_status: "pending",
       verification_notes: notes || null,
       verification_photo_path: itemPath,
+      location_consent: locationConsent,
+      location_consent_at: locationConsent ? new Date().toISOString() : null,
     },
     { onConflict: "user_id" },
   );
 
   if (error) {
     redirect("/onboarding/seller?error=" + encodeURIComponent(error.message));
+  }
+
+  // Record the consented device-location capture (append-only; best-effort).
+  if (locationConsent) {
+    await recordLocationEvent(admin, {
+      userId,
+      source: "seller_onboarding",
+      lat: geoLat,
+      lng: geoLng,
+      accuracyM: Number.isFinite(geoAcc) ? geoAcc : null,
+    });
   }
 
   // If this applicant arrived via another seller's referral link, record a

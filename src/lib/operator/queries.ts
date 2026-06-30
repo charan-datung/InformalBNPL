@@ -586,6 +586,7 @@ export type ApprovedBuyer = {
   outstanding_centavos: number;
   available_centavos: number;
   loan_count: number;
+  location_consent: boolean;
 };
 
 export async function listApprovedBuyers(): Promise<ApprovedBuyer[]> {
@@ -593,7 +594,7 @@ export async function listApprovedBuyers(): Promise<ApprovedBuyer[]> {
   const [{ data }, users, { data: loans }] = await Promise.all([
     admin
       .from("buyer_profiles")
-      .select("user_id, created_at, buyer_kind, credit_limit_centavos")
+      .select("user_id, created_at, buyer_kind, credit_limit_centavos, location_consent")
       .eq("kyc_status", "verified")
       .order("created_at", { ascending: false }),
     usersMap(),
@@ -615,6 +616,7 @@ export async function listApprovedBuyers(): Promise<ApprovedBuyer[]> {
       outstanding_centavos: agg.outstanding,
       available_centavos: Math.max(0, limit - agg.outstanding),
       loan_count: agg.total,
+      location_consent: Boolean(b.location_consent),
     };
   });
 }
@@ -636,6 +638,7 @@ export type ApprovedSeller = {
   available_centavos: number;
   approved_at: string;
   loan_count: number;
+  location_consent: boolean;
 };
 
 export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
@@ -644,7 +647,7 @@ export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, created_at, sells_what, social_handle, marketplace_url, selling_since, storefront_location, trust_tier, rolling_reserve_pct, max_outstanding_centavos",
+        "user_id, created_at, sells_what, social_handle, marketplace_url, selling_since, storefront_location, trust_tier, rolling_reserve_pct, max_outstanding_centavos, location_consent",
       )
       .eq("kyc_status", "verified")
       .order("created_at", { ascending: false }),
@@ -673,6 +676,7 @@ export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
       available_centavos: Math.max(0, cap - agg.outstanding),
       approved_at: s.created_at,
       loan_count: agg.total,
+      location_consent: Boolean(s.location_consent),
     };
   });
 }

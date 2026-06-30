@@ -9,6 +9,7 @@ import { Field, TextInput, Select, Textarea, controlClasses } from "@/components
 import FileUpload from "@/components/ui/FileUpload";
 import Callout from "@/components/ui/Callout";
 import Wizard, { type WizardStep } from "@/components/ui/Wizard";
+import LocationConsent from "@/components/location/LocationConsent";
 
 /**
  * Details carried over from the buyer step in the "Both" flow so the same
@@ -192,6 +193,10 @@ export default function SellerApplicationForm({
             defaultCity={prefill?.city}
           />
           <PinLocation />
+          <LocationConsent
+            title="Share my current device location"
+            purpose="to help verify my shop's location"
+          />
         </>
       ),
     },

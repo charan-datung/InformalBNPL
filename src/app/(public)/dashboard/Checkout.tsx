@@ -12,6 +12,7 @@ import Card from "@/components/ui/Card";
 import Callout from "@/components/ui/Callout";
 import { Field, TextInput, Select } from "@/components/ui/Field";
 import { buttonClasses } from "@/components/ui/Button";
+import LocationConsent from "@/components/location/LocationConsent";
 
 /**
  * Buyer checkout. Pick a seller, enter amount + tenor (tenor defaults from
@@ -200,6 +201,8 @@ export default function Checkout({
         {ticketCentavos > 0 && !overLimit ? (
           <DisclosureAcknowledgment terms={terms} />
         ) : null}
+
+        <LocationConsent purpose="to confirm this purchase and protect against fraud" />
 
         <button
           type="submit"
