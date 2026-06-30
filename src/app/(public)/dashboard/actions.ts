@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
+import { postLoanDisbursement } from "@/lib/ledger/post";
 import { confirmDelivery, raiseDispute } from "@/lib/loans/buyer";
 import { markShipped, confirmHandover } from "@/lib/loans/seller";
 import {
@@ -132,6 +133,21 @@ export async function checkoutAction(formData: FormData) {
       actorUserId: buyerUserId,
       amountCentavos: loan.ticket_centavos,
       note: "Escrow held on checkout",
+    });
+    // Post the disbursement ledger (mirrors the Datung Pay path) — without this
+    // the seller's payable is never recorded and they can't be paid out.
+    const admin = createAdminClient();
+    const { data: sellerProfile } = await admin
+      .from("seller_profiles")
+      .select("rolling_reserve_pct")
+      .eq("user_id", sellerUserId)
+      .maybeSingle();
+    await postLoanDisbursement(admin, {
+      loanId: loan.id,
+      ticketCentavos: loan.ticket_centavos,
+      merchantFeePct: loan.merchant_fee_pct,
+      reservePct: sellerProfile?.rolling_reserve_pct ?? 0,
+      processingFeeCentavos: loan.processing_fee_centavos,
     });
   } catch (e) {
     // Don't show the seller's exposure-cap math to the buyer — it's the seller's
