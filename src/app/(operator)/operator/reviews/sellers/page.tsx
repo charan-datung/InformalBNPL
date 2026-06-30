@@ -56,7 +56,7 @@ function Signal({ label, url }: { label: string; url: string | null }) {
 export default function SellerReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   // Shell renders immediately; the queue (data + per-row signed URLs) streams in
   // behind a skeleton so this page never blocks on the slowest storage call.
@@ -77,9 +77,9 @@ export default function SellerReviewsPage({
 async function SellerQueue({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
   const [sellers, config] = await Promise.all([listPendingSellers(), getConfig()]);
   const flags = await fraudFlagsForUsers(sellers.map((s) => s.user_id));
 
@@ -95,6 +95,12 @@ async function SellerQueue({
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
+        </p>
+      ) : null}
+
+      {ok ? (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+          {ok}
         </p>
       ) : null}
 
@@ -171,7 +177,8 @@ async function SellerQueue({
                     {formatDateTime(s.created_at)}
                   </div>
                   <div className="text-xs text-black/60 dark:text-white/60">
-                    Sells as <strong>{s.social_handle ?? "—"}</strong>
+                    Sells <strong>{s.sells_what ?? "—"}</strong>
+                    {s.social_handle ? ` · ${s.social_handle}` : ""}
                     {s.marketplace_url ? (
                       <>
                         {" · "}

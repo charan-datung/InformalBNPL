@@ -227,6 +227,7 @@ export async function applyAsSeller(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
   const idType = String(formData.get("id_type") ?? "").trim();
+  const sellsWhat = String(formData.get("sells_what") ?? "").trim();
   const socialHandle = String(formData.get("social_handle") ?? "").trim();
   const marketplaceUrl = String(formData.get("marketplace_url") ?? "").trim();
   const sellingSince = String(formData.get("selling_since") ?? "").trim();
@@ -246,6 +247,7 @@ export async function applyAsSeller(formData: FormData) {
     sellerError("Name and contact are required.");
   }
   if (!idType) sellerError("Select your government ID type.");
+  if (!sellsWhat) sellerError("Tell us what you sell.");
   if (!storefrontAddress) sellerError("Tell us where you sell.");
 
   const admin = createAdminClient();
@@ -318,6 +320,7 @@ export async function applyAsSeller(formData: FormData) {
   const { error } = await admin.from("seller_profiles").upsert(
     {
       user_id: userId,
+      sells_what: sellsWhat || null,
       social_handle: socialHandle || null,
       marketplace_url: marketplaceUrl || null,
       selling_since: sellingSince || null,

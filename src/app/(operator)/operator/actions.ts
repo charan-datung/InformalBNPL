@@ -10,6 +10,7 @@ import {
 } from "@/lib/loans/mutations";
 import { isLoanStatus } from "@/lib/loans/state-machine";
 import { reviewBuyer, reviewSeller } from "@/lib/profiles/review";
+import type { ApprovalEmailResult } from "@/lib/email/notify";
 import { getConfigValue } from "@/lib/config/system-config";
 import { formatPeso } from "@/lib/format";
 import { resolveDispute } from "@/lib/disputes/mutations";
@@ -33,6 +34,31 @@ import { confirmPayment, rejectPayment } from "@/lib/payments/buyer-payments";
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Unexpected error.";
+}
+
+/**
+ * Build the confirmation shown after an approve/reject, making the email outcome
+ * explicit so the operator KNOWS whether the member was actually notified — and
+ * gets a clear, actionable warning (e.g. SMTP not configured) when they weren't.
+ */
+function reviewOkMessage(
+  decision: "approve" | "reject",
+  who: "Buyer" | "Seller",
+  email: ApprovalEmailResult | null,
+): string {
+  if (decision === "reject") return `${who} application rejected.`;
+  switch (email?.status) {
+    case "sent":
+      return `${who} approved — notified by email.`;
+    case "skipped":
+      return `${who} approved. ⚠ Email NOT sent: SMTP is not configured on the server.`;
+    case "no_email":
+      return `${who} approved. ⚠ No email on file — couldn't notify them.`;
+    case "error":
+      return `${who} approved. ⚠ Email failed to send: ${email.error}`;
+    default:
+      return `${who} approved.`;
+  }
 }
 
 export async function transitionLoanAction(formData: FormData) {
@@ -197,8 +223,9 @@ export async function reviewBuyerAction(formData: FormData) {
     );
   }
 
+  let emailResult: ApprovalEmailResult | null = null;
   try {
-    await reviewBuyer({
+    emailResult = await reviewBuyer({
       userId,
       decision: decision as "approve" | "reject",
       creditLimitCentavos: Math.round(creditLimitPesos * 100),
@@ -208,7 +235,11 @@ export async function reviewBuyerAction(formData: FormData) {
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
-  redirect(back);
+  redirect(
+    `${back}?ok=${encodeURIComponent(
+      reviewOkMessage(decision as "approve" | "reject", "Buyer", emailResult),
+    )}`,
+  );
 }
 
 export async function reviewSellerAction(formData: FormData) {
@@ -226,8 +257,9 @@ export async function reviewSellerAction(formData: FormData) {
     redirect(`${back}?error=${encodeURIComponent("Invalid decision.")}`);
   }
 
+  let emailResult: ApprovalEmailResult | null = null;
   try {
-    await reviewSeller({
+    emailResult = await reviewSeller({
       userId,
       decision: decision as "approve" | "reject",
       trustTier: trustTier === "trusted" ? "trusted" : "new",
@@ -241,7 +273,11 @@ export async function reviewSellerAction(formData: FormData) {
   } catch (e) {
     redirect(`${back}?error=${encodeURIComponent(errorMessage(e))}`);
   }
-  redirect(back);
+  redirect(
+    `${back}?ok=${encodeURIComponent(
+      reviewOkMessage(decision as "approve" | "reject", "Seller", emailResult),
+    )}`,
+  );
 }
 
 // ---- Maker-checker seller payouts ----

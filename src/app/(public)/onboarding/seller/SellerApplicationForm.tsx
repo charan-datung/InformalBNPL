@@ -120,7 +120,7 @@ export default function SellerApplicationForm({
     },
     {
       id: "where",
-      title: "Where you sell",
+      title: "What & where you sell",
       validate: () => {
         if (!storefrontFilled) {
           setStorefrontError("Please add a photo of your storefront or stall.");
@@ -132,17 +132,27 @@ export default function SellerApplicationForm({
       render: (
         <>
           <StepIntro
-            title="Where you sell"
-            subtitle="Your selling presence — online and on the ground."
+            title="What & where you sell"
+            subtitle="The goods you offer and where buyers can find you."
           />
           <Field
-            label="Social / marketplace handle(s)"
+            label="What do you sell?"
+            hint="The products or goods you offer — NOT your address. This is what our team and your buyers will see."
+          >
+            <TextInput
+              name="sells_what"
+              required
+              placeholder="e.g. phones & accessories, ukay-ukay, street food, RTW clothes"
+            />
+          </Field>
+          <Field
+            label="Online shop page"
             optional
-            hint="Only if you sell online too — leave blank if you're a physical store."
+            hint="Link or @handle of your Facebook / Shopee page — only if you sell online too. Leave blank if you're a physical store."
           >
             <TextInput
               name="social_handle"
-              placeholder="@yourshop, fb.com/yourshop"
+              placeholder="@yourshop or fb.com/yourshop"
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">

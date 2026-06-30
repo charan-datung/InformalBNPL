@@ -140,7 +140,7 @@ async function SellersTable() {
           <tr>
             <Th>Name</Th>
             <Th>Contact</Th>
-            <Th>Sells as</Th>
+            <Th>Sells</Th>
             <Th>Location</Th>
             <Th>Tier</Th>
             <Th right>Reserve</Th>
@@ -157,18 +157,25 @@ async function SellersTable() {
               <Td>{s.name}</Td>
               <Td>{s.contact ?? "—"}</Td>
               <Td>
-                {s.marketplace_url ? (
-                  <a
-                    href={s.marketplace_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    {s.social_handle ?? "link"}
-                  </a>
-                ) : (
-                  (s.social_handle ?? "—")
-                )}
+                <div className="max-w-[220px] whitespace-normal">
+                  <div className="font-medium">{s.sells_what ?? "—"}</div>
+                  {s.social_handle || s.marketplace_url ? (
+                    <div className="text-[11px] text-black/45 dark:text-white/45">
+                      {s.marketplace_url ? (
+                        <a
+                          href={s.marketplace_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2"
+                        >
+                          {s.social_handle ?? "online shop"}
+                        </a>
+                      ) : (
+                        s.social_handle
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </Td>
               <Td>{s.storefront_location ?? "—"}</Td>
               <Td>

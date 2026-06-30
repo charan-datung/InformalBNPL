@@ -12,28 +12,48 @@ import {
 } from "@/lib/email/templates";
 
 /**
+ * Outcome of trying to notify a member that they were approved. Returned (never
+ * thrown) so the operator action can show exactly what happened — sent, or why
+ * not — instead of silently assuming the email went out.
+ */
+export type ApprovalEmailResult =
+  | { status: "sent" }
+  /** SMTP isn't configured on the host (SMTP_USER/SMTP_PASS missing). */
+  | { status: "skipped" }
+  /** No email address on file for this user, so there was nothing to send to. */
+  | { status: "no_email" }
+  | { status: "error"; error: string };
+
+/**
  * Email a buyer/seller that their application was approved. Best-effort: looks up
- * the auth email + display name via the service-role client and sends; any
- * failure is logged and swallowed so it never blocks the approval.
+ * the auth email + display name via the service-role client and sends. Never
+ * throws (so it can't block the approval) — instead it reports the outcome so the
+ * operator console can confirm the notice went out or flag why it didn't.
  */
 export async function sendApprovalEmail(
   admin: SupabaseClient,
   userId: string,
   capability: "buyer" | "seller",
-): Promise<void> {
+): Promise<ApprovalEmailResult> {
+  if (!emailConfigured()) return { status: "skipped" };
   try {
     const { data, error } = await admin.auth.admin.getUserById(userId);
     const email = data?.user?.email;
-    if (error || !email) return;
+    if (error || !email) return { status: "no_email" };
     const { data: u } = await admin
       .from("users")
       .select("name")
       .eq("id", userId)
       .maybeSingle();
     const { subject, html } = approvalEmail({ name: u?.name ?? null, capability });
-    await sendEmail({ to: email, subject, html });
+    const res = await sendEmail({ to: email, subject, html });
+    return res.ok
+      ? { status: "sent" }
+      : { status: "error", error: res.error ?? "send failed" };
   } catch (e) {
-    console.error("sendApprovalEmail failed:", e);
+    const error = e instanceof Error ? e.message : "send failed";
+    console.error("sendApprovalEmail failed:", error);
+    return { status: "error", error };
   }
 }
 

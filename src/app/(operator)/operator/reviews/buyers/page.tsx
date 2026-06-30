@@ -106,7 +106,7 @@ function ApplicationDetails({ app }: { app: Record<string, unknown> | null }) {
 export default function BuyerReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
   // Shell paints immediately; the queue (data + per-row signed URLs) streams in
   // behind a skeleton instead of blocking the whole page on storage calls.
@@ -123,9 +123,9 @@ export default function BuyerReviewsPage({
 async function BuyerQueue({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, ok } = await searchParams;
   const [buyers, config] = await Promise.all([listPendingBuyers(), getConfig()]);
   const flags = await fraudFlagsForUsers(buyers.map((b) => b.user_id));
 
@@ -143,6 +143,12 @@ async function BuyerQueue({
       {error ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {error}
+        </p>
+      ) : null}
+
+      {ok ? (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+          {ok}
         </p>
       ) : null}
 

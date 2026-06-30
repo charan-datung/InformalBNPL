@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAudit } from "@/lib/audit/log";
 import { getConfig, getConfigValue } from "@/lib/config/system-config";
-import { sendApprovalEmail } from "@/lib/email/notify";
+import { sendApprovalEmail, type ApprovalEmailResult } from "@/lib/email/notify";
 
 /**
  * Operator review of pending buyer/seller applications. Approval is fully
@@ -20,7 +20,13 @@ export type BuyerReviewInput = {
   actorUserId: string;
 };
 
-export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
+/**
+ * On approval, returns the approval-email outcome so the caller can confirm the
+ * member was notified (or surface why not). Null on rejection (no email sent).
+ */
+export async function reviewBuyer(
+  input: BuyerReviewInput,
+): Promise<ApprovalEmailResult | null> {
   const admin = createAdminClient();
 
   // Backstop: never persist a limit above the configured ceiling, regardless of
@@ -63,8 +69,9 @@ export async function reviewBuyer(input: BuyerReviewInput): Promise<void> {
 
   // Tell the buyer they're in (best-effort; never blocks the approval).
   if (input.decision === "approve") {
-    await sendApprovalEmail(admin, input.userId, "buyer");
+    return sendApprovalEmail(admin, input.userId, "buyer");
   }
+  return null;
 }
 
 export type SellerReviewInput = {
@@ -78,7 +85,9 @@ export type SellerReviewInput = {
   actorUserId: string;
 };
 
-export async function reviewSeller(input: SellerReviewInput): Promise<void> {
+export async function reviewSeller(
+  input: SellerReviewInput,
+): Promise<ApprovalEmailResult | null> {
   const admin = createAdminClient();
 
   // Exposure cap follows the tier (conservative for `new`, higher once trusted)
@@ -129,6 +138,7 @@ export async function reviewSeller(input: SellerReviewInput): Promise<void> {
 
   // Tell the seller they're in (best-effort; never blocks the approval).
   if (input.decision === "approve") {
-    await sendApprovalEmail(admin, input.userId, "seller");
+    return sendApprovalEmail(admin, input.userId, "seller");
   }
+  return null;
 }

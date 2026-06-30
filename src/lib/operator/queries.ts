@@ -253,6 +253,8 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
 
 export type PendingSeller = {
   user_id: string;
+  /** Free-text description of the goods the seller offers. */
+  sells_what: string | null;
   social_handle: string | null;
   marketplace_url: string | null;
   selling_since: string | null;
@@ -281,7 +283,7 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, ocr_id_text, ocr_storefront_text, created_at",
+        "user_id, sells_what, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, ocr_id_text, ocr_storefront_text, created_at",
       )
       .eq("kyc_status", "pending")
       .order("created_at", { ascending: true }),
@@ -306,6 +308,7 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
       ]);
       return {
         user_id: s.user_id,
+        sells_what: s.sells_what,
         social_handle: s.social_handle,
         marketplace_url: s.marketplace_url,
         selling_since: s.selling_since,
@@ -620,6 +623,8 @@ export type ApprovedSeller = {
   user_id: string;
   name: string;
   contact: string | null;
+  /** Free-text description of the goods the seller offers. */
+  sells_what: string | null;
   social_handle: string | null;
   marketplace_url: string | null;
   selling_since: string | null;
@@ -639,7 +644,7 @@ export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, created_at, social_handle, marketplace_url, selling_since, storefront_location, trust_tier, rolling_reserve_pct, max_outstanding_centavos",
+        "user_id, created_at, sells_what, social_handle, marketplace_url, selling_since, storefront_location, trust_tier, rolling_reserve_pct, max_outstanding_centavos",
       )
       .eq("kyc_status", "verified")
       .order("created_at", { ascending: false }),
@@ -656,6 +661,7 @@ export async function listApprovedSellers(): Promise<ApprovedSeller[]> {
       user_id: s.user_id,
       name: users.get(s.user_id)?.name ?? s.user_id,
       contact: users.get(s.user_id)?.contact ?? null,
+      sells_what: s.sells_what,
       social_handle: s.social_handle,
       marketplace_url: s.marketplace_url,
       selling_since: s.selling_since,
