@@ -94,8 +94,21 @@ export default function LoanAgreement({
         evaluation, identity verification, account servicing, collection, fraud
         prevention, and compliance with legal and regulatory requirements; and to
         its sharing with credit bureaus, service providers, and regulators where
-        permitted or required by law. The Borrower may exercise their rights under
-        the Data Privacy Act by contacting {LENDER.noticesEmail}.
+        permitted or required by law. The information collected includes: identity
+        and contact details; government ID and proof of billing; financial,
+        transaction, and repayment data; device and technical information; the
+        Borrower’s device location, captured only when the Borrower grants location
+        permission — at sign-up, at seller onboarding, and at the time of each
+        purchase — and used to verify the account and to detect and prevent fraud;
+        and character references the Borrower voluntarily provides, including any
+        contacts the Borrower individually selects to share through their device’s
+        own contact picker. The Lender does not read or upload the Borrower’s phone
+        contact list; only the specific entries the Borrower chooses to share are
+        collected. Granting device location and contact-sharing is optional: the
+        Borrower may decline or later withdraw either consent — without losing
+        access to credit already granted — and may exercise their rights to be
+        informed, to access, to correct, to object, and to erasure or blocking
+        under the Data Privacy Act by contacting {LENDER.noticesEmail}.
       </Section>
 
       <Section n={6} title="Electronic transactions (RA 8792)">

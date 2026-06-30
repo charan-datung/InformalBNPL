@@ -57,4 +57,4 @@ export function lenderHasPlaceholders(): boolean {
  * of any document changes, so a borrower's recorded acceptance is tied to the
  * exact version they agreed to.
  */
-export const DOCUMENT_VERSION = "2026-06-26";
+export const DOCUMENT_VERSION = "2026-06-30";
