@@ -2,6 +2,7 @@
 
 import { randomInt } from "crypto";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getCapabilities } from "@/lib/profiles/capabilities";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookLoan, transitionLoan } from "@/lib/loans/mutations";
@@ -85,6 +86,17 @@ async function requireSeller(): Promise<string> {
     );
   }
   return caps.userId;
+}
+
+/** Dual-role users toggle between the buyer and seller views (cookie-backed). */
+export async function setDashboardModeAction(formData: FormData) {
+  const mode = String(formData.get("mode") ?? "") === "seller" ? "seller" : "buyer";
+  (await cookies()).set("dash_mode", mode, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+  redirect("/dashboard");
 }
 
 // ---- Buyer -----------------------------------------------------------------

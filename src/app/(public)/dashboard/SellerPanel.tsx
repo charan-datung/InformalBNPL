@@ -226,12 +226,16 @@ function OrderCard({
   );
 }
 
+export type SellerTab = "home" | "orders" | "payouts" | "more";
+
 export default async function SellerPanel({
   userId,
   email,
+  tab = "home",
 }: {
   userId: string;
   email: string | null;
+  tab?: SellerTab;
 }) {
   const [loans, config, exposure, account, profile] = await Promise.all([
     listSellerLoans(userId),
@@ -243,9 +247,9 @@ export default async function SellerPanel({
 
   const stats = sellerStats(loans, new Date().toISOString().slice(0, 7));
 
-  // Orders that need the seller to do something (hand over / ship) come first.
+  // Orders that need the seller to do something (hand over / ship) — surfaced
+  // on Home so nothing stalls; the Orders tab shows the full list.
   const actionNeeded = loans.filter((l) => l.status === "escrow_held");
-  const rest = loans.filter((l) => l.status !== "escrow_held");
 
   // The soonest expected payout across in-flight orders, for the hero.
   const nextPayout = loans
@@ -256,6 +260,8 @@ export default async function SellerPanel({
 
   return (
     <section className="space-y-8">
+      {tab === "home" && (
+        <>
       {/* Zone 1 — Get paid */}
       <section className="space-y-4">
         <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-sm shadow-brand-950/20">
@@ -323,13 +329,13 @@ export default async function SellerPanel({
           ))}
         </div>
       ) : null}
+        </>
+      )}
 
-      {/* Orders */}
+      {/* Orders — full list */}
+      {tab === "orders" && (
       <div className="space-y-3">
-        <SectionHeading icon={Package}>
-          {actionNeeded.length > 0 ? "Other orders" : "Your orders"} ({rest.length})
-        </SectionHeading>
-
+        <SectionHeading icon={Package}>Your orders ({loans.length})</SectionHeading>
         {loans.length === 0 ? (
           <Card className="flex flex-col items-center gap-2 py-8 text-center">
             <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-500">
@@ -337,20 +343,47 @@ export default async function SellerPanel({
             </span>
             <p className="text-sm font-medium text-foreground">No orders yet</p>
             <p className="max-w-xs text-xs text-black/50">
-              Create a sale above and share the QR or link. Orders buyers pay for
-              will show up here, each with its payout tracker.
+              Create a sale and share the QR or link. Orders buyers pay for will
+              show up here, each with its payout tracker.
             </p>
           </Card>
-        ) : rest.length === 0 ? (
-          <Card className="text-center text-sm text-black/55">
-            Nothing else right now — your open orders are up top.
-          </Card>
         ) : (
-          rest.map((l) => <OrderCard key={l.id} l={l} config={config} />)
+          loans.map((l) => <OrderCard key={l.id} l={l} config={config} />)
         )}
       </div>
+      )}
 
-      {/* Payout statement */}
+      {/* Payouts tab — pending summary + statement */}
+      {tab === "payouts" && (
+      <div className="space-y-4">
+        <StatGrid>
+          <Stat
+            label="Pending payout"
+            tone="brand"
+            value={formatPeso(stats.pendingPayoutCentavos)}
+            hint={`${stats.activeOrders} in progress`}
+            icon={Wallet}
+          />
+          <Stat
+            label="Paid out"
+            tone="accent"
+            value={formatPeso(stats.paidOutCentavos)}
+            hint={`${stats.completedOrders} completed`}
+            icon={Banknote}
+          />
+          <Stat
+            label="Gross sales"
+            value={formatPeso(stats.grossSalesCentavos)}
+            hint={`${stats.totalOrders} order${stats.totalOrders === 1 ? "" : "s"}`}
+            icon={TrendingUp}
+          />
+        </StatGrid>
+        {nextPayout?.payoutDate ? (
+          <Card className="text-sm text-black/60">
+            Next payout ~ <strong>{formatDate(nextPayout.payoutDate)}</strong>.
+            Datung holds the buyer&apos;s payment until the order is delivered.
+          </Card>
+        ) : null}
       {(() => {
         const paidOut = loans.filter((l) => l.status === "settled");
         if (paidOut.length === 0) return null;
@@ -391,7 +424,12 @@ export default async function SellerPanel({
           </div>
         );
       })()}
+      </div>
+      )}
 
+      {/* "More" tab — grow tools + profile */}
+      {tab === "more" && (
+        <>
       {/* Zone 3 — Grow your shop */}
       <div className="space-y-3">
         <SectionHeading icon={Megaphone}>Grow your shop</SectionHeading>
@@ -495,6 +533,8 @@ export default async function SellerPanel({
         <PasskeySetup />
         <SupportForm context="seller" defaultContact={account.contact} />
       </div>
+        </>
+      )}
     </section>
   );
 }

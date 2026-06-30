@@ -63,12 +63,16 @@ function addDays(iso: string, days: number): Date {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+export type BuyerTab = "home" | "orders" | "payments" | "profile";
+
 export default async function BuyerPanel({
   userId,
   email,
+  tab = "home",
 }: {
   userId: string;
   email: string | null;
+  tab?: BuyerTab;
 }) {
   const [loans, sellers, credit, config, account, profile] = await Promise.all([
     listBuyerLoans(userId),
@@ -88,6 +92,8 @@ export default async function BuyerPanel({
 
   return (
     <div className="space-y-8">
+      {tab === "home" && (
+        <>
       {/* Spending power — the heart of repeat instant checkout */}
       <section className="space-y-4">
         <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-sm shadow-brand-950/20">
@@ -202,9 +208,11 @@ export default async function BuyerPanel({
           />
         </div>
       </details>
+        </>
+      )}
 
       {/* Unified upcoming payments across every order */}
-      {stats.upcoming.length > 0 ? (
+      {tab === "payments" && stats.upcoming.length > 0 ? (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <SectionHeading icon={CalendarClock}>
@@ -265,6 +273,7 @@ export default async function BuyerPanel({
       ) : null}
 
       {/* Order history */}
+      {tab === "orders" && (
       <section className="space-y-3">
         <SectionHeading icon={ShoppingBag}>
           Your purchases ({loans.length})
@@ -419,15 +428,24 @@ export default async function BuyerPanel({
         )}
       </section>
 
+      )}
+
       {/* Payment history / receipts */}
-      {payments.length > 0 ? (
+      {tab === "payments" && payments.length > 0 ? (
         <section className="space-y-3">
           <SectionHeading icon={CheckCircle2}>Payment history</SectionHeading>
           <PaymentHistory payments={payments} />
         </section>
       ) : null}
 
+      {tab === "payments" && stats.upcoming.length === 0 && payments.length === 0 ? (
+        <Card className="text-center text-sm text-black/55">
+          No payments due and nothing recorded yet.
+        </Card>
+      ) : null}
+
       {/* Profile / account */}
+      {tab === "profile" && (
       <section className="space-y-3">
         <SectionHeading icon={User}>Profile</SectionHeading>
         <ProfileEditor
@@ -490,6 +508,7 @@ export default async function BuyerPanel({
         <PasskeySetup />
         <SupportForm context="buyer" defaultContact={account.contact} />
       </section>
+      )}
     </div>
   );
 }
