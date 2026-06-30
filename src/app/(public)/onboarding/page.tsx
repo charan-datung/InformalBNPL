@@ -43,32 +43,47 @@ export default async function OnboardingPage() {
     <div className="mx-auto max-w-md space-y-6">
       <div className="space-y-1.5 text-center">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          What would you like to do?
+          Which one are you?
         </h1>
         <p className="text-sm text-black/55">
-          You can change or add to this later — it&apos;s not a one-time choice.
+          Pick what fits you. You can add the other later — it&apos;s not
+          permanent.
         </p>
       </div>
 
       <div className="grid gap-3">
         <RoleCard
-          href="/onboarding/buyer"
-          icon={ShoppingBag}
-          title="Buy"
-          description="Shop now and pay in small amounts. Starts a quick application."
-        />
-        <RoleCard
           href="/onboarding/seller"
           icon={Store}
-          title="Sell"
-          description="Sell to buyers who pay in installments. Starts seller verification."
+          title="I sell things"
+          chooseIf="Choose this if you have a shop or products to sell and want your customers to pay in installments (hulugan)."
+          example="e.g. you sell on Facebook/Shopee, run a stall, or own a store."
+        />
+        <RoleCard
+          href="/onboarding/buyer"
+          icon={ShoppingBag}
+          title="I want to shop"
+          chooseIf="Choose this if you want to buy things now and pay for them in small amounts over time."
+          example="e.g. you're a customer buying from a seller."
         />
         <RoleCard
           href="/onboarding/buyer?next=seller"
           icon={Sparkles}
           title="Both"
-          description="We'll take you through the buyer application, then seller verification."
+          chooseIf="I want to sell my products AND shop from others."
+          example="We'll set up selling and buying, one after the other."
         />
+      </div>
+
+      <div className="rounded-xl border border-black/10 bg-black/[0.02] p-4 text-sm text-black/60">
+        <p>
+          <strong className="text-foreground">Not sure?</strong> If you have
+          something to <strong>sell</strong>, pick{" "}
+          <span className="font-semibold text-brand-700">&ldquo;I sell things&rdquo;</span>
+          . If you just want to <strong>buy</strong>, pick{" "}
+          <span className="font-semibold text-brand-700">&ldquo;I want to shop&rdquo;</span>
+          . You can always add the other one later from your dashboard.
+        </p>
       </div>
     </div>
   );
@@ -78,28 +93,29 @@ function RoleCard({
   href,
   icon: Icon,
   title,
-  description,
+  chooseIf,
+  example,
 }: {
   href: string;
   icon: LucideIcon;
   title: string;
-  description: string;
+  chooseIf: string;
+  example: string;
 }) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3.5 rounded-xl border border-black/10 bg-white p-4 shadow-sm shadow-brand-950/[0.03] transition-colors hover:border-brand-200 hover:bg-brand-50/40"
+      className="group flex items-start gap-3.5 rounded-2xl border border-black/10 bg-white p-4 shadow-sm shadow-brand-950/[0.03] transition-colors hover:border-brand-300 hover:bg-brand-50/40"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
-        <Icon className="size-5" />
+      <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+        <Icon className="size-6" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 text-sm leading-relaxed text-black/55">
-          {description}
-        </p>
+        <p className="text-base font-bold text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm leading-relaxed text-black/70">{chooseIf}</p>
+        <p className="mt-1 text-xs italic text-black/45">{example}</p>
       </div>
-      <ChevronRight className="size-5 shrink-0 text-black/25 transition-colors group-hover:text-brand-600" />
+      <ChevronRight className="mt-1 size-5 shrink-0 text-black/25 transition-colors group-hover:text-brand-600" />
     </Link>
   );
 }

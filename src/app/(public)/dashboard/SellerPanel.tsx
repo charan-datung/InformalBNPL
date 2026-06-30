@@ -24,6 +24,7 @@ import PhotoActionForm from "@/app/(public)/dashboard/PhotoActionForm";
 import ProfileEditor from "@/app/(public)/dashboard/ProfileEditor";
 import SupportForm from "@/app/(public)/dashboard/SupportForm";
 import PasskeySetup from "@/components/auth/PasskeySetup";
+import SellerGettingStarted from "@/app/(public)/dashboard/SellerGettingStarted";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
 import Card from "@/components/ui/Card";
@@ -293,6 +294,9 @@ export default async function SellerPanel({
 
         {/* Primary action */}
         <NewSale />
+
+        {/* Plain-language guide — open until the first sale, then collapses */}
+        <SellerGettingStarted hasOrders={loans.length > 0} />
 
         {/* Slim numbers */}
         <StatGrid>
