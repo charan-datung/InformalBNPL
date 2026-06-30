@@ -28,6 +28,7 @@ import PasskeySetup from "@/components/auth/PasskeySetup";
 import PayInstructions from "@/app/(public)/dashboard/PayInstructions";
 import RepaymentPlan from "@/app/(public)/dashboard/RepaymentPlan";
 import PaymentReportForm from "@/app/(public)/dashboard/PaymentReportForm";
+import BuyerGettingStarted from "@/app/(public)/dashboard/BuyerGettingStarted";
 import ScanToPay from "@/app/(public)/dashboard/ScanToPay";
 import { StatusBadge } from "@/lib/loans/status-ui";
 import { formatPeso, formatDate, formatDateTime } from "@/lib/format";
@@ -183,6 +184,9 @@ export default async function BuyerPanel({
           </div>
         ) : null}
       </section>
+
+      {/* Plain-language guide — open until the first purchase, then collapses */}
+      <BuyerGettingStarted hasOrders={loans.length > 0} />
 
       {/* Manual checkout — secondary to scanning a seller's QR. Tucked into a
           disclosure so the home stays focused on the two cards above. */}
