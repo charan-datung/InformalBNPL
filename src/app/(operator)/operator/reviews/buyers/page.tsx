@@ -13,6 +13,8 @@ import { formatPeso, formatDateTime } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { latestLocations, mapsLink } from "@/lib/location/events";
+import { scoreBuyer } from "@/lib/credit/scoring";
+import ScorePanel from "@/components/credit/ScorePanel";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -168,6 +170,19 @@ async function BuyerQueue({
             const app = b.application as BuyerApplication | null;
             const idCheck = app?.ocr_id_check;
             const billingPreview = app?.ocr_billing_preview;
+            const credit = scoreBuyer({
+              buyerKind:
+                b.buyer_kind === "personal" || b.buyer_kind === "business"
+                  ? b.buyer_kind
+                  : null,
+              application: app,
+              fraudFlags: flags.get(b.user_id) ?? [],
+              locationConsent: b.location_consent,
+              config: {
+                defaultLimitCentavos: config.default_credit_limit_centavos,
+                maxLimitCentavos: config.max_credit_limit_centavos,
+              },
+            });
             return (
             <form
               key={b.user_id}
@@ -252,6 +267,18 @@ async function BuyerQueue({
                 <ApplicationDetails app={b.application} />
               </div>
 
+              <ScorePanel
+                score={credit.score}
+                band={credit.band}
+                reasons={credit.reasons}
+                recommendation={
+                  credit.recommendedLimitCentavos > 0
+                    ? `${formatPeso(credit.recommendedLimitCentavos)} opening limit`
+                    : "decline, or set a limit manually"
+                }
+                reviewCarefully={credit.reviewCarefully}
+              />
+
               {/* OCR verification — runs server-side on demand */}
               <div className="mt-3 space-y-2 rounded border border-black/10 p-3 dark:border-white/10">
                 <div className="flex flex-wrap items-center gap-2">
@@ -328,9 +355,13 @@ async function BuyerQueue({
                     max={maxLimitPesos}
                     step="1"
                     defaultValue={Math.min(
-                      b.requested_amount_centavos != null
-                        ? b.requested_amount_centavos / 100
-                        : defaultLimitPesos,
+                      // Scorecard recommendation first; fall back to the
+                      // requested amount / standard opening limit.
+                      credit.recommendedLimitCentavos > 0
+                        ? credit.recommendedLimitCentavos / 100
+                        : b.requested_amount_centavos != null
+                          ? b.requested_amount_centavos / 100
+                          : defaultLimitPesos,
                       maxLimitPesos,
                     )}
                     className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"

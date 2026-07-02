@@ -8,8 +8,9 @@ import { formatPeso } from "@/lib/format";
 
 /**
  * "Refer a seller" panel on the seller dashboard. The seller shares a tagged
- * link (/signup?intent=seller&sref=<them>); when a referred seller books their
- * first order, the seller earns a cash bounty the operator settles. Shows the
+ * link to the merchant portal (/merchants?sref=<them>) — the pitch page sells
+ * the referred merchant before sign-up, and sref rides through sign-up so the
+ * bounty attributes when the referred seller books their first order. Shows the
  * link + QR and a running tally of referrals and earnings.
  */
 export default async function ReferSellers({
@@ -23,7 +24,7 @@ export default async function ReferSellers({
     getSellerReferralSummary(sellerUserId),
   ]);
 
-  const referUrl = `${origin}/signup?intent=seller&sref=${sellerUserId}`;
+  const referUrl = `${origin}/merchants?sref=${sellerUserId}`;
   const qrSvg = await makeQrSvg(referUrl);
 
   return (

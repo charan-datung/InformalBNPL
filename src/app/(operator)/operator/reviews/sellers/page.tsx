@@ -8,10 +8,12 @@ import {
 } from "@/app/(operator)/operator/reviews/sellers/ocr-actions";
 import OcrButton from "@/app/(operator)/operator/reviews/OcrButton";
 import { getConfig } from "@/lib/config/system-config";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatPeso } from "@/lib/format";
 import { CardSkeleton } from "@/components/brand/Skeleton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { latestLocations, mapsLink } from "@/lib/location/events";
+import { scoreSeller } from "@/lib/credit/scoring";
+import ScorePanel from "@/components/credit/ScorePanel";
 
 export const dynamic = "force-dynamic";
 // OCR (model download on cold start + recognition) can take well over the
@@ -89,7 +91,6 @@ async function SellerQueue({
     sellers.map((s) => s.user_id),
   );
 
-  const defaultReservePct = config.seller_reserve_new_pct;
   const defaultCapPesos = Math.round(config.seller_cap_new_centavos / 100);
 
   return (
@@ -121,6 +122,24 @@ async function SellerQueue({
               s.storefront_lat != null && s.storefront_lng != null
                 ? `https://www.google.com/maps?q=${s.storefront_lat},${s.storefront_lng}`
                 : null;
+            const credit = scoreSeller({
+              sellsWhat: s.sells_what,
+              socialHandle: s.social_handle,
+              marketplaceUrl: s.marketplace_url,
+              sellingSince: s.selling_since,
+              idType: s.id_type,
+              hasStorefrontPin:
+                s.storefront_lat != null && s.storefront_lng != null,
+              locationConsent: s.location_consent,
+              fraudFlags: flags.get(s.user_id) ?? [],
+              config: {
+                capNewCentavos: config.seller_cap_new_centavos,
+                capTrustedCentavos: config.seller_cap_trusted_centavos,
+                reserveNewPct: config.seller_reserve_new_pct,
+                reserveTrustedPct: config.seller_reserve_trusted_pct,
+              },
+              nowYear: new Date().getFullYear(),
+            });
             return (
               <form
                 key={s.user_id}
@@ -242,6 +261,18 @@ async function SellerQueue({
                   ) : null}
                 </div>
 
+                <ScorePanel
+                  score={credit.score}
+                  band={credit.band}
+                  reasons={credit.reasons}
+                  recommendation={
+                    credit.recommendedCapCentavos > 0
+                      ? `${formatPeso(credit.recommendedCapCentavos)} cap · ${credit.recommendedReservePct}% reserve`
+                      : "decline, or set a cap manually"
+                  }
+                  reviewCarefully={credit.reviewCarefully}
+                />
+
                 <div className="mt-3 grid gap-3 sm:grid-cols-4">
                   <label className="block space-y-1">
                     <span className="text-xs font-medium">Trust tier</span>
@@ -262,7 +293,7 @@ async function SellerQueue({
                       min={0}
                       max={100}
                       step="0.5"
-                      defaultValue={defaultReservePct}
+                      defaultValue={credit.recommendedReservePct}
                       className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
                     />
                   </label>
@@ -273,7 +304,11 @@ async function SellerQueue({
                       name="max_outstanding_pesos"
                       min={0}
                       step="100"
-                      defaultValue={defaultCapPesos}
+                      defaultValue={
+                        credit.recommendedCapCentavos > 0
+                          ? Math.round(credit.recommendedCapCentavos / 100)
+                          : defaultCapPesos
+                      }
                       className="w-full rounded-md border border-black/15 px-3 py-1.5 text-sm dark:border-white/15 dark:bg-transparent"
                     />
                   </label>

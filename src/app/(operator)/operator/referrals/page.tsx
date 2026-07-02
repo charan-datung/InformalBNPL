@@ -28,7 +28,9 @@ export default async function ReferralsPage({
     searchParams,
   ]);
 
-  const sellerSignupUrl = `${origin}/signup?intent=seller`;
+  // BD leave-behind: point prospects at the merchant portal (the pitch page),
+  // which funnels into seller-intent sign-up.
+  const sellerSignupUrl = `${origin}/merchants`;
   const qrSvg = await makeQrSvg(sellerSignupUrl);
 
   const owed = rows
@@ -57,8 +59,8 @@ export default async function ReferralsPage({
           Invite a seller
         </h2>
         <p className="mb-3 mt-0.5 text-xs text-black/55">
-          Send this to a prospective seller. It drops them straight into seller
-          verification.
+          Send this to a prospective seller. It opens the merchant portal — the
+          pitch, then straight into seller verification.
         </p>
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <div

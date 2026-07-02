@@ -83,6 +83,16 @@ export default async function HomePage({
             Log in
           </Link>
         </div>
+
+        <p className="mt-4 text-sm text-black/55">
+          Have a shop or sell online?{" "}
+          <Link
+            href="/merchants"
+            className="font-semibold text-brand-700 underline-offset-4 hover:underline"
+          >
+            Sell on Datung — get paid upfront
+          </Link>
+        </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">

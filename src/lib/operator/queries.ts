@@ -207,6 +207,7 @@ export type PendingBuyer = {
   application: Record<string, unknown> | null;
   idPhotoUrl: string | null;
   proofUrl: string | null;
+  location_consent: boolean;
 };
 
 export async function listPendingBuyers(): Promise<PendingBuyer[]> {
@@ -215,7 +216,7 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
     admin
       .from("buyer_profiles")
       .select(
-        "user_id, created_at, buyer_kind, requested_amount_centavos, application, id_document_path",
+        "user_id, created_at, buyer_kind, requested_amount_centavos, application, id_document_path, location_consent",
       )
       .eq("kyc_status", "pending")
       .order("created_at", { ascending: true }),
@@ -246,6 +247,7 @@ export async function listPendingBuyers(): Promise<PendingBuyer[]> {
         application: app,
         idPhotoUrl,
         proofUrl,
+        location_consent: Boolean(b.location_consent),
       };
     }),
   );
@@ -266,6 +268,7 @@ export type PendingSeller = {
   created_at: string;
   name: string;
   contact: string | null;
+  location_consent: boolean;
   /** Live item photo (proof of selling). */
   photoUrl: string | null;
   /** Government ID photo. */
@@ -283,7 +286,7 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
     admin
       .from("seller_profiles")
       .select(
-        "user_id, sells_what, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, ocr_id_text, ocr_storefront_text, created_at",
+        "user_id, sells_what, social_handle, marketplace_url, selling_since, id_type, id_document_path, storefront_photo_path, storefront_location, storefront_lat, storefront_lng, verification_notes, verification_photo_path, ocr_id_text, ocr_storefront_text, created_at, location_consent",
       )
       .eq("kyc_status", "pending")
       .order("created_at", { ascending: true }),
@@ -320,6 +323,7 @@ export async function listPendingSellers(): Promise<PendingSeller[]> {
         created_at: s.created_at,
         name: users.get(s.user_id)?.name ?? s.user_id,
         contact: users.get(s.user_id)?.contact ?? null,
+        location_consent: Boolean(s.location_consent),
         photoUrl,
         idUrl,
         storefrontUrl,
